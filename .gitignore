@@ -1,0 +1,13 @@
+# Supabase CLI
+.branches
+.temp
+supabase/.env
+
+# Variables locales (NO commitear service role ni secretos)
+.env
+.env.local
+*.local
+
+# OS
+.DS_Store
+Thumbs.db

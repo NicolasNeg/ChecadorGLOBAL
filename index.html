@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0F766E">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>EQS Checador</title>
+  <link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body>
+
+  <!-- ── PERMISOS ──────────────────────────────────────────────────────────── -->
+  <section id="pantalla-permisos" class="pantalla" hidden>
+    <div class="tarjeta">
+      <h1>EQS Checador</h1>
+      <p>Para continuar necesitamos acceso a tu cámara y ubicación.</p>
+
+      <div class="permiso-fila">
+        <span>Cámara</span>
+        <span id="estado-camara" class="permiso-estado permiso-estado--pendiente">Pendiente</span>
+      </div>
+      <div class="permiso-fila">
+        <span>Ubicación</span>
+        <span id="estado-ubicacion" class="permiso-estado permiso-estado--pendiente">Pendiente</span>
+      </div>
+
+      <button id="btn-reintentar" class="btn btn--secundario btn--sm">Reintentar permisos</button>
+    </div>
+  </section>
+
+  <!-- ── PIN ────────────────────────────────────────────────────────────────── -->
+  <section id="pantalla-pin" class="pantalla" hidden>
+    <div class="tarjeta">
+      <h1>EQS Checador</h1>
+      <label for="input-pin" style="font-weight:600">Ingresa tu PIN</label>
+      <input
+        id="input-pin"
+        class="input-pin"
+        type="password"
+        inputmode="numeric"
+        pattern="\d*"
+        maxlength="10"
+        autocomplete="off"
+        placeholder="••••"
+      >
+      <p id="error-pin" class="error-msg" hidden></p>
+      <button id="btn-continuar-pin" class="btn btn--primario">Continuar</button>
+    </div>
+  </section>
+
+  <!-- ── MENÚ ───────────────────────────────────────────────────────────────── -->
+  <section id="pantalla-menu" class="pantalla" hidden>
+    <div class="tarjeta">
+      <p id="saludo"></p>
+      <h2>¿Qué deseas hacer?</h2>
+      <div class="menu-botones">
+        <button id="btn-checar"    class="btn btn--primario">Checar asistencia</button>
+        <button id="btn-historial" class="btn btn--secundario">Ver historial</button>
+      </div>
+      <button id="btn-cerrar-sesion" class="btn btn--peligro btn--sm">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ── TIPO DE CHECADA ────────────────────────────────────────────────────── -->
+  <section id="pantalla-tipo" class="pantalla" hidden>
+    <div class="tarjeta">
+      <h2>¿Qué vas a registrar?</h2>
+      <button id="btn-entrada" class="btn btn--entrada">Entrada</button>
+      <button id="btn-salida"  class="btn btn--salida">Salida</button>
+      <button id="btn-volver-tipo" class="btn btn--secundario btn--sm">Volver</button>
+    </div>
+  </section>
+
+  <!-- ── FIRMA ──────────────────────────────────────────────────────────────── -->
+  <section id="pantalla-firma" class="pantalla pantalla-firma" hidden>
+    <div class="tarjeta">
+      <h2>Firma aquí</h2>
+      <canvas id="canvas-firma"></canvas>
+      <p id="error-firma" class="error-msg" hidden></p>
+      <div style="display:flex;gap:10px">
+        <button id="btn-limpiar-firma"   class="btn btn--secundario btn--sm" style="flex:1">Limpiar</button>
+        <button id="btn-continuar-firma" class="btn btn--primario   btn--sm" style="flex:2">Continuar →</button>
+      </div>
+      <button id="btn-volver-firma" class="btn btn--secundario btn--sm">Volver</button>
+    </div>
+  </section>
+
+  <!-- ── CÁMARA ─────────────────────────────────────────────────────────────── -->
+  <section id="pantalla-camara" class="pantalla" hidden>
+    <div class="tarjeta">
+      <h2>Foto de verificación</h2>
+
+      <div id="sec-video">
+        <video id="video-preview" autoplay playsinline muted></video>
+        <button id="btn-tomar-foto" class="btn btn--primario" style="margin-top:12px">Tomar foto</button>
+      </div>
+
+      <div id="sec-preview" hidden>
+        <img id="img-preview" alt="preview">
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button id="btn-repetir-foto"   class="btn btn--secundario btn--sm" style="flex:1">Repetir</button>
+          <button id="btn-confirmar-foto" class="btn btn--primario   btn--sm" style="flex:2">Confirmar ✓</button>
+        </div>
+      </div>
+
+      <p id="error-camara" class="error-msg" hidden></p>
+      <button id="btn-volver-camara" class="btn btn--secundario btn--sm">Volver</button>
+    </div>
+  </section>
+
+  <!-- ── HISTORIAL ──────────────────────────────────────────────────────────── -->
+  <section id="pantalla-historial" class="pantalla pantalla-historial" hidden>
+    <div style="width:100%;max-width:680px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <button id="btn-volver-historial" class="btn btn--secundario btn--sm" style="width:auto;min-width:80px">← Volver</button>
+        <h2>Mi historial</h2>
+      </div>
+      <div id="contenedor-historial"></div>
+    </div>
+  </section>
+
+  <!-- ── OVERLAY ÉXITO ─────────────────────────────────────────────────────── -->
+  <div id="overlay-exito" hidden>
+    <svg id="exito-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
+    <p id="exito-mensaje"></p>
+  </div>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
