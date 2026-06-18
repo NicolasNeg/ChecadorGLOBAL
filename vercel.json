@@ -3,11 +3,12 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(self), geolocation=(self)"
-        }
+        { "key": "Permissions-Policy", "value": "camera=(self), geolocation=(self)" }
       ]
     }
+  ],
+  "redirects": [
+    { "source": "/checador",  "destination": "/checador/",  "permanent": true },
+    { "source": "/historial", "destination": "/historial/", "permanent": true }
   ]
 }

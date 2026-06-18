@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#DC2626">
+  <title>Permisos requeridos · EQS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/estilos.css">
+</head>
+<body>
+
+<div class="page-center">
+
+  <div class="page-center__icon" style="background:#FEE2E2">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  </div>
+
+  <div>
+    <h1 class="page-center__title">Permisos requeridos</h1>
+    <p class="page-center__body" style="margin-top:8px">
+      Para checar tu asistencia necesitamos acceso a tu <strong>cámara</strong> y <strong>ubicación</strong>.
+      Sin estos permisos no es posible continuar.
+    </p>
+  </div>
+
+  <div class="sin-permisos-steps">
+    <div class="sin-permisos-step">
+      <div class="sin-permisos-step__num">1</div>
+      <p>Toca el ícono de candado o <strong>ⓘ</strong> junto a la URL en tu navegador</p>
+    </div>
+    <div class="sin-permisos-step">
+      <div class="sin-permisos-step__num">2</div>
+      <p>Ve a <strong>Configuración del sitio</strong> o <strong>Permisos</strong></p>
+    </div>
+    <div class="sin-permisos-step">
+      <div class="sin-permisos-step__num">3</div>
+      <p>Activa <strong>Cámara</strong> y <strong>Ubicación</strong> en <em>Permitir</em></p>
+    </div>
+    <div class="sin-permisos-step">
+      <div class="sin-permisos-step__num">4</div>
+      <p>Regresa aquí y toca <strong>Reintentar</strong></p>
+    </div>
+  </div>
+
+  <button class="btn btn--primario" style="width:100%;max-width:320px" onclick="location.href='/checador/'">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/>
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+    Reintentar
+  </button>
+
+  <a href="/" class="btn btn--secundario" style="max-width:320px;width:100%;text-decoration:none">
+    Volver al inicio
+  </a>
+
+</div>
+
+</body>
+</html>

@@ -41,8 +41,14 @@ button { cursor: pointer; font: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 20px;
+  padding: 24px 16px;
   gap: 16px;
+  overflow-y: auto; /* scrollable when mobile keyboard pushes content */
+}
+
+/* form-pin hereda el layout de la tarjeta */
+#form-pin {
+  display: contents; /* gap y flex de .tarjeta se aplican directo */
 }
 
 .tarjeta {
@@ -493,4 +499,242 @@ label {
 /* ── Accesibilidad / reducir movimiento ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   APP SHELL — usado en /checador/ y /historial/
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.app-shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--fondo);
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.app-header {
+  flex-shrink: 0;
+  height: 56px;
+  background: var(--tarjeta);
+  border-bottom: 1px solid var(--linea);
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 4px;
+  gap: 4px;
+  box-shadow: var(--sombra-sm);
+}
+
+.app-header__back {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none;
+  border-radius: 10px;
+  color: var(--primario);
+  flex-shrink: 0;
+  touch-action: manipulation;
+  transition: background .12s;
+}
+.app-header__back:hover  { background: var(--fondo); }
+.app-header__back:active { background: var(--linea); }
+
+.app-header__info { flex: 1; min-width: 0; }
+
+.app-header__title {
+  font-family: 'Lexend', sans-serif;
+  font-size: .95rem; font-weight: 600; color: var(--tinta);
+  letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.app-header__sub {
+  font-size: .75rem; color: var(--tinta-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.app-header__tag {
+  flex-shrink: 0;
+  font-size: .7rem; font-weight: 700;
+  padding: 4px 10px; border-radius: 99px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.app-header__tag--entrada { background: #DCFCE7; color: #15803D; }
+.app-header__tag--salida  { background: #FFEDD5; color: #C2410C; }
+
+/* ── Step bar ─────────────────────────────────────────────────────────────── */
+.step-bar {
+  flex-shrink: 0;
+  display: flex; gap: 4px;
+  padding: 10px 16px 8px;
+  background: var(--tarjeta);
+  border-bottom: 1px solid var(--linea);
+}
+.step-dot {
+  flex: 1; height: 3px; border-radius: 99px;
+  background: var(--linea);
+  transition: background .25s ease;
+}
+.step-dot--done   { background: var(--entrada); }
+.step-dot--active { background: var(--primario); }
+
+/* ── Content area ─────────────────────────────────────────────────────────── */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.app-content--center {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.app-content--firma {
+  overflow: hidden; /* canvas fills available space */
+}
+.app-content--historial {
+  padding: 16px;
+}
+
+/* ── Bottom action bar ────────────────────────────────────────────────────── */
+.app-bottom {
+  flex-shrink: 0;
+  background: var(--tarjeta);
+  border-top: 1px solid var(--linea);
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 10px;
+}
+
+/* ── Tipo selection cards ─────────────────────────────────────────────────── */
+.tipo-greeting {
+  margin-bottom: 4px;
+}
+.tipo-greeting__nombre {
+  font-family: 'Lexend', sans-serif;
+  font-size: 1.3rem; font-weight: 700; color: var(--tinta);
+  letter-spacing: -.02em;
+}
+.tipo-greeting__sub {
+  font-size: .9rem; color: var(--tinta-3);
+  margin-top: 2px;
+}
+
+.tipo-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--linea);
+  background: var(--tarjeta);
+  box-shadow: var(--sombra-sm);
+  cursor: pointer; touch-action: manipulation;
+  transition: border-color .15s, box-shadow .15s, transform .1s;
+  text-align: left; width: 100%;
+}
+.tipo-card:active { transform: scale(.97); }
+.tipo-card--entrada:hover { border-color: #86EFAC; box-shadow: 0 0 0 3px rgba(21,128,61,.08), var(--sombra-sm); }
+.tipo-card--salida:hover  { border-color: #FED7AA; box-shadow: 0 0 0 3px rgba(194,65,12,.08), var(--sombra-sm); }
+
+.tipo-card__icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.tipo-card--entrada .tipo-card__icon { background: #DCFCE7; color: #15803D; }
+.tipo-card--salida  .tipo-card__icon { background: #FFEDD5; color: #C2410C; }
+
+.tipo-card__label {
+  font-family: 'Lexend', sans-serif;
+  font-size: 1.05rem; font-weight: 600; color: var(--tinta);
+}
+.tipo-card__sub   { font-size: .82rem; color: var(--tinta-3); margin-top: 2px; }
+.tipo-card__arrow { margin-left: auto; flex-shrink: 0; color: var(--tinta-3); }
+
+/* ── App screen typography ────────────────────────────────────────────────── */
+.app-screen__title {
+  font-family: 'Lexend', sans-serif;
+  font-size: 1.1rem; font-weight: 600; color: var(--tinta);
+  letter-spacing: -.015em;
+}
+.app-screen__sub { font-size: .875rem; color: var(--tinta-3); margin-top: 4px; }
+
+/* ── Firma canvas (fills flex parent) ────────────────────────────────────── */
+.canvas-firma {
+  flex: 1;
+  min-height: 220px;
+  width: 100%;
+  border: 1.5px dashed var(--linea);
+  border-radius: 14px;
+  background: #FAFBFC;
+  touch-action: none;
+  display: block;
+}
+
+/* ── Camera wrap (fixed aspect, fills width) ──────────────────────────────── */
+.camara-wrap {
+  border-radius: 14px; overflow: hidden; background: #111;
+  aspect-ratio: 4/3;
+  width: 100%;
+}
+.camara-wrap video,
+.camara-wrap img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+/* ── Spinner for blue (permission loading screen) ─────────────────────────── */
+.spinner--blue {
+  border-color: var(--linea);
+  border-top-color: var(--primario);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PAGE CENTER — usado en /sin-permisos.html y /404.html
+   ══════════════════════════════════════════════════════════════════════════════ */
+.page-center {
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 24px;
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  text-align: center; gap: 24px;
+  background: var(--fondo);
+}
+
+.page-center__icon {
+  width: 80px; height: 80px; border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+.page-center__title {
+  font-family: 'Lexend', sans-serif;
+  font-size: 1.4rem; font-weight: 700; color: var(--tinta);
+  letter-spacing: -.02em;
+}
+.page-center__body {
+  font-size: .95rem; color: var(--tinta-2);
+  line-height: 1.65; max-width: 320px;
+}
+
+/* ── Sin-permisos steps ───────────────────────────────────────────────────── */
+.sin-permisos-steps {
+  display: flex; flex-direction: column; gap: 10px;
+  width: 100%; max-width: 340px;
+  background: var(--tarjeta);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--sombra);
+}
+.sin-permisos-step {
+  display: flex; align-items: flex-start; gap: 12px;
+  font-size: .875rem; color: var(--tinta-2);
+  text-align: left; line-height: 1.55;
+}
+.sin-permisos-step__num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--primario); color: #fff;
+  font-size: .75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
 }

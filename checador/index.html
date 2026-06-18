@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0369A1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Registrar asistencia · EQS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/estilos.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ── APP HEADER ─────────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <button class="app-header__back" id="btn-atras" aria-label="Volver">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+    <div class="app-header__info">
+      <div class="app-header__title" id="header-title">Registrar asistencia</div>
+      <div class="app-header__sub" id="header-sub" hidden></div>
+    </div>
+    <span class="app-header__tag" id="header-tag" hidden></span>
+  </header>
+
+  <!-- ── STEP BAR ───────────────────────────────────────────────────────────── -->
+  <div class="step-bar">
+    <div class="step-dot" id="dot-1"></div>
+    <div class="step-dot" id="dot-2"></div>
+    <div class="step-dot" id="dot-3"></div>
+  </div>
+
+  <!-- ── SCREEN: Loading / Permisos ────────────────────────────────────────── -->
+  <div id="s-cargando" class="app-content app-content--center">
+    <div class="spinner spinner--blue"></div>
+    <p style="color:var(--tinta-3);font-size:.95rem">Solicitando permisos…</p>
+  </div>
+
+  <!-- ── SCREEN: Tipo ───────────────────────────────────────────────────────── -->
+  <div id="s-tipo" class="app-content" hidden>
+    <div class="tipo-greeting">
+      <p class="tipo-greeting__nombre" id="saludo-nombre">Hola</p>
+      <p class="tipo-greeting__sub">¿Qué vas a registrar hoy?</p>
+    </div>
+
+    <button id="btn-entrada" class="tipo-card tipo-card--entrada">
+      <div class="tipo-card__icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+      </div>
+      <div>
+        <div class="tipo-card__label">Entrada</div>
+        <div class="tipo-card__sub">Inicio de jornada</div>
+      </div>
+      <svg class="tipo-card__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+
+    <button id="btn-salida" class="tipo-card tipo-card--salida">
+      <div class="tipo-card__icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+      <div>
+        <div class="tipo-card__label">Salida</div>
+        <div class="tipo-card__sub">Fin de jornada</div>
+      </div>
+      <svg class="tipo-card__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ── SCREEN: Firma ─────────────────────────────────────────────────────── -->
+  <div id="s-firma" class="app-content app-content--firma" hidden>
+    <div>
+      <h2 class="app-screen__title">Tu firma</h2>
+      <p class="app-screen__sub">Usa tu dedo o lápiz para firmar en el recuadro</p>
+    </div>
+    <canvas id="canvas-firma" class="canvas-firma"></canvas>
+    <p id="error-firma" class="error-msg" hidden></p>
+  </div>
+
+  <!-- ── SCREEN: Foto ───────────────────────────────────────────────────────── -->
+  <div id="s-foto" class="app-content" hidden>
+    <div id="sec-video">
+      <p class="app-screen__sub" style="margin-bottom:12px">Mira directo a la cámara</p>
+      <div class="camara-wrap">
+        <video id="video-preview" autoplay playsinline muted></video>
+      </div>
+    </div>
+    <div id="sec-preview" hidden>
+      <p class="app-screen__sub" style="margin-bottom:12px">Confirma que tu foto es clara</p>
+      <div class="camara-wrap">
+        <img id="img-preview" alt="Vista previa">
+      </div>
+    </div>
+    <p id="error-camara" class="error-msg" hidden></p>
+  </div>
+
+  <!-- ── BOTTOM BARS ────────────────────────────────────────────────────────── -->
+  <div id="btm-firma" class="app-bottom" hidden>
+    <button id="btn-limpiar-firma" class="btn btn--secundario" style="flex:1">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
+      </svg>
+      Limpiar
+    </button>
+    <button id="btn-continuar-firma" class="btn btn--primario" style="flex:2">
+      Continuar
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="btm-foto" class="app-bottom" hidden>
+    <button id="btn-tomar-foto" class="btn btn--primario" style="flex:1">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Tomar foto
+    </button>
+  </div>
+
+  <div id="btm-confirm" class="app-bottom" hidden>
+    <button id="btn-repetir-foto" class="btn btn--secundario" style="flex:1">Repetir</button>
+    <button id="btn-confirmar-foto" class="btn btn--primario" style="flex:2">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      Confirmar
+    </button>
+  </div>
+
+</div><!-- /.app-shell -->
+
+<!-- ── OVERLAY: Cargando ────────────────────────────────────────────────────── -->
+<div id="overlay-cargando" hidden>
+  <div class="spinner"></div>
+  <p id="cargando-mensaje">Subiendo registro…</p>
+</div>
+
+<!-- ── OVERLAY: Éxito ────────────────────────────────────────────────────────── -->
+<div id="overlay-exito" hidden>
+  <svg id="exito-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div>
+    <p class="exito-label">Registro completado</p>
+    <p id="exito-mensaje"></p>
+  </div>
+</div>
+
+<script type="module" src="/assets/js/checador.js"></script>
+</body>
+</html>

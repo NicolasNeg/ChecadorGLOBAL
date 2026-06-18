@@ -25,8 +25,8 @@ export async function verificarPin(pin) {
 
     if (datos && datos.length > 0) {
       _token = SUPABASE_ANON_KEY;
-      _idEmpleado = datos[0].id; // <--- GUARDAMOS EL ID DEL EMPLEADO LOGUEADO
-      return { ok: true, nombre: datos[0].nombre };
+      _idEmpleado = datos[0].id;
+      return { ok: true, nombre: datos[0].nombre, idEmpleado: datos[0].id };
     } else {
       return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
     }
@@ -114,6 +114,9 @@ export async function obtenerHistorial() {
     return null;
   }
 }
+
+// ── SET ID DESDE SESIÓN (para páginas que cargan con sessionStorage) ────────
+export function setIdEmpleado(id) { _idEmpleado = id; }
 
 // ── LIMPIAR SESIÓN ───────────────────────────────────────────────────────────
 export function limpiarSesion() {
