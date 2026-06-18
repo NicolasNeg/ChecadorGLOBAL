@@ -3,9 +3,9 @@ import { SUPABASE_ANON_KEY, FUNCTIONS_BASE } from './config.js';
 let _token = null;
 
 const baseHeaders = () => ({
-  'apikey':        SUPABASE_ANON_KEY,
+  'apikey': SUPABASE_ANON_KEY,
   'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-  'Content-Type':  'application/json',
+  'Content-Type': 'application/json',
 });
 
 const authHeaders = () => ({
@@ -15,9 +15,9 @@ const authHeaders = () => ({
 
 async function post(endpoint, body, headers) {
   const res = await fetch(`${FUNCTIONS_BASE}/${endpoint}`, {
-    method:  'POST',
+    method: 'POST',
     headers: headers ?? baseHeaders(),
-    body:    JSON.stringify(body),
+    body: JSON.stringify(body),
   });
   if (!res.ok && res.status !== 200) {
     throw new Error(`HTTP ${res.status}`);
@@ -26,9 +26,31 @@ async function post(endpoint, body, headers) {
 }
 
 export async function verificarPin(pin) {
-  const data = await post('verificar-pin', { pin });
-  if (data.ok) _token = data.token;
-  return data;
+  // CAMBIO CLAVE: Usamos la ruta /rest/v1/rpc/verificar_pin
+  const url = `${SUPABASE_URL}/rest/v1/rpc/verificar_pin`;
+
+  const respuesta = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': `Bearer ${ANON_KEY}`
+    },
+    body: JSON.stringify({ p_pin: pin }) // Le pasamos el parámetro que pide el SQL
+  });
+
+  if (!respuesta.ok) {
+    throw new Error('Error en la petición');
+  }
+
+  const datos = await respuesta.json();
+
+  // Si la base de datos encontró al empleado, devolverá un array con 1 elemento
+  if (datos && datos.length > 0) {
+    return { ok: true, nombre: datos[0].nombre };
+  } else {
+    return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
+  }
 }
 
 export function limpiarSesion() {
