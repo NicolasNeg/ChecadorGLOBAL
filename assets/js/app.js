@@ -27,7 +27,7 @@ async function iniciarPermisos() {
       const el = document.getElementById(`estado-${p}`);
       if (el) {
         el.textContent = { pendiente: 'Pendiente', activa: 'Activa', bloqueada: 'Bloqueada' }[estado[p]];
-        el.className   = `permiso-estado permiso-estado--${estado[p]}`;
+        el.className = `permiso-estado permiso-estado--${estado[p]}`;
       }
     });
     if (estado.camara === 'activa' && estado.ubicacion === 'activa') {
@@ -40,6 +40,7 @@ async function iniciarPermisos() {
 }
 
 // ── PANTALLA: PIN ────────────────────────────────────────────────────────────
+// ── PANTALLA: PIN ────────────────────────────────────────────────────────────
 function iniciarPin() {
   mostrar('pantalla-pin');
   setError('error-pin', '');
@@ -50,19 +51,26 @@ function iniciarPin() {
   document.getElementById('btn-continuar-pin').onclick = async () => {
     const pin = input.value.trim();
     setError('error-pin', '');
+
     if (!/^\d{3,10}$/.test(pin)) {
       setError('error-pin', 'Ingresa un PIN de 3 a 10 dígitos.');
       return;
     }
+
     try {
+      // Llamamos a nuestra API nativa
       const res = await verificarPin(pin);
-      if (res.ok) {
+
+      // Validamos si la respuesta es exitosa Y trae datos correctos
+      if (res && res.ok) {
         sesion.nombre = res.nombre;
-        iniciarMenu();
+        iniciarMenu(); // ¡Nos vamos al Menú!
       } else {
-        setError('error-pin', res.error ?? 'PIN incorrecto.');
+        // Mostramos el error exacto que nos devuelva la API de Supabase
+        setError('error-pin', res?.error || 'PIN incorrecto.');
       }
-    } catch {
+    } catch (error) {
+      console.error("Error crítico en login:", error);
       setError('error-pin', 'Error de conexión. Intenta de nuevo.');
     }
   };
@@ -120,25 +128,25 @@ function iniciarFirmaPantalla() {
 // ── PANTALLA: Cámara ─────────────────────────────────────────────────────────
 function iniciarCamaraPantalla() {
   mostrar('pantalla-camara');
-  const video   = document.getElementById('video-preview');
+  const video = document.getElementById('video-preview');
   const preview = document.getElementById('img-preview');
-  const secVid  = document.getElementById('sec-video');
+  const secVid = document.getElementById('sec-video');
   const secPrev = document.getElementById('sec-preview');
 
   iniciarPreview(video, streamCamara);
-  secVid.hidden  = false;
+  secVid.hidden = false;
   secPrev.hidden = true;
   setError('error-camara', '');
 
   document.getElementById('btn-tomar-foto').onclick = () => {
     sesion.fotoDataURL = capturarFoto(video);
-    preview.src        = sesion.fotoDataURL;
-    secVid.hidden  = true;
+    preview.src = sesion.fotoDataURL;
+    secVid.hidden = true;
     secPrev.hidden = false;
   };
 
   document.getElementById('btn-repetir-foto').onclick = () => {
-    secVid.hidden  = false;
+    secVid.hidden = false;
     secPrev.hidden = true;
   };
 
@@ -148,8 +156,8 @@ function iniciarCamaraPantalla() {
     try {
       const res = await guardarRegistro({
         tipoChecada: sesion.tipo,
-        foto:        sesion.fotoDataURL,
-        firma:       sesion.firmaDataURL,
+        foto: sesion.fotoDataURL,
+        firma: sesion.firmaDataURL,
         latitud,
         longitud,
       });
@@ -169,8 +177,8 @@ function iniciarCamaraPantalla() {
 // ── Overlay de éxito ─────────────────────────────────────────────────────────
 function mostrarExito(tipo) {
   const overlay = document.getElementById('overlay-exito');
-  const msg     = document.getElementById('exito-mensaje');
-  const check   = document.getElementById('exito-svg');
+  const msg = document.getElementById('exito-mensaje');
+  const check = document.getElementById('exito-svg');
 
   msg.textContent = tipo === 'entrada' ? '¡Entrada registrada!' : '¡Salida registrada!';
   overlay.dataset.tipo = tipo;
