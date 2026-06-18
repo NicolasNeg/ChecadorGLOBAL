@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,6 +10,7 @@
   <title>EQS Checador</title>
   <link rel="stylesheet" href="assets/css/estilos.css">
 </head>
+
 <body>
 
   <!-- ── PERMISOS ──────────────────────────────────────────────────────────── -->
@@ -33,18 +35,10 @@
   <!-- ── PIN ────────────────────────────────────────────────────────────────── -->
   <section id="pantalla-pin" class="pantalla" hidden>
     <div class="tarjeta">
-      <h1>EQS Checador</h1>
+      <h1>Empresa-Checador</h1>
       <label for="input-pin" style="font-weight:600">Ingresa tu PIN</label>
-      <input
-        id="input-pin"
-        class="input-pin"
-        type="password"
-        inputmode="numeric"
-        pattern="\d*"
-        maxlength="10"
-        autocomplete="off"
-        placeholder="••••"
-      >
+      <input id="input-pin" class="input-pin" type="password" inputmode="numeric" pattern="\d*" maxlength="10"
+        autocomplete="off" placeholder="••••">
       <p id="error-pin" class="error-msg" hidden></p>
       <button id="btn-continuar-pin" class="btn btn--primario">Continuar</button>
     </div>
@@ -56,7 +50,7 @@
       <p id="saludo"></p>
       <h2>¿Qué deseas hacer?</h2>
       <div class="menu-botones">
-        <button id="btn-checar"    class="btn btn--primario">Checar asistencia</button>
+        <button id="btn-checar" class="btn btn--primario">Checar asistencia</button>
         <button id="btn-historial" class="btn btn--secundario">Ver historial</button>
       </div>
       <button id="btn-cerrar-sesion" class="btn btn--peligro btn--sm">Cerrar sesión</button>
@@ -68,7 +62,7 @@
     <div class="tarjeta">
       <h2>¿Qué vas a registrar?</h2>
       <button id="btn-entrada" class="btn btn--entrada">Entrada</button>
-      <button id="btn-salida"  class="btn btn--salida">Salida</button>
+      <button id="btn-salida" class="btn btn--salida">Salida</button>
       <button id="btn-volver-tipo" class="btn btn--secundario btn--sm">Volver</button>
     </div>
   </section>
@@ -80,7 +74,7 @@
       <canvas id="canvas-firma"></canvas>
       <p id="error-firma" class="error-msg" hidden></p>
       <div style="display:flex;gap:10px">
-        <button id="btn-limpiar-firma"   class="btn btn--secundario btn--sm" style="flex:1">Limpiar</button>
+        <button id="btn-limpiar-firma" class="btn btn--secundario btn--sm" style="flex:1">Limpiar</button>
         <button id="btn-continuar-firma" class="btn btn--primario   btn--sm" style="flex:2">Continuar →</button>
       </div>
       <button id="btn-volver-firma" class="btn btn--secundario btn--sm">Volver</button>
@@ -100,7 +94,7 @@
       <div id="sec-preview" hidden>
         <img id="img-preview" alt="preview">
         <div style="display:flex;gap:10px;margin-top:12px">
-          <button id="btn-repetir-foto"   class="btn btn--secundario btn--sm" style="flex:1">Repetir</button>
+          <button id="btn-repetir-foto" class="btn btn--secundario btn--sm" style="flex:1">Repetir</button>
           <button id="btn-confirmar-foto" class="btn btn--primario   btn--sm" style="flex:2">Confirmar ✓</button>
         </div>
       </div>
@@ -114,7 +108,8 @@
   <section id="pantalla-historial" class="pantalla pantalla-historial" hidden>
     <div style="width:100%;max-width:680px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <button id="btn-volver-historial" class="btn btn--secundario btn--sm" style="width:auto;min-width:80px">← Volver</button>
+        <button id="btn-volver-historial" class="btn btn--secundario btn--sm" style="width:auto;min-width:80px">←
+          Volver</button>
         <h2>Mi historial</h2>
       </div>
       <div id="contenedor-historial"></div>
@@ -129,4 +124,5 @@
 
   <script type="module" src="assets/js/app.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,5 @@
 // Integra SignaturePad (ESM desde jsDelivr) con escalado devicePixelRatio.
-import SignaturePad from 'https://cdn.jsdelivr.net/npm/signature_pad@5/dist/signature_pad.esm.js';
+import SignaturePad from 'https://cdn.jsdelivr.net/npm/signature_pad@5/+esm';
 
 let pad = null;
 
@@ -19,8 +19,8 @@ export function iniciarFirma(canvas) {
 
 function escalar(canvas) {
   const ratio = Math.max(window.devicePixelRatio ?? 1, 1);
-  const rect  = canvas.getBoundingClientRect();
-  canvas.width  = rect.width  * ratio;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * ratio;
   canvas.height = rect.height * ratio;
   const ctx = canvas.getContext('2d');
   ctx.scale(ratio, ratio);
