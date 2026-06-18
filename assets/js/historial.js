@@ -36,7 +36,7 @@ export function renderHistorial(contenedorEl, registros) {
     <div class="tabla-scroll">
       <table class="hist-tabla">
         <thead><tr>
-          <th>Fecha/Hora</th><th>Tipo</th><th>Ubicación</th><th>Foto</th>
+          <th>Fecha / Hora</th><th>Tipo</th><th>Ubicación</th><th>Foto</th>
         </tr></thead>
         <tbody>${filas}</tbody>
       </table>
