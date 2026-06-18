@@ -18,6 +18,11 @@ function setError(id, msg) {
   if (el) { el.textContent = msg; el.hidden = !msg; }
 }
 
+function setOverlayCargando(visible) {
+  const el = document.getElementById('overlay-cargando');
+  if (el) el.hidden = !visible;
+}
+
 // ── PANTALLA: Permisos ───────────────────────────────────────────────────────
 async function iniciarPermisos() {
   mostrar('pantalla-permisos');
@@ -30,6 +35,9 @@ async function iniciarPermisos() {
         el.className = `permiso-estado permiso-estado--${estado[p]}`;
       }
     });
+    const hayBloqueado = estado.camara === 'bloqueada' || estado.ubicacion === 'bloqueada';
+    const msgEl = document.getElementById('msg-bloqueado');
+    if (msgEl) msgEl.hidden = !hayBloqueado;
     if (estado.camara === 'activa' && estado.ubicacion === 'activa') {
       setTimeout(iniciarPin, 400);
     }
@@ -40,35 +48,31 @@ async function iniciarPermisos() {
 }
 
 // ── PANTALLA: PIN ────────────────────────────────────────────────────────────
-// ── PANTALLA: PIN ────────────────────────────────────────────────────────────
 function iniciarPin() {
   mostrar('pantalla-pin');
   setError('error-pin', '');
   const input = document.getElementById('input-pin');
   input.value = '';
   input.focus();
-  document.getElementById('btn-continuar-pin').onclick = async () => {
+  const btnPin = document.getElementById('btn-continuar-pin');
+  btnPin.onclick = async () => {
     const pin = input.value.trim();
     setError('error-pin', '');
-
-    console.log("Intentando validar PIN:", pin); // Diagnóstico 1
-
+    btnPin.disabled = true;
+    btnPin.textContent = 'Verificando…';
     try {
       const res = await verificarPin(pin);
-
-      console.log("Respuesta de Supabase:", res); // Diagnóstico 2
-
       if (res && res.ok) {
-        console.log("PIN correcto, iniciando menú para:", res.nombre); // Diagnóstico 3
         sesion.nombre = res.nombre;
         iniciarMenu();
       } else {
-        console.log("PIN incorrecto o error:", res.error); // Diagnóstico 4
         setError('error-pin', res?.error || 'PIN incorrecto.');
       }
-    } catch (error) {
-      console.error("Error crítico:", error);
+    } catch {
       setError('error-pin', 'Error de conexión.');
+    } finally {
+      btnPin.disabled = false;
+      btnPin.textContent = 'Continuar';
     }
   };
 }
@@ -147,8 +151,12 @@ function iniciarCamaraPantalla() {
     secPrev.hidden = true;
   };
 
-  document.getElementById('btn-confirmar-foto').onclick = async () => {
+  const btnConfirmar = document.getElementById('btn-confirmar-foto');
+  btnConfirmar.onclick = async () => {
     setError('error-camara', '');
+    btnConfirmar.disabled = true;
+    btnConfirmar.textContent = 'Guardando…';
+    setOverlayCargando(true);
     const { latitud, longitud } = coordenadas;
     try {
       const res = await guardarRegistro({
@@ -165,6 +173,10 @@ function iniciarCamaraPantalla() {
       }
     } catch {
       setError('error-camara', 'Error de conexión. Intenta de nuevo.');
+    } finally {
+      btnConfirmar.disabled = false;
+      btnConfirmar.textContent = 'Confirmar ✓';
+      setOverlayCargando(false);
     }
   };
 

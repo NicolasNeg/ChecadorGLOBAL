@@ -28,6 +28,12 @@
         <span id="estado-ubicacion" class="permiso-estado permiso-estado--pendiente">Pendiente</span>
       </div>
 
+      <p id="msg-bloqueado" class="permiso-bloqueado-msg" hidden>
+        Toca el ícono de candado junto a la URL en tu navegador →
+        <strong>Configuración del sitio</strong> y activa
+        <strong>Cámara</strong> y <strong>Ubicación</strong>.
+        Luego toca "Reintentar".
+      </p>
       <button id="btn-reintentar" class="btn btn--secundario btn--sm">Reintentar permisos</button>
     </div>
   </section>
@@ -120,6 +126,12 @@
   <div id="overlay-exito" hidden>
     <svg id="exito-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
     <p id="exito-mensaje"></p>
+  </div>
+
+  <!-- ── OVERLAY CARGANDO ──────────────────────────────────────────────────── -->
+  <div id="overlay-cargando" hidden>
+    <div class="spinner"></div>
+    <p id="cargando-mensaje">Subiendo registro…</p>
   </div>
 
   <script type="module" src="assets/js/app.js"></script>

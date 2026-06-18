@@ -63,7 +63,8 @@ h2 { font-size: 1.25rem; font-weight: 600; }
   transition: opacity .15s, transform .1s;
   touch-action: manipulation;
 }
-.btn:active { opacity: .85; transform: scale(.98); }
+.btn:active   { opacity: .85; transform: scale(.98); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .btn--primario  { background: var(--primario); color: #fff; }
 .btn--entrada   { background: var(--entrada);  color: #fff; }
 .btn--salida    { background: var(--salida);   color: #fff; }
@@ -85,6 +86,40 @@ h2 { font-size: 1.25rem; font-weight: 600; }
   outline: none;
 }
 .input-pin:focus { border-color: var(--primario); }
+
+/* ── Mensaje permisos bloqueados ──────────────────────────────────────────── */
+.permiso-bloqueado-msg {
+  font-size: .875rem;
+  color: var(--peligro);
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  padding: 12px 14px;
+  line-height: 1.55;
+}
+
+/* ── Overlay de carga ─────────────────────────────────────────────────────── */
+#overlay-cargando {
+  position: fixed;
+  inset: 0;
+  background: rgba(12,32,48,.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 150;
+}
+#overlay-cargando[hidden] { display: none; }
+#cargando-mensaje { color: #fff; font-size: 1rem; font-weight: 600; }
+.spinner {
+  width: 48px; height: 48px;
+  border: 5px solid rgba(255,255,255,.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: girar .75s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
 
 /* ── Permisos ─────────────────────────────────────────────────────────────── */
 .permiso-fila {
