@@ -47,31 +47,28 @@ function iniciarPin() {
   const input = document.getElementById('input-pin');
   input.value = '';
   input.focus();
-
   document.getElementById('btn-continuar-pin').onclick = async () => {
     const pin = input.value.trim();
     setError('error-pin', '');
 
-    if (!/^\d{3,10}$/.test(pin)) {
-      setError('error-pin', 'Ingresa un PIN de 3 a 10 dígitos.');
-      return;
-    }
+    console.log("Intentando validar PIN:", pin); // Diagnóstico 1
 
     try {
-      // Llamamos a nuestra API nativa
       const res = await verificarPin(pin);
 
-      // Validamos si la respuesta es exitosa Y trae datos correctos
+      console.log("Respuesta de Supabase:", res); // Diagnóstico 2
+
       if (res && res.ok) {
+        console.log("PIN correcto, iniciando menú para:", res.nombre); // Diagnóstico 3
         sesion.nombre = res.nombre;
-        iniciarMenu(); // ¡Nos vamos al Menú!
+        iniciarMenu();
       } else {
-        // Mostramos el error exacto que nos devuelva la API de Supabase
+        console.log("PIN incorrecto o error:", res.error); // Diagnóstico 4
         setError('error-pin', res?.error || 'PIN incorrecto.');
       }
     } catch (error) {
-      console.error("Error crítico en login:", error);
-      setError('error-pin', 'Error de conexión. Intenta de nuevo.');
+      console.error("Error crítico:", error);
+      setError('error-pin', 'Error de conexión.');
     }
   };
 }
