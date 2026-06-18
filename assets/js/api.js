@@ -25,31 +25,43 @@ async function post(endpoint, body, headers) {
   return res.json();
 }
 
+
 export async function verificarPin(pin) {
-  // CAMBIO CLAVE: Usamos la ruta /rest/v1/rpc/verificar_pin
-  const url = `${SUPABASE_URL}/rest/v1/rpc/verificar_pin`;
+  try {
+    // Apuntamos directamente a la RPC de Postgres (/rpc/nombre_de_la_funcion)
+    const url = `${REST_BASE}/rpc/verificar_pin`;
 
-  const respuesta = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': ANON_KEY,
-      'Authorization': `Bearer ${ANON_KEY}`
-    },
-    body: JSON.stringify({ p_pin: pin }) // Le pasamos el parámetro que pide el SQL
-  });
+    const respuesta = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_pin: pin }) // Enviamos p_pin tal como lo definimos en el SQL
+    });
 
-  if (!respuesta.ok) {
-    throw new Error('Error en la petición');
-  }
+    if (!respuesta.ok) {
+      return { ok: false, error: 'Error de respuesta del servidor.' };
+    }
 
-  const datos = await respuesta.json();
+    const datos = await respuesta.json();
 
-  // Si la base de datos encontró al empleado, devolverá un array con 1 elemento
-  if (datos && datos.length > 0) {
-    return { ok: true, nombre: datos[0].nombre };
-  } else {
-    return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
+    // Si Postgres encuentra al usuario, devolverá un array con sus datos: [{id: 1, nombre: "Nicolas"}]
+    if (datos && datos.length > 0) {
+      // Guardamos la anon key como token provisional para mantener la lógica de tu app
+      _token = SUPABASE_ANON_KEY;
+
+      return {
+        ok: true,
+        nombre: datos[0].nombre
+      };
+    } else {
+      return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
+    }
+  } catch (error) {
+    console.error('Error en verificarPin:', error);
+    return { ok: false, error: 'Error de conexión a la base de datos.' };
   }
 }
 
