@@ -23,6 +23,9 @@ function enterLogin() {
   const input  = document.getElementById('input-pin');
   const btnPin = document.getElementById('btn-continuar-pin');
   input.value = '';
+  btnPin.disabled = false;
+  btnPin.textContent = 'Continuar';
+  setError('error-pin', '');
   setTimeout(() => input.focus(), 50);
 
   form.onsubmit = async (e) => {
@@ -34,12 +37,11 @@ function enterLogin() {
     btnPin.textContent = 'Verificando…';
 
     let res;
-    try { res = await verificarPin(pin); }
-    catch {
-      setError('error-pin', 'Error de conexión. Intenta de nuevo.');
+    try {
+      res = await verificarPin(pin);
+    } finally {
       btnPin.disabled = false;
       btnPin.textContent = 'Continuar';
-      return;
     }
 
     if (res?.ok) {
@@ -47,8 +49,6 @@ function enterLogin() {
       enterMenu(res.nombre);
     } else {
       setError('error-pin', res?.error || 'PIN incorrecto.');
-      btnPin.disabled = false;
-      btnPin.textContent = 'Continuar';
     }
   };
 }

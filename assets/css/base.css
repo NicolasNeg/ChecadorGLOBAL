@@ -22,6 +22,7 @@
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 html, body {
   height: 100%;
   font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
