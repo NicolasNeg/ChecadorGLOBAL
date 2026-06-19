@@ -1,5 +1,6 @@
 import { verificarPin, limpiarSesion } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
+import { BASE } from './config.js';
 
 const sLogin = document.getElementById('s-login');
 const sMenu  = document.getElementById('s-menu');
@@ -57,8 +58,8 @@ function enterMenu(nombre) {
   sMenu.hidden  = false;
   document.getElementById('saludo').textContent = `Hola, ${nombre}`;
 
-  document.getElementById('btn-checar').onclick    = () => { location.href = '/checador/'; };
-  document.getElementById('btn-historial').onclick = () => { location.href = '/historial/'; };
+  document.getElementById('btn-checar').onclick    = () => { location.href = BASE + '/checador/'; };
+  document.getElementById('btn-historial').onclick = () => { location.href = BASE + '/historial/'; };
   document.getElementById('btn-cerrar-sesion').onclick = () => {
     clearSession();
     limpiarSesion();

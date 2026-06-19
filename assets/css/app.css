@@ -1,0 +1,61 @@
+/* ── Login / Menú — index.html ────────────────────────────────────────────── */
+.pantalla {
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 16px; gap: 16px;
+  overflow-y: auto;
+}
+
+#form-pin { display: contents; }
+
+.tarjeta {
+  width: 100%; max-width: 420px;
+  background: var(--tarjeta); border-radius: var(--radio);
+  box-shadow: var(--sombra); padding: 28px 24px 32px;
+  display: flex; flex-direction: column; gap: 16px;
+  border-top: 3px solid var(--primario);
+}
+
+.input-pin {
+  width: 100%;
+  font-family: 'Lexend', sans-serif; font-size: 2rem; font-weight: 500;
+  letter-spacing: .45rem; text-align: center; padding: 14px;
+  border: 1.5px solid var(--linea); border-radius: 10px;
+  background: var(--fondo); color: var(--tinta); outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input-pin:focus {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(3,105,161,.12);
+  background: #fff;
+}
+
+.permiso-fila {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 0; border-bottom: 1px solid var(--linea);
+  font-size: .95rem; font-weight: 500;
+}
+.permiso-fila:last-of-type { border-bottom: none; }
+.permiso-estado {
+  font-size: .75rem; font-weight: 600;
+  padding: 3px 10px; border-radius: 99px; letter-spacing: .02em;
+}
+.permiso-estado--pendiente { color: #92400E; background: #FEF3C7; }
+.permiso-estado--activa    { color: #15803D; background: #DCFCE7; }
+.permiso-estado--bloqueada { color: var(--peligro); background: #FEE2E2; }
+.permiso-bloqueado-msg {
+  font-size: .875rem; color: #991B1B; background: #FEF2F2;
+  border: 1px solid #FECACA; border-radius: 10px; padding: 12px 14px; line-height: 1.6;
+}
+
+.menu-botones { display: flex; flex-direction: column; gap: 12px; }
+.saludo-bloque { display: flex; flex-direction: column; gap: 2px; }
+.saludo-sup {
+  font-size: .75rem; color: var(--tinta-3); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+}
+#saludo {
+  font-family: 'Lexend', sans-serif; font-size: 1.3rem; font-weight: 700;
+  color: var(--tinta); letter-spacing: -.02em;
+}

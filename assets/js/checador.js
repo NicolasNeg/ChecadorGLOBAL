@@ -1,5 +1,6 @@
 import { requireSession } from './auth.js';
 import { setIdEmpleado, guardarRegistro } from './api.js';
+import { BASE } from './config.js';
 import { solicitarPermisos, streamCamara, coordenadas } from './permisos.js';
 import { iniciarFirma, limpiarFirma, estaVacia, obtenerFirmaPNG } from './firma.js';
 import { iniciarPreview, capturarFoto } from './camara.js';
@@ -62,7 +63,7 @@ function saludo(nombre) {
 
 // ── Back button ───────────────────────────────────────────────────────────────
 btnAtras.addEventListener('click', () => {
-  if (current === 'tipo' || current === 'cargando') location.href = '/';
+  if (current === 'tipo' || current === 'cargando') location.href = BASE + '/';
   else if (current === 'firma') showTipo();
   else if (current === 'foto')  showFirma();
 });
@@ -166,14 +167,14 @@ function mostrarExito(tipo) {
     <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" class="check-circle"/>
     <polyline points="28,52 44,68 72,34" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" class="check-mark"/>`;
   overlayOk.hidden = false;
-  setTimeout(() => { location.href = '/'; }, 2500);
+  setTimeout(() => { location.href = BASE + '/'; }, 2500);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   const estado = await solicitarPermisos(() => {});
   if (estado.camara === 'bloqueada' || estado.ubicacion === 'bloqueada') {
-    location.replace('/sin-permisos.html');
+    location.replace(BASE + '/sin-permisos.html');
     return;
   }
   showTipo();

@@ -72,7 +72,19 @@ export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longi
     if (!respuesta.ok) {
       const errTxt = await respuesta.text();
       console.error('Error al insertar registro:', errTxt);
-      return { ok: false, error: 'No se pudo guardar la asistencia.' };
+      let errMsg = 'No se pudo guardar la asistencia.';
+      try {
+        const parsed = JSON.parse(errTxt);
+        const msg = parsed.message || parsed.details || '';
+        if (msg.includes('FUERA_GEOCERCA')) {
+          errMsg = msg.split('FUERA_GEOCERCA: ')[1] || 'Ubicación fuera del rango permitido.';
+        } else if (msg.includes('UBICACION_REQUERIDA')) {
+          errMsg = 'Se requiere ubicación GPS para registrar asistencia.';
+        } else if (msg) {
+          errMsg = msg;
+        }
+      } catch { /* use default */ }
+      return { ok: false, error: errMsg };
     }
 
     return { ok: true };

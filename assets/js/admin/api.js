@@ -1,0 +1,84 @@
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+import { getAdminSession } from './auth.js';
+
+function hdrs(extra = {}) {
+  const s = getAdminSession();
+  return {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${s?.access_token}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+    ...extra
+  };
+}
+
+export async function apiFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: { ...hdrs(), ...opts.headers }
+  });
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || body.details || body.hint || `Error ${res.status}`);
+  return body;
+}
+
+// ── RPC helper ────────────────────────────────────────────────────────────
+export async function rpc(fn, params = {}) {
+  return apiFetch(`rpc/${fn}`, { method: 'POST', body: JSON.stringify(params) });
+}
+
+// ── Plazas ────────────────────────────────────────────────────────────────
+export const getPlazas       = () => apiFetch('plazas?select=*&order=nombre.asc');
+export const createPlaza     = (d) => apiFetch('plazas', { method: 'POST', body: JSON.stringify(d) });
+export const updatePlaza     = (id, d) => apiFetch(`plazas?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
+export const deletePlaza     = (id) => apiFetch(`plazas?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
+
+// ── Turnos ────────────────────────────────────────────────────────────────
+export const getTurnos       = (plazaId) => apiFetch(`turnos?select=*,plazas(nombre)${plazaId ? `&plaza_id=eq.${plazaId}` : ''}&order=nombre.asc`);
+export const createTurno     = (d) => apiFetch('turnos', { method: 'POST', body: JSON.stringify(d) });
+export const updateTurno     = (id, d) => apiFetch(`turnos?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
+export const deleteTurno     = (id) => apiFetch(`turnos?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
+
+// ── Empleados ─────────────────────────────────────────────────────────────
+export const getEmpleados    = () => apiFetch('empleados?select=*,plazas(nombre),turnos(nombre)&order=nombre.asc');
+export const updateEmpleado  = (id, d) => apiFetch(`empleados?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
+export const crearEmpleado   = (d) => rpc('crear_empleado', d);
+export const actualizarPin   = (id, pin) => rpc('actualizar_pin_empleado', { p_empleado_id: id, p_nuevo_pin: pin });
+
+// ── Asistencia ────────────────────────────────────────────────────────────
+export function getRegistros({ fecha, plaza_id, limit = 100 } = {}) {
+  const q = new URLSearchParams({ order: 'hora.desc', limit: limit.toString() });
+  if (fecha) {
+    q.set('hora', `gte.${fecha}T00:00:00`);
+    // upper bound for single-day filter
+    const next = new Date(fecha); next.setDate(next.getDate() + 1);
+    q.set('hora', `gte.${fecha}T00:00:00`);
+  }
+  const filter = fecha ? `&hora=gte.${fecha}T00:00:00&hora=lte.${fecha}T23:59:59` : '';
+  return apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,empleados(id,nombre,plaza_id,plazas(nombre))${filter}&order=hora.desc&limit=${limit}`);
+}
+
+// ── Audit log ─────────────────────────────────────────────────────────────
+export const getAuditLog = (limit = 50) =>
+  apiFetch(`audit_log?select=*,perfiles_admin(nombre)&order=created_at.desc&limit=${limit}`);
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+export const countPlazas     = () => apiFetch('plazas?select=id&activo=eq.true', { headers: { 'Prefer': 'count=exact' } });
+export const countEmpleados  = () => apiFetch('empleados?select=id&activo=eq.true', { headers: { 'Prefer': 'count=exact' } });
+
+export async function statsHoy() {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const [total, incid] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/registros?select=id&hora=gte.${hoy}T00:00:00&hora=lte.${hoy}T23:59:59`, {
+      headers: { ...hdrs(), 'Prefer': 'count=exact' }
+    }),
+    fetch(`${SUPABASE_URL}/rest/v1/registros?select=id&geocerca_valida=eq.false&hora=gte.${hoy}T00:00:00`, {
+      headers: { ...hdrs(), 'Prefer': 'count=exact' }
+    })
+  ]);
+  return {
+    hoy:        parseInt(total.headers.get('Content-Range')?.split('/')?.[1] ?? '0'),
+    incidencias: parseInt(incid.headers.get('Content-Range')?.split('/')?.[1] ?? '0')
+  };
+}

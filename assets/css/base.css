@@ -1,0 +1,122 @@
+/* ── Google Fonts ──────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+/* ── Tokens ───────────────────────────────────────────────────────────────── */
+:root {
+  --fondo:        #F1F5F9;
+  --tarjeta:      #FFFFFF;
+  --tinta:        #0F172A;
+  --tinta-2:      #475569;
+  --tinta-3:      #94A3B8;
+  --linea:        #E2E8F0;
+  --primario:     #0369A1;
+  --primario-dk:  #075985;
+  --primario-bg:  #EFF6FF;
+  --entrada:      #15803D;
+  --salida:       #C2410C;
+  --peligro:      #DC2626;
+  --radio:        14px;
+  --sombra:       0 1px 3px rgba(15,23,42,.07), 0 4px 20px rgba(15,23,42,.08);
+  --sombra-sm:    0 1px 3px rgba(15,23,42,.06);
+}
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+  background: var(--fondo);
+  color: var(--tinta);
+  -webkit-tap-highlight-color: transparent;
+  font-size: 16px;
+  line-height: 1.5;
+}
+a { color: var(--primario); }
+button { cursor: pointer; font: inherit; }
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+h1 {
+  font-family: 'Lexend', sans-serif;
+  font-size: 1.45rem; font-weight: 700; color: var(--tinta);
+  letter-spacing: -.02em; line-height: 1.25;
+}
+h2 {
+  font-family: 'Lexend', sans-serif;
+  font-size: 1.15rem; font-weight: 600; color: var(--tinta);
+  letter-spacing: -.015em;
+}
+label {
+  font-size: .78rem; font-weight: 600;
+  color: var(--tinta-3); letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 52px; border: none; border-radius: 10px;
+  font-size: 1rem; font-weight: 600; padding: 0 20px; width: 100%;
+  transition: background .15s, box-shadow .15s, transform .1s, opacity .15s;
+  touch-action: manipulation; letter-spacing: -.01em;
+}
+.btn:active   { transform: scale(.97); opacity: .9; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+
+.btn--primario {
+  background: var(--primario); color: #fff;
+  box-shadow: 0 1px 4px rgba(3,105,161,.25), 0 4px 14px rgba(3,105,161,.18);
+}
+.btn--primario:hover:not(:disabled) {
+  background: var(--primario-dk);
+  box-shadow: 0 2px 8px rgba(3,105,161,.32), 0 6px 18px rgba(3,105,161,.22);
+}
+.btn--entrada {
+  background: var(--entrada); color: #fff;
+  box-shadow: 0 1px 4px rgba(21,128,61,.22), 0 4px 14px rgba(21,128,61,.15);
+}
+.btn--entrada:hover:not(:disabled) { filter: brightness(1.07); }
+.btn--salida {
+  background: var(--salida); color: #fff;
+  box-shadow: 0 1px 4px rgba(194,65,12,.22), 0 4px 14px rgba(194,65,12,.15);
+}
+.btn--salida:hover:not(:disabled) { filter: brightness(1.07); }
+.btn--secundario {
+  background: transparent; color: var(--tinta-2); border: 1.5px solid var(--linea);
+}
+.btn--secundario:hover:not(:disabled) { background: var(--fondo); border-color: #CBD5E1; color: var(--tinta); }
+.btn--peligro {
+  background: transparent; color: var(--peligro); border: 1.5px solid #FECACA;
+}
+.btn--peligro:hover:not(:disabled) { background: #FEF2F2; }
+.btn--sm { min-height: 42px; font-size: .9rem; }
+
+/* ── Brand header ─────────────────────────────────────────────────────────── */
+.brand-header { display: flex; align-items: center; gap: 12px; }
+.brand-icon {
+  width: 44px; height: 44px; background: var(--primario); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(3,105,161,.28);
+}
+.brand-icon svg { color: #fff; }
+.brand-text-block { display: flex; flex-direction: column; gap: 1px; }
+.brand-name {
+  font-family: 'Lexend', sans-serif; font-size: 1.1rem; font-weight: 700;
+  color: var(--tinta); letter-spacing: -.02em; line-height: 1.2;
+}
+.brand-sub {
+  font-size: .78rem; color: var(--tinta-3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+
+/* ── Shared ───────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--linea); border: none; margin: 0; }
+.error-msg {
+  font-size: .875rem; color: #991B1B; background: #FEF2F2;
+  border: 1px solid #FECACA; border-radius: 8px; padding: 9px 13px;
+  text-align: center; line-height: 1.5; display: block;
+}
+.error-txt { color: var(--peligro); }
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

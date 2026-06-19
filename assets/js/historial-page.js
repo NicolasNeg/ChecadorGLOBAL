@@ -1,13 +1,14 @@
 import { requireSession } from './auth.js';
 import { setIdEmpleado, obtenerHistorial } from './api.js';
 import { renderHistorial } from './historial.js';
+import { BASE } from './config.js';
 
 const sesion = requireSession();
 if (!sesion) throw new Error('sin sesión');
 
 setIdEmpleado(sesion.idEmpleado);
 document.getElementById('header-sub').textContent = sesion.nombre;
-document.getElementById('btn-atras').addEventListener('click', () => { location.href = '/'; });
+document.getElementById('btn-atras').addEventListener('click', () => { location.href = BASE + '/'; });
 
 const contenedor = document.getElementById('contenedor-historial');
 contenedor.innerHTML = '<p class="cargando">Cargando…</p>';

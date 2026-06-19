@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>!function(){var b=document.createElement('base');b.href=location.hostname==='nicolasneg.github.io'?'/ChecadorGLOBAL/':'/';document.head.appendChild(b)}()</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#DC2626">
   <title>Permisos requeridos · EQS</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&family=Source+Sans+3:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/estilos.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/sin-permisos.css">
 </head>
 <body>
 
@@ -49,7 +49,7 @@
     </div>
   </div>
 
-  <button class="btn btn--primario" style="width:100%;max-width:320px" onclick="location.href='/checador/'">
+  <button class="btn btn--primario" style="width:100%;max-width:320px" id="btn-reintentar">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="23 4 23 10 17 10"/>
       <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -57,11 +57,15 @@
     Reintentar
   </button>
 
-  <a href="/" class="btn btn--secundario" style="max-width:320px;width:100%;text-decoration:none">
+  <a href="./" class="btn btn--secundario" style="max-width:320px;width:100%;text-decoration:none">
     Volver al inicio
   </a>
 
 </div>
 
+<script type="module">
+  import { BASE } from 'assets/js/config.js';
+  document.getElementById('btn-reintentar').addEventListener('click', () => { location.href = BASE + '/checador/'; });
+</script>
 </body>
 </html>

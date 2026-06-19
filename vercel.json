@@ -8,7 +8,10 @@
     }
   ],
   "redirects": [
-    { "source": "/checador",  "destination": "/checador/",  "permanent": true },
-    { "source": "/historial", "destination": "/historial/", "permanent": true }
+    { "source": "/checador",         "destination": "/checador/",         "permanent": true },
+    { "source": "/historial",        "destination": "/historial/",        "permanent": true },
+    { "source": "/admin",            "destination": "/admin/",            "permanent": true },
+    { "source": "/admin/dashboard",  "destination": "/admin/dashboard/",  "permanent": true },
+    { "source": "/favicon.ico",      "destination": "/favicon.svg",       "permanent": false }
   ]
 }
