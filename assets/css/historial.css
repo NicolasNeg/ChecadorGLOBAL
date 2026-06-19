@@ -90,3 +90,32 @@
   box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; color: var(--tinta);
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Desktop / large screens ──────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  /* Branded backdrop behind a centered frame (wider for the table) */
+  body {
+    min-height: 100dvh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(3,105,161,.16) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 100% 110%, rgba(7,89,133,.10) 0%, transparent 55%),
+      var(--fondo);
+  }
+
+  .app-shell {
+    height: min(820px, calc(100dvh - 80px));
+    width: 100%; max-width: 760px;
+    border-radius: 24px; overflow: hidden;
+    border: 1px solid var(--linea);
+    box-shadow:
+      0 1px 3px rgba(15,23,42,.06),
+      0 12px 40px rgba(15,23,42,.12),
+      0 32px 80px rgba(15,23,42,.10);
+  }
+
+  /* Comfortable, centered content column inside the frame */
+  .app-content--historial { padding: 28px; align-items: center; }
+  .app-content--historial > #contenedor-historial { width: 100%; max-width: 680px; }
+}

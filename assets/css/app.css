@@ -141,3 +141,31 @@
   color: var(--primario); background: var(--primario-bg);
   padding: 3px 9px; border-radius: 99px; letter-spacing: .02em;
 }
+
+/* ── Desktop / large screens ──────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  /* Richer branded backdrop so the card no longer floats in emptiness */
+  .pantalla {
+    padding: 40px;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(3,105,161,.16) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 100% 110%, rgba(7,89,133,.10) 0%, transparent 55%),
+      var(--fondo);
+  }
+
+  /* Slightly larger, more deliberate card with deeper elevation */
+  .tarjeta {
+    max-width: 440px;
+    padding: 40px 36px 44px;
+    gap: 20px;
+    box-shadow:
+      0 1px 3px rgba(15,23,42,.06),
+      0 12px 40px rgba(15,23,42,.12),
+      0 32px 80px rgba(15,23,42,.10);
+  }
+
+  .brand-name { font-size: 1.2rem; }
+  .input-pin  { font-size: 2.2rem; padding: 18px; }
+  .saludo-avatar { width: 58px; height: 58px; font-size: 1.35rem; }
+  #saludo { font-size: 1.4rem; }
+}
