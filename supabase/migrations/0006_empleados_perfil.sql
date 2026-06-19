@@ -41,7 +41,7 @@ returns table(
   turno_entrada   time,
   turno_salida    time
 )
-language sql security definer set search_path = public
+language sql security definer set search_path = public, extensions
 as $$
   select e.id, e.nombre, e.numero_empleado, e.puesto, e.email, e.telefono, e.rol,
          e.plaza_id, e.turno_id,
@@ -69,7 +69,7 @@ returns table(
   ruta_foto       text,
   geocerca_valida boolean
 )
-language sql security definer set search_path = public
+language sql security definer set search_path = public, extensions
 as $$
   select r.id, r.tipo, r.hora, r.latitud, r.longitud, r.ruta_foto, r.geocerca_valida
   from   registros r
@@ -83,7 +83,7 @@ grant  execute on function obtener_historial(bigint, int) to anon, service_role;
 -- ── Última entrada del empleado (para calcular duración del turno) ─────────
 create or replace function ultima_entrada(p_id_empleado bigint)
 returns timestamptz
-language sql security definer set search_path = public
+language sql security definer set search_path = public, extensions
 as $$
   select r.hora
   from   registros r

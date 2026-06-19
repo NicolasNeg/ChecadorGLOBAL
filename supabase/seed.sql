@@ -5,6 +5,9 @@
 -- el trigger de geocerca NO bloquee las pruebas de check-in desde cualquier lugar.
 -- Para probar la geocerca, asigna plaza_id a un empleado desde el panel admin.
 
+-- pgcrypto (crypt/gen_salt) vive en el schema `extensions` en Supabase
+set search_path = public, extensions;
+
 -- Limpia datos de demo previos (idempotente)
 delete from registros where id_empleado in (
   select id from empleados where nombre in ('María López','Carlos Pérez')

@@ -13,7 +13,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- ── Plazas (geocercas / centros de trabajo) ───────────────────────────────
-create table plazas (
+create table if not exists plazas (
   id           bigserial primary key,
   nombre       text not null,
   ciudad       text not null,
@@ -25,7 +25,7 @@ create table plazas (
 );
 
 -- ── Turnos ────────────────────────────────────────────────────────────────
-create table turnos (
+create table if not exists turnos (
   id                      bigserial primary key,
   plaza_id                bigint not null references plazas(id) on delete cascade,
   nombre                  text not null,
@@ -50,7 +50,7 @@ alter table registros
   add column if not exists distancia_metros int;
 
 -- ── Perfiles de administrador (vinculados a auth.users de Supabase) ───────
-create table perfiles_admin (
+create table if not exists perfiles_admin (
   id         uuid primary key references auth.users(id) on delete cascade,
   nombre     text not null,
   email      text not null,
@@ -64,7 +64,7 @@ create table perfiles_admin (
 );
 
 -- ── Audit log (historial de cambios) ─────────────────────────────────────
-create table audit_log (
+create table if not exists audit_log (
   id            bigserial primary key,
   tabla         text not null,
   operacion     text not null,               -- INSERT | UPDATE | DELETE
@@ -162,6 +162,7 @@ begin
 end;
 $$;
 
+drop trigger if exists trg_validar_geocerca on registros;
 create trigger trg_validar_geocerca
   before insert on registros
   for each row execute function fn_validar_geocerca();
@@ -185,14 +186,17 @@ begin
 end;
 $$;
 
+drop trigger if exists audit_plazas on plazas;
 create trigger audit_plazas
   after insert or update or delete on plazas
   for each row execute function fn_audit_log();
 
+drop trigger if exists audit_empleados on empleados;
 create trigger audit_empleados
   after insert or update or delete on empleados
   for each row execute function fn_audit_log();
 
+drop trigger if exists audit_turnos on turnos;
 create trigger audit_turnos
   after insert or update or delete on turnos
   for each row execute function fn_audit_log();
@@ -207,7 +211,7 @@ create or replace function crear_empleado(
   p_plaza_id bigint,
   p_turno_id bigint default null
 )
-returns empleados language plpgsql security definer as $$
+returns empleados language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_rol  text := mi_rol();
   v_emp  empleados;
@@ -240,7 +244,7 @@ create or replace function actualizar_pin_empleado(
   p_empleado_id bigint,
   p_nuevo_pin   text
 )
-returns void language plpgsql security definer as $$
+returns void language plpgsql security definer set search_path = public, extensions as $$
 declare
   v_rol text := mi_rol();
 begin
@@ -272,11 +276,13 @@ grant execute on function actualizar_pin_empleado(bigint, text) to authenticated
 -- ── plazas ────────────────────────────────────────────────────────────────
 alter table plazas enable row level security;
 
+drop policy if exists "rh_all_plazas" on plazas;
 create policy "rh_all_plazas" on plazas
   to authenticated
   using (mi_rol() = 'rh')
   with check (mi_rol() = 'rh');
 
+drop policy if exists "jefe_select_plaza" on plazas;
 create policy "jefe_select_plaza" on plazas
   for select to authenticated
   using (mi_rol() = 'jefe' and id = mi_plaza_id());
@@ -284,37 +290,44 @@ create policy "jefe_select_plaza" on plazas
 -- ── turnos ────────────────────────────────────────────────────────────────
 alter table turnos enable row level security;
 
+drop policy if exists "rh_all_turnos" on turnos;
 create policy "rh_all_turnos" on turnos
   to authenticated
   using (mi_rol() = 'rh')
   with check (mi_rol() = 'rh');
 
+drop policy if exists "jefe_select_turnos" on turnos;
 create policy "jefe_select_turnos" on turnos
   for select to authenticated
   using (mi_rol() = 'jefe' and plaza_id = mi_plaza_id());
 
 -- ── empleados (extender políticas existentes para autenticados) ───────────
 -- Nota: las políticas anon existentes siguen vigentes para la app empleados.
+drop policy if exists "rh_all_empleados" on empleados;
 create policy "rh_all_empleados" on empleados
   to authenticated
   using (mi_rol() = 'rh')
   with check (mi_rol() = 'rh');
 
+drop policy if exists "jefe_select_empleados" on empleados;
 create policy "jefe_select_empleados" on empleados
   for select to authenticated
   using (mi_rol() = 'jefe' and plaza_id = mi_plaza_id());
 
+drop policy if exists "jefe_update_empleados" on empleados;
 create policy "jefe_update_empleados" on empleados
   for update to authenticated
   using (mi_rol() = 'jefe' and plaza_id = mi_plaza_id())
   with check (mi_rol() = 'jefe' and plaza_id = mi_plaza_id());
 
 -- ── registros (extender políticas existentes) ─────────────────────────────
+drop policy if exists "rh_all_registros" on registros;
 create policy "rh_all_registros" on registros
   to authenticated
   using (mi_rol() = 'rh')
   with check (mi_rol() = 'rh');
 
+drop policy if exists "jefe_select_registros" on registros;
 create policy "jefe_select_registros" on registros
   for select to authenticated
   using (
@@ -327,11 +340,13 @@ create policy "jefe_select_registros" on registros
 -- ── perfiles_admin ────────────────────────────────────────────────────────
 alter table perfiles_admin enable row level security;
 
+drop policy if exists "rh_all_perfiles" on perfiles_admin;
 create policy "rh_all_perfiles" on perfiles_admin
   to authenticated
   using (mi_rol() = 'rh')
   with check (mi_rol() = 'rh');
 
+drop policy if exists "self_select_perfil" on perfiles_admin;
 create policy "self_select_perfil" on perfiles_admin
   for select to authenticated
   using (id = auth.uid());
@@ -339,6 +354,7 @@ create policy "self_select_perfil" on perfiles_admin
 -- ── audit_log (sólo RH puede leer) ───────────────────────────────────────
 alter table audit_log enable row level security;
 
+drop policy if exists "rh_select_audit" on audit_log;
 create policy "rh_select_audit" on audit_log
   for select to authenticated
   using (mi_rol() = 'rh');

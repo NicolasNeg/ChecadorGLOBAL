@@ -1,8 +1,8 @@
 -- EQS Checador — schema inicial
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 -- Empleados
-create table empleados (
+create table if not exists empleados (
   id         bigint generated always as identity primary key,
   nombre     text    not null,
   pin_hash   text    not null,
@@ -11,7 +11,7 @@ create table empleados (
 );
 
 -- Registros de asistencia
-create table registros (
+create table if not exists registros (
   id          bigint generated always as identity primary key,
   id_empleado bigint not null references empleados(id),
   tipo        text   not null check (tipo in ('entrada','salida')),
@@ -23,7 +23,7 @@ create table registros (
   created_at  timestamptz default now()
 );
 
-create index registros_empleado_hora_idx on registros (id_empleado, hora desc);
+create index if not exists registros_empleado_hora_idx on registros (id_empleado, hora desc);
 
 -- RLS deny-by-default (las Edge Functions usan service role)
 alter table empleados enable row level security;
@@ -31,9 +31,9 @@ alter table registros  enable row level security;
 -- Sin policies → anon no puede leer ni escribir nada
 
 -- RPC interna para verificar PIN
-create function verificar_pin(p_pin text)
+create or replace function verificar_pin(p_pin text)
 returns table(id bigint, nombre text)
-language sql security definer set search_path = public
+language sql security definer set search_path = public, extensions
 as $$
   select e.id, e.nombre
   from   empleados e
