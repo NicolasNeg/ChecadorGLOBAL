@@ -25,7 +25,7 @@ Repo serves at `/ChecadorGLOBAL/`, so **absolute paths (`/assets/...`) break the
 ```bash
 supabase link --project-ref <REF>   # link once
 supabase db push                    # apply ALL migrations in supabase/migrations/ (0001 … 0006)
-supabase db seed                    # re-seed demo employees (María López PIN 1234, Carlos Pérez PIN 5678) + a demo shift
+supabase db query --linked --file supabase/seed.sql   # re-seed demo data on the linked DB (María PIN 1234, Carlos PIN 5678) — there is no `db seed` subcommand for a remote DB
 ```
 
 Migrations are ordered and cumulative — `supabase db push` applies every `NNNN_*.sql` in order:
