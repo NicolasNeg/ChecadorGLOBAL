@@ -4,6 +4,7 @@ import { BASE } from './config.js';
 import { solicitarPermisos, streamCamara, coordenadas } from './permisos.js';
 import { iniciarFirma, limpiarFirma, estaVacia, obtenerFirmaPNG } from './firma.js';
 import { iniciarPreview, capturarFoto } from './camara.js';
+import { direccionDesdeCoords, mapsLink } from './geo.js';
 
 const sesion = requireSession();
 if (!sesion) throw new Error('sin sesión');
@@ -116,6 +117,11 @@ function showFoto() {
   document.getElementById('sec-video').hidden   = false;
   document.getElementById('sec-preview').hidden = true;
   iniciarPreview(document.getElementById('video-preview'), streamCamara);
+
+  // Pre-calienta la dirección (geo.js cachea) para que la pantalla de éxito sea instantánea.
+  if (coordenadas.latitud != null && coordenadas.longitud != null) {
+    direccionDesdeCoords(coordenadas.latitud, coordenadas.longitud);
+  }
 }
 
 document.getElementById('btn-tomar-foto').addEventListener('click', () => {
@@ -184,21 +190,26 @@ function mostrarExito(tipo, fotoDataURL, lat, lon) {
     turnoEl.hidden = true;
   }
 
-  // Map thumbnail (OpenStreetMap static, no API key needed)
-  const mapHtml = (lat != null && lon != null)
-    ? `<a class="exito-mapa" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener" aria-label="Ver en mapa">
-         <img src="https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=320x150&markers=${lat},${lon},red"
-              alt="Mapa de ubicación" loading="eager"
-              onerror="this.parentElement.hidden=true">
-       </a>`
-    : '';
+  // Ubicación como dirección legible (click → Google Maps). Más confiable que el
+  // mapa estático y ya pre-calentada desde showFoto(), así sale al instante.
+  const ubicEl  = document.getElementById('exito-ubic');
+  const ubicTxt = document.getElementById('exito-ubic-txt');
+  if (lat != null && lon != null) {
+    ubicEl.href = mapsLink(lat, lon);
+    ubicEl.hidden = false;
+    direccionDesdeCoords(lat, lon).then((dir) => {
+      ubicTxt.textContent = dir || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    });
+  } else {
+    ubicEl.hidden = true;
+  }
 
   const fotoHtml = fotoDataURL
     ? `<img class="exito-foto" src="${fotoDataURL}" alt="Tu foto de registro">`
     : '';
 
-  document.getElementById('exito-media').innerHTML = mapHtml + fotoHtml;
-  document.getElementById('exito-media').hidden = !(mapHtml || fotoHtml);
+  document.getElementById('exito-media').innerHTML = fotoHtml;
+  document.getElementById('exito-media').hidden = !fotoHtml;
 
   overlayOk.hidden = false;
   setTimeout(() => { location.href = BASE + '/'; }, 3000);

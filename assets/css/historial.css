@@ -33,31 +33,50 @@
 }
 .app-content--historial { padding: 16px; }
 
-/* Historial table */
-.hist-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
-  width: 100%; max-width: 680px;
+/* Historial — lista de tarjetas (mobile-first) */
+.hist-lista {
+  display: flex; flex-direction: column; gap: 12px; width: 100%;
 }
-.tabla-scroll {
-  width: 100%; overflow-x: auto; border-radius: var(--radio);
-  box-shadow: var(--sombra); background: var(--tarjeta); border: 1px solid var(--linea);
+.hist-card {
+  background: var(--tarjeta); border: 1px solid var(--linea);
+  border-radius: var(--radio); box-shadow: var(--sombra-sm);
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
 }
-.hist-tabla { width: 100%; border-collapse: collapse; font-size: .875rem; }
-.hist-tabla th, .hist-tabla td {
-  padding: 11px 14px; border-bottom: 1px solid var(--linea); white-space: nowrap; text-align: left;
+.hist-card__top {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
-.hist-tabla th {
-  font-size: .72rem; font-weight: 600; color: var(--tinta-3);
-  background: var(--fondo); text-transform: uppercase; letter-spacing: .07em;
+.hist-card__fecha {
+  font-size: .82rem; color: var(--tinta-2); font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
-.hist-tabla tr:last-child td { border-bottom: none; }
-.hist-tabla tr:hover td { background: #F8FAFC; }
 
-.hist-thumb {
-  width: 42px; height: 42px; object-fit: cover; border-radius: 8px;
-  cursor: pointer; transition: transform .15s, box-shadow .15s; display: block;
+/* Ubicación (dirección legible, click → Google Maps) */
+.hist-ubic {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: .85rem; line-height: 1.35; color: var(--primario);
+  text-decoration: none; font-weight: 500;
 }
-.hist-thumb:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgba(15,23,42,.15); }
+.hist-ubic svg { flex-shrink: 0; margin-top: 2px; }
+.hist-ubic:hover .hist-ubic__txt { text-decoration: underline; }
+.hist-ubic--none { color: var(--tinta-3); font-weight: 400; }
+
+/* Miniaturas foto + firma */
+.hist-medios { display: flex; gap: 10px; flex-wrap: wrap; }
+.hist-medio {
+  border: 1px solid var(--linea); background: var(--fondo);
+  border-radius: 10px; padding: 4px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.hist-medio:hover { transform: translateY(-1px); box-shadow: var(--sombra-sm); border-color: #CBD5E1; }
+.hist-medio img {
+  width: 56px; height: 56px; object-fit: cover; border-radius: 7px; display: block;
+}
+.hist-medio span {
+  font-size: .66rem; font-weight: 600; color: var(--tinta-3);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.hist-medio--firma img { object-fit: contain; background: #fff; }
 
 .badge {
   display: inline-flex; align-items: center;
@@ -81,7 +100,9 @@
 .lightbox__inner img {
   max-width: 100%; max-height: 80dvh; border-radius: 12px;
   display: block; box-shadow: 0 24px 80px rgba(0,0,0,.5);
+  background: #fff; /* firmas son PNG transparentes con tinta oscura */
 }
+.lightbox__inner--firma img { padding: 16px; }
 .lightbox__cerrar {
   position: absolute; top: -14px; right: -14px;
   background: #fff; border: none; border-radius: 50%;

@@ -132,7 +132,8 @@ export async function obtenerHistorial() {
       latitud: d.latitud,
       longitud: d.longitud,
       geocercaValida: d.geocerca_valida,
-      foto: d.ruta_foto ? `${SUPABASE_URL}/storage/v1/object/public/${d.ruta_foto}` : null
+      foto:  d.ruta_foto  ? `${SUPABASE_URL}/storage/v1/object/public/${d.ruta_foto}`  : null,
+      firma: d.ruta_firma ? `${SUPABASE_URL}/storage/v1/object/public/${d.ruta_firma}` : null
     }));
   } catch (error) {
     console.error('Error en obtenerHistorial:', error);
