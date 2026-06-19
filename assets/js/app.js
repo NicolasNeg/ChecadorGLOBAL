@@ -5,43 +5,72 @@ import { BASE } from './config.js';
 const sLogin = document.getElementById('s-login');
 const sMenu  = document.getElementById('s-menu');
 
+// ── Animate between two .pantalla screens ───────────────────────────────────
+function switchTo(from, to) {
+  if (from.hidden) { to.hidden = false; return; }
+  from.classList.add('exiting');
+  setTimeout(() => {
+    from.hidden = true;
+    from.classList.remove('exiting');
+    to.hidden = false;
+  }, 160);
+}
+
+// ── Error message ────────────────────────────────────────────────────────────
 function setError(id, msg) {
   const el = document.getElementById(id);
   el.textContent = msg;
   el.hidden = !msg;
 }
 
+// ── Shake input on error ─────────────────────────────────────────────────────
+function shakeInput(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('input-pin--shake');
+  void el.offsetWidth; // restart animation
+  el.classList.add('input-pin--shake');
+  el.addEventListener('animationend', () => el.classList.remove('input-pin--shake'), { once: true });
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
 const existing = getSession();
 if (existing) enterMenu(existing.nombre);
 else          enterLogin();
 
+// ── Login screen ─────────────────────────────────────────────────────────────
 function enterLogin() {
-  sLogin.hidden = false;
-  sMenu.hidden  = true;
+  const form    = document.getElementById('form-pin');
+  const input   = document.getElementById('input-pin');
+  const btnPin  = document.getElementById('btn-continuar-pin');
+  const label   = document.getElementById('pin-btn-label');
+  const spinner = document.getElementById('pin-btn-spinner');
 
-  const form   = document.getElementById('form-pin');
-  const input  = document.getElementById('input-pin');
-  const btnPin = document.getElementById('btn-continuar-pin');
-  input.value = '';
-  btnPin.disabled = false;
-  btnPin.textContent = 'Continuar';
+  input.value      = '';
+  btnPin.disabled  = false;
+  label.textContent = 'Continuar';
+  spinner.hidden   = true;
   setError('error-pin', '');
-  setTimeout(() => input.focus(), 50);
+
+  switchTo(sMenu, sLogin);
+  setTimeout(() => input.focus(), 380);
 
   form.onsubmit = async (e) => {
     e.preventDefault();
     const pin = input.value.trim();
-    if (!pin) { setError('error-pin', 'Ingresa tu PIN.'); return; }
+    if (!pin) { setError('error-pin', 'Ingresa tu PIN.'); shakeInput('input-pin'); return; }
     setError('error-pin', '');
-    btnPin.disabled = true;
-    btnPin.textContent = 'Verificando…';
+
+    btnPin.disabled   = true;
+    label.textContent = 'Verificando…';
+    spinner.hidden    = false;
 
     let res;
     try {
       res = await verificarPin(pin);
     } finally {
-      btnPin.disabled = false;
-      btnPin.textContent = 'Continuar';
+      btnPin.disabled   = false;
+      label.textContent = 'Continuar';
+      spinner.hidden    = true;
     }
 
     if (res?.ok) {
@@ -49,14 +78,23 @@ function enterLogin() {
       enterMenu(res.nombre);
     } else {
       setError('error-pin', res?.error || 'PIN incorrecto.');
+      shakeInput('input-pin');
     }
   };
 }
 
+// ── Menu / Welcome screen ─────────────────────────────────────────────────────
 function enterMenu(nombre) {
-  sLogin.hidden = true;
-  sMenu.hidden  = false;
-  document.getElementById('saludo').textContent = `Hola, ${nombre}`;
+  // Avatar initials (up to 2 chars)
+  const initials = nombre.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  document.getElementById('saludo-avatar').textContent = initials;
+
+  // Time-of-day greeting
+  const h = new Date().getHours();
+  const hora = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('saludo-hora').textContent = hora;
+
+  document.getElementById('saludo').textContent = nombre;
 
   document.getElementById('btn-checar').onclick    = () => { location.href = BASE + '/checador/'; };
   document.getElementById('btn-historial').onclick = () => { location.href = BASE + '/historial/'; };
@@ -65,4 +103,6 @@ function enterMenu(nombre) {
     limpiarSesion();
     enterLogin();
   };
+
+  switchTo(sLogin, sMenu);
 }
