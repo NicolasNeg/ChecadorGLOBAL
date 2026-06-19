@@ -4,12 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-EQS Checador — mobile-first attendance app (check-in / check-out).  
+EQS Checador — mobile-first attendance app (check-in / check-out) with an admin dashboard.  
 No build step. No frameworks. No PHP.
 
-- **Frontend**: HTML + CSS + ES Modules (vanilla), served as a static site from Vercel.
-- **Backend**: Supabase Edge Functions (Deno/TypeScript) + Postgres + Storage.
-- **Auth**: numeric PIN hashed with pgcrypto `crypt()`; the Edge Functions issue an HMAC-SHA256 token the client stores in memory and passes as `x-checador-token`.
+- **Frontend**: HTML + CSS + ES Modules (vanilla), **multi-page** static site. Deployed to **Vercel** and **GitHub Pages** (`nicolasneg.github.io/ChecadorGLOBAL/`).
+- **Backend**: Supabase Postgres + Storage. Edge Functions (Deno/TypeScript) exist but are **not currently wired up** — see "Architectural split".
+- **Employee auth**: numeric PIN hashed with pgcrypto `crypt()`, verified by the `verificar_pin` RPC (SECURITY DEFINER). The current frontend calls Supabase REST/RPC directly with the anon key; it does **not** use the Edge Function HMAC token yet.
+- **Admin auth**: Supabase Auth (email + password → JWT). RBAC via `perfiles_admin` + RLS helpers `mi_rol()` / `mi_plaza_id()`.
+
+### GitHub Pages base path
+
+Repo serves at `/ChecadorGLOBAL/`, so **absolute paths (`/assets/...`) break there**. Two mechanisms keep paths working on both hosts:
+- Every HTML file's first `<head>` element is an inline script that creates a `<base>` tag (`/ChecadorGLOBAL/` on github.io, `/` elsewhere). All HTML asset paths are **relative** (`assets/...`, not `/assets/...`).
+- `assets/js/config.js` exports `BASE` (`'/ChecadorGLOBAL'` on github.io, `''` elsewhere). All JS navigation uses `BASE + '/path'`.
 
 ## Commands
 
@@ -17,21 +24,24 @@ No build step. No frameworks. No PHP.
 
 ```bash
 supabase link --project-ref <REF>   # link once
-supabase db push                    # apply supabase/migrations/0001_init.sql
-supabase db seed                    # insert test employees (María López PIN 1234, Carlos Pérez PIN 5678)
-openssl rand -base64 48             # generate TOKEN_SECRET
-supabase secrets set TOKEN_SECRET=<64-char random>
-supabase functions deploy verificar-pin guardar-registro obtener-historial
-supabase functions serve            # local dev with hot-reload
-
-# Apply RLS policies (run after 0001_init.sql)
-supabase db push
+supabase db push                    # apply ALL migrations in supabase/migrations/ (0001 … 0006)
+supabase db seed                    # re-seed demo employees (María López PIN 1234, Carlos Pérez PIN 5678) + a demo shift
 ```
 
-Add an employee directly via SQL:
+Migrations are ordered and cumulative — `supabase db push` applies every `NNNN_*.sql` in order:
+- `0001_init` — empleados, registros, `verificar_pin`, private buckets
+- `0002_rls_policies` — anon INSERT/SELECT (the broad SELECT is later dropped)
+- `0003_grant_anon_pin` — grant `verificar_pin` to anon
+- `0004_admin_schema` — plazas, turnos, perfiles_admin, audit_log, geocerca trigger, admin RBAC + RLS
+- `0005_storage_policies` — make `fotos`/`firmas` buckets **public** + anon insert/read
+- `0006_empleados_perfil` — professional profile fields, `verificar_pin` returns full profile, history RPCs, **drops the broad anon SELECT**
+
+The Edge Functions (`supabase functions deploy …`, `TOKEN_SECRET`) are **not deployed/used** by the current frontend; only run those if you wire up the Edge Function path.
+
+Prefer creating employees through the admin dashboard (`crear_empleado` RPC hashes the PIN server-side). Direct SQL still works:
 ```sql
-insert into empleados (nombre, pin_hash, activo)
-values ('Nombre Completo', crypt('<PIN>', gen_salt('bf')), true);
+insert into empleados (nombre, pin_hash, activo, numero_empleado, puesto)
+values ('Nombre Completo', crypt('<PIN>', gen_salt('bf')), true, 'EQS-003', 'Puesto');
 ```
 
 ### Frontend (no build)
@@ -48,50 +58,69 @@ Vercel deploys the repo root as a static site — no framework preset, no output
 
 **This is the most important thing to understand.** The codebase has two parallel implementations:
 
-- **`assets/js/api.js`** (what the frontend currently uses): calls the Supabase **REST API directly** (`/rest/v1/rpc/verificar_pin`, `/rest/v1/registros`, `/storage/v1/object/…`) using the anon key. It stores `_idEmpleado` from the RPC response in a module-level variable and sends it to the DB insert.
+- **`assets/js/api.js`** (what the frontend currently uses): calls the Supabase **REST API / RPCs directly** using the anon key. It stores `_idEmpleado` from `verificar_pin` in a module-level variable (set on login, or via `setIdEmpleado()` on history/checador pages that restore it from `sessionStorage`) and passes it to inserts and history RPCs.
 
-- **`supabase/functions/`** (the intended secure path): Edge Functions that use the service role key and issue/verify a proper HMAC token. These are deployed but the current `api.js` does **not call them**.
+- **`supabase/functions/`** (the intended secure path): Edge Functions that use the service role key and issue/verify a proper HMAC token. They exist but the current `api.js` does **not call them**, and they are not deployed.
 
-The Edge Function flow described below is the intended architecture. If you wire `api.js` to call the Edge Functions instead of the REST API directly, `api.js` must send `x-checador-token` in requests (received from `verificar-pin`) and stop sending `id_empleado` from the client.
+If you wire `api.js` to the Edge Functions, it must send `x-checador-token` (received from `verificar-pin`) and stop sending `id_empleado` from the client.
 
-### Security model (Edge Functions)
+### Security model (current — anon key + RPCs)
 
-The client holds only the **anon key** (public). All DB reads/writes go through Edge Functions using the **service role key** (server-side only). RLS is enabled on both tables with no anon policies — pure deny-by-default.
+The client holds only the **anon key** (public). The security boundary is **SECURITY DEFINER RPCs** + tight RLS, not Edge Functions:
 
-PIN flow: `verificar-pin` calls the `verificar_pin(text)` RPC (security definer, granted only to service_role). On success it returns an HMAC-SHA256 token (TTL: 8 hours, format: `${idEmpleado}.${exp}.${hmac}`). `guardar-registro` and `obtener-historial` extract `idEmpleado` from that token — the client never sends its own ID.
+- **PIN**: `verificar_pin(p_pin)` (SECURITY DEFINER, granted to anon + service_role) returns the employee's full profile + assigned plaza/turno only when the PIN hash matches. PIN hashes never leave the DB.
+- **History**: `obtener_historial(p_id_empleado)` and `ultima_entrada(p_id_empleado)` are SECURITY DEFINER RPCs that filter by employee server-side. The old broad `anon SELECT on registros` policy was **dropped** in `0006` — anon can no longer bulk-read the table; reads go only through these RPCs.
+- **Writes**: `registros` INSERT is still a direct anon REST insert (`anon_insert_registros` policy). The geocerca BEFORE-INSERT trigger validates/blocks based on the employee's assigned plaza.
 
-### Frontend module graph
+**Known ceiling (MVP):** the history RPCs trust the `id_empleado` the client passes — a tampered client could request another employee's id. The real fix is the HMAC token path (Edge Functions) so the id comes from a signed token, not the client. Flagged in `0006_empleados_perfil.sql`.
+
+### Admin dashboard (`/admin/`, `/admin/dashboard/`)
+
+Separate SPA (hash routing, lazy-loaded modules in `assets/js/admin/`). Auth = Supabase Auth (email/password → JWT in `sessionStorage['eqs_admin_session']`); the JWT goes in the `Authorization` header so PostgREST enforces RLS automatically. RBAC: `rh` (super admin, all plazas) vs `jefe` (limited to `mi_plaza_id()`). Manages plazas (geocercas), turnos, empleados, real-time asistencia, and an audit log.
+
+### Frontend page + module map
+
+Multi-page, not a SPA. Each page is its own HTML file with its own entry module; `sesion` state is restored from `sessionStorage` (via `auth.js`) on each page load.
 
 ```
-app.js          ← orchestrates screens and state
-├─ permisos.js  ← getUserMedia + watchPosition (blocking gate)
-├─ firma.js     ← SignaturePad (ESM from jsDelivr) + devicePixelRatio scaling
-├─ camara.js    ← video preview + canvas JPEG capture
-├─ historial.js ← table render + lightbox
-└─ api.js       ← fetch wrapper; stores _token (anon key) and _idEmpleado in module scope
-   └─ config.js ← exports SUPABASE_URL, SUPABASE_ANON_KEY, REST_BASE
+index.html        → app.js     login (PIN) + welcome menu
+checador/         → checador.js tipo→firma→foto flow + success overlay
+historial/        → historial-page.js  per-user history table + lightbox
+admin/, admin/dashboard/ → assets/js/admin/* (separate auth + RBAC, see above)
+
+shared employee modules:
+  auth.js       ← session persistence (sessionStorage), requireSession()
+  api.js        ← REST/RPC wrapper; _idEmpleado in module scope, setIdEmpleado() to restore
+  config.js     ← SUPABASE_URL, SUPABASE_ANON_KEY, REST_BASE, BASE (GitHub Pages prefix)
+  permisos.js   ← getUserMedia + watchPosition (blocking gate)
+  firma.js      ← SignaturePad (ESM from jsDelivr) + devicePixelRatio scaling
+  camara.js     ← video preview + canvas JPEG capture
+  historial.js  ← table render + lightbox helpers
 ```
 
-`app.js` drives a single-page flow by toggling `hidden` on `<section class="pantalla">` elements. There is no router. Screen state lives in the `sesion` object (nombre, tipo, fotoDataURL, firmaDataURL).
+Within a page, "screens" are `hidden`-toggled `<div>`/`<section>` blocks (e.g. `app.js` toggles `.pantalla`; `checador.js` toggles `s-tipo`/`s-firma`/`s-foto`). `[hidden] { display: none !important; }` in base.css enforces this over `display:flex`.
 
-### Edge Function layout
+### Edge Function layout (present but unused)
+
+These exist as the intended HMAC-token secure path but are **not deployed** and the frontend does not call them.
 
 ```
 supabase/functions/
-├─ _shared/cors.ts    ← CORS headers (currently Access-Control-Allow-Origin: *) + OPTIONS 204 handler
+├─ _shared/cors.ts    ← CORS headers (Access-Control-Allow-Origin: *) + OPTIONS 204 handler
 ├─ _shared/token.ts   ← firmarToken() / verificarToken() (HMAC-SHA256, timing-safe compare)
 ├─ verificar-pin/     ← POST {pin} → {ok, idEmpleado, nombre, token}
 ├─ guardar-registro/  ← POST + x-checador-token: validates input, uploads photo+signature, inserts row
 └─ obtener-historial/ ← POST + x-checador-token: queries registros for the token's idEmpleado, returns signed URLs (1 h)
 ```
 
-All functions import from `https://esm.sh/@supabase/supabase-js@2` and `_shared/` via relative paths.
-
 ### Database
 
-Two tables: `empleados` (`id, nombre, pin_hash, activo`) and `registros` (`id_empleado, tipo, hora, latitud, longitud, ruta_foto, ruta_firma`). Photos go to the `fotos` bucket (JPEG), signatures to `firmas` (PNG) — both private. Server always uses `new Date().toISOString()` for `hora`; never trusts the client clock.
+- **`empleados`**: `id, nombre, pin_hash, activo` + profile columns added in `0006` (`numero_empleado, puesto, email, telefono, fecha_ingreso, rol`) + `turno_id`, `plaza_id` (from the admin schema, `0004`).
+- **`registros`**: `id_empleado, tipo, hora, latitud, longitud, ruta_foto, ruta_firma` + geocerca columns (`geocerca_valida`, `distancia_metros`). Server always sets `hora` server-side; never trusts the client clock.
+- **`plazas`** (geocerca: lat/lon/radio_metros) and **`turnos`** (hora_entrada/salida), plus admin RBAC tables (`perfiles_admin`) from `0004`.
+- **Storage**: `fotos` (JPEG) and `firmas` (PNG) buckets, made **public** in `0005` with anon insert + read policies so the history view can show photos by public URL.
 
-RLS policies (`0002_rls_policies.sql`): anon role can INSERT and SELECT on `registros`, and SELECT on `empleados`. No UPDATE or DELETE policies exist — those operations are blocked for anon by design.
+RLS: anon can INSERT `registros` and call the SECURITY DEFINER RPCs (`verificar_pin`, `obtener_historial`, `ultima_entrada`); the broad anon SELECT on `registros` was dropped in `0006`. Admin tables use authenticated-role policies scoped by `mi_rol()` / `mi_plaza_id()`. No anon UPDATE/DELETE anywhere.
 
 ### UI patterns
 
@@ -102,8 +131,8 @@ RLS policies (`0002_rls_policies.sql`): anon role can INSERT and SELECT on `regi
 ## Key constraints
 
 - `assets/js/config.js` contains only the **anon key** (public). Never put `service_role` or `TOKEN_SECRET` there.
-- Camera and geolocation require HTTPS — always test on Vercel or a tunnel, not plain `http://localhost`.
+- Camera and geolocation require HTTPS — always test on Vercel/GitHub Pages or a tunnel, not plain `http://localhost`.
+- Every page's `<head>` must start with the inline `<base>` script (sets `/ChecadorGLOBAL/` on GitHub Pages, `/` elsewhere); all asset/nav paths must be relative so they resolve under both. See "GitHub Pages base path".
 - SignaturePad is loaded as ESM from `https://cdn.jsdelivr.net/npm/signature_pad@5/dist/signature_pad.esm.js` — no local copy needed.
-- Edge Functions must respond to `OPTIONS` with 204 and include CORS headers on every response.
-- `guardar-registro` validates: foto must be JPEG, firma must be PNG, both < 8 MB, coordinates in valid ranges.
-- CORS is `*` in the MVP; restrict to your Vercel domain in production by editing `_shared/cors.ts`.
+- New tables/columns/policies go in a new numbered migration (`000N_*.sql`), kept idempotent (`drop ... if exists`, `on conflict`). Never edit an already-applied migration.
+- Security boundary is SECURITY DEFINER RPCs + RLS, not the (unused) Edge Functions. The history RPCs trust the client-supplied `id_empleado` — known MVP ceiling; HMAC token path is the upgrade.
