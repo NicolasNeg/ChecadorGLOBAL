@@ -10,9 +10,9 @@ set search_path = public, extensions;
 
 -- Limpia datos de demo previos (idempotente)
 delete from registros where id_empleado in (
-  select id from empleados where nombre in ('María López','Carlos Pérez')
+  select id from empleados where nombre in ('Angel Armenta','Isaac Lerma')
 );
-delete from empleados where nombre in ('María López','Carlos Pérez');
+delete from empleados where nombre in ('Angel Armenta','Isaac Lerma');
 
 -- Plaza + turno de ejemplo y empleados con perfil profesional
 with p as (
@@ -30,7 +30,7 @@ insert into empleados
 select v.nombre, crypt(v.pin, gen_salt('bf')), true,
        v.numero_empleado, v.puesto, v.email, v.telefono, v.fecha_ingreso::date, v.rol, t.id
 from (values
-  ('María López',  '1234', 'EQS-001', 'Recepcionista',       'maria@empresa.com',  '55-1234-5678', '2024-03-01', 'empleado'),
-  ('Carlos Pérez', '5678', 'EQS-002', 'Supervisor de Piso',  'carlos@empresa.com', '55-8765-4321', '2023-08-15', 'supervisor')
+  ('Angel Armenta',  '1234', 'EQS-001', 'Direccion Administrativa',       'ANGELARMENTTA@ICLOUD.com',  '55-1234-5678', '2024-03-01', 'empleado'),
+  ('Isaac Lerma', '1111', 'EQS-002', 'Operador',  'carlos@empresa.com', '55-8765-4321', '2023-08-15', 'supervisor')
 ) as v(nombre, pin, numero_empleado, puesto, email, telefono, fecha_ingreso, rol)
 cross join t;
