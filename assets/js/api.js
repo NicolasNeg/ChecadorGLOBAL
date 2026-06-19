@@ -24,9 +24,25 @@ export async function verificarPin(pin) {
     const datos = await respuesta.json();
 
     if (datos && datos.length > 0) {
+      const e = datos[0];
       _token = SUPABASE_ANON_KEY;
-      _idEmpleado = datos[0].id;
-      return { ok: true, nombre: datos[0].nombre, idEmpleado: datos[0].id };
+      _idEmpleado = e.id;
+      return {
+        ok: true,
+        idEmpleado:     e.id,
+        nombre:         e.nombre,
+        numeroEmpleado: e.numero_empleado,
+        puesto:         e.puesto,
+        email:          e.email,
+        telefono:       e.telefono,
+        rol:            e.rol,
+        plazaId:        e.plaza_id,
+        turnoId:        e.turno_id,
+        plazaNombre:    e.plaza_nombre,
+        turnoNombre:    e.turno_nombre,
+        turnoEntrada:   e.turno_entrada,  // "HH:MM:SS" o null
+        turnoSalida:    e.turno_salida
+      };
     } else {
       return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
     }
@@ -94,37 +110,52 @@ export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longi
   }
 }
 
-// ── OBTENER HISTORIAL ────────────────────────────────────────────────────────
+// ── OBTENER HISTORIAL (RPC: separado por empleado en el servidor) ────────────
 export async function obtenerHistorial() {
+  if (!_idEmpleado) return [];
   try {
-    // Hace un JOIN automático pidiendo los campos del registro y el nombre de la tabla empleados
-    const url = `${REST_BASE}/registros?select=*,empleados(nombre)&order=hora.desc&limit=20`;
-
-    const respuesta = await fetch(url, {
-      method: 'GET',
+    const r = await fetch(`${REST_BASE}/rpc/obtener_historial`, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-      }
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado, p_limit: 50 })
     });
-
-    if (!respuesta.ok) return null;
-
-    const datos = await respuesta.json();
-
-    // Mapeamos los datos limpios para que tu app.js y historial.js los rendericen sin problemas
-    return datos.map(r => ({
-      id: r.id,
-      tipo: r.tipo,
-      hora: r.hora,
-      latitud: r.latitud,
-      longitud: r.longitud,
-      empleadoNombre: r.empleados?.nombre || 'Empleado'
+    if (!r.ok) return null;
+    const datos = await r.json();
+    return datos.map(d => ({
+      id: d.id,
+      tipo: d.tipo,
+      hora: d.hora,
+      latitud: d.latitud,
+      longitud: d.longitud,
+      geocercaValida: d.geocerca_valida,
+      foto: d.ruta_foto ? `${SUPABASE_URL}/storage/v1/object/public/${d.ruta_foto}` : null
     }));
   } catch (error) {
     console.error('Error en obtenerHistorial:', error);
     return null;
   }
+}
+
+// ── ÚLTIMA ENTRADA (RPC: para calcular duración del turno) ──────────────────
+export async function obtenerUltimaEntrada() {
+  if (!_idEmpleado) return null;
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/ultima_entrada`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado })
+    });
+    if (!r.ok) return null;
+    return await r.json(); // timestamptz o null
+  } catch { return null; }
 }
 
 // ── SET ID DESDE SESIÓN (para páginas que cargan con sessionStorage) ────────

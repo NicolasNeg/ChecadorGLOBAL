@@ -34,7 +34,7 @@ function shakeInput(id) {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 const existing = getSession();
-if (existing) enterMenu(existing.nombre);
+if (existing) enterMenu(existing);
 else          enterLogin();
 
 // ── Login screen ─────────────────────────────────────────────────────────────
@@ -74,8 +74,9 @@ function enterLogin() {
     }
 
     if (res?.ok) {
-      setSession({ nombre: res.nombre, idEmpleado: res.idEmpleado });
-      enterMenu(res.nombre);
+      const { ok, ...perfil } = res;
+      setSession(perfil);
+      enterMenu(perfil);
     } else {
       setError('error-pin', res?.error || 'PIN incorrecto.');
       shakeInput('input-pin');
@@ -84,10 +85,12 @@ function enterLogin() {
 }
 
 // ── Menu / Welcome screen ─────────────────────────────────────────────────────
-function enterMenu(nombre) {
+function enterMenu(perfil) {
+  const nombre = perfil.nombre ?? '';
+
   // Avatar initials (up to 2 chars)
   const initials = nombre.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  document.getElementById('saludo-avatar').textContent = initials;
+  document.getElementById('saludo-avatar').textContent = initials || '–';
 
   // Time-of-day greeting
   const h = new Date().getHours();
@@ -95,6 +98,16 @@ function enterMenu(nombre) {
   document.getElementById('saludo-hora').textContent = hora;
 
   document.getElementById('saludo').textContent = nombre;
+
+  // Professional sub-line: puesto · plaza  (and employee number tag)
+  const meta = [perfil.puesto, perfil.plazaNombre].filter(Boolean).join(' · ');
+  const metaEl = document.getElementById('saludo-meta');
+  metaEl.textContent = meta;
+  metaEl.hidden = !meta;
+
+  const numEl = document.getElementById('saludo-num');
+  numEl.textContent = perfil.numeroEmpleado ? `#${perfil.numeroEmpleado}` : '';
+  numEl.hidden = !perfil.numeroEmpleado;
 
   document.getElementById('btn-checar').onclick    = () => { location.href = BASE + '/checador/'; };
   document.getElementById('btn-historial').onclick = () => { location.href = BASE + '/historial/'; };

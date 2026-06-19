@@ -158,10 +158,16 @@
 
 <!-- ── OVERLAY: Éxito ────────────────────────────────────────────────────────── -->
 <div id="overlay-exito" hidden>
-  <svg id="exito-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
-  <div>
-    <p class="exito-label">Registro completado</p>
-    <p id="exito-mensaje"></p>
+  <div class="exito-inner">
+    <svg id="exito-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
+    <p id="exito-titulo" class="exito-titulo"></p>
+    <div class="exito-chips">
+      <span id="exito-hora"  class="exito-chip"></span>
+      <span id="exito-fecha" class="exito-chip exito-chip--dim"></span>
+    </div>
+    <span id="exito-turno" class="exito-turno" hidden></span>
+    <div id="exito-media" class="exito-media" hidden></div>
+    <p id="exito-duracion" class="exito-duracion" hidden></p>
   </div>
 </div>
 

@@ -1,5 +1,5 @@
 import { requireSession } from './auth.js';
-import { setIdEmpleado, guardarRegistro } from './api.js';
+import { setIdEmpleado, guardarRegistro, obtenerUltimaEntrada } from './api.js';
 import { BASE } from './config.js';
 import { solicitarPermisos, streamCamara, coordenadas } from './permisos.js';
 import { iniciarFirma, limpiarFirma, estaVacia, obtenerFirmaPNG } from './firma.js';
@@ -152,7 +152,7 @@ btnConfirmar.addEventListener('click', async () => {
   overlayLoad.hidden = true;
 
   if (res.ok) {
-    mostrarExito(data.tipo);
+    mostrarExito(data.tipo, data.fotoDataURL, coordenadas.latitud, coordenadas.longitud);
   } else {
     setError('error-camara', res.error ?? 'No se pudo guardar. Intenta de nuevo.');
     btnConfirmar.disabled    = false;
@@ -160,14 +160,63 @@ btnConfirmar.addEventListener('click', async () => {
   }
 });
 
-function mostrarExito(tipo) {
+function mostrarExito(tipo, fotoDataURL, lat, lon) {
+  const ahora = new Date();
+  const horaFmt  = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const fechaFmt = ahora.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
   overlayOk.dataset.tipo = tipo;
-  document.getElementById('exito-mensaje').textContent = tipo === 'entrada' ? '¡Entrada registrada!' : '¡Salida registrada!';
+
   document.getElementById('exito-svg').innerHTML = `
     <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" class="check-circle"/>
     <polyline points="28,52 44,68 72,34" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" class="check-mark"/>`;
+  document.getElementById('exito-titulo').textContent  = tipo === 'entrada' ? '¡Entrada registrada!' : '¡Salida registrada!';
+  document.getElementById('exito-hora').textContent   = horaFmt;
+  document.getElementById('exito-fecha').textContent  = fechaFmt;
+
+  // Horario de turno asignado (si existe)
+  const turnoEl = document.getElementById('exito-turno');
+  if (sesion.turnoEntrada && sesion.turnoSalida) {
+    const hm = (t) => t.slice(0, 5); // "08:00:00" → "08:00"
+    turnoEl.textContent = `Turno ${hm(sesion.turnoEntrada)} – ${hm(sesion.turnoSalida)}`;
+    turnoEl.hidden = false;
+  } else {
+    turnoEl.hidden = true;
+  }
+
+  // Map thumbnail (OpenStreetMap static, no API key needed)
+  const mapHtml = (lat != null && lon != null)
+    ? `<a class="exito-mapa" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener" aria-label="Ver en mapa">
+         <img src="https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=16&size=320x150&markers=${lat},${lon},red"
+              alt="Mapa de ubicación" loading="eager"
+              onerror="this.parentElement.hidden=true">
+       </a>`
+    : '';
+
+  const fotoHtml = fotoDataURL
+    ? `<img class="exito-foto" src="${fotoDataURL}" alt="Tu foto de registro">`
+    : '';
+
+  document.getElementById('exito-media').innerHTML = mapHtml + fotoHtml;
+  document.getElementById('exito-media').hidden = !(mapHtml || fotoHtml);
+
   overlayOk.hidden = false;
-  setTimeout(() => { location.href = BASE + '/'; }, 2500);
+  setTimeout(() => { location.href = BASE + '/'; }, 3000);
+
+  // Load shift duration async for salida (non-blocking — updates if it arrives in time)
+  if (tipo === 'salida') {
+    obtenerUltimaEntrada().then(horaEntrada => {
+      if (!horaEntrada) return;
+      const diff = ahora - new Date(horaEntrada);
+      if (diff <= 0) return;
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const str = h > 0 ? `${h}h ${m}min` : `${m} min`;
+      const el = document.getElementById('exito-duracion');
+      el.textContent = `Turno de ${str}`;
+      el.hidden = false;
+    });
+  }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
