@@ -56,8 +56,8 @@
   </div>
 
   <script type="module">
-    import { loginAdmin, getAdminSession } from 'assets/js/admin/auth.js';
-    import { BASE } from 'assets/js/config.js';
+    import { loginAdmin, getAdminSession } from './assets/js/admin/auth.js';
+    import { BASE } from './assets/js/config.js';
 
     // If already logged in, skip to dashboard
     if (getAdminSession()) location.replace(BASE + '/admin/dashboard/');
@@ -86,10 +86,15 @@
       const password = passIn.value;
 
       try {
-        await loginAdmin(email, password);
-        location.replace(BASE + '/admin/dashboard/');
+        const res = await loginAdmin(email, password);
+        if (res.ok) {
+          location.replace(BASE + '/admin/dashboard/');
+          return;
+        }
+        errEl.textContent = res.error || 'No se pudo iniciar sesión.';
+        errEl.hidden = false;
       } catch (err) {
-        errEl.textContent = err.message;
+        errEl.textContent = err.message || 'Error inesperado.';
         errEl.hidden = false;
       } finally {
         btnSub.disabled = false;
