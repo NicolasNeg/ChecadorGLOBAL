@@ -40,6 +40,11 @@ async function loadEmpleados() {
       const emp = _allEmpleados.find(e => e.id === id);
       if (emp) openEmpForm(emp);
     };
+    window._verHistorial = async (id) => {
+      const m = await import('./historial-empleado.js');
+      m.preseleccionar(id);
+      document.querySelector('.sidebar__link[data-panel="historial"]').click();
+    };
     window._toggleEmp = async (id, activo) => {
       try {
         await api.updateEmpleado(id, { activo: !activo });
@@ -95,6 +100,9 @@ function renderEmpleados(empleados) {
     ],
     empleados,
     (r) => `
+      <button class="abtn abtn--ghost abtn--icon" title="Ver historial" onclick="window._verHistorial(${r.id})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+      </button>
       <button class="abtn abtn--ghost abtn--icon" title="Editar" onclick="window._editEmp(${r.id})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
