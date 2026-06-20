@@ -91,7 +91,11 @@ function renderEmpleados(empleados) {
   renderTable(
     wrap,
     [
-      { key: 'nombre',   label: 'Nombre' },
+      { key: 'nombre',   label: 'Nombre', render: r => `<div class="emp-cell">${
+        r.foto_url
+          ? `<img class="emp-avatar" src="${r.foto_url}" alt="">`
+          : `<span class="emp-avatar emp-avatar--ph">${r.nombre.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`
+      }<span>${r.nombre}${r.puesto ? `<br><span class="td-muted">${r.puesto}</span>` : ''}</span></div>` },
       { key: 'plaza',    label: 'Plaza',  render: r => r.plazas?.nombre  ?? '<span class="td-muted">Sin plaza</span>' },
       { key: 'turno',    label: 'Turno',  render: r => r.turnos?.nombre  ?? '<span class="td-muted">Sin turno</span>' },
       { key: 'activo',   label: 'Estado', render: r => r.activo
@@ -128,16 +132,58 @@ function filterTable(q) {
   renderEmpleados(filtered);
 }
 
+const ROLES = ['empleado', 'supervisor', 'gerente'];
+
 function openEmpForm(emp = null) {
   const isEdit = !!emp;
+  const v = (k) => emp?.[k] ?? '';
   const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${emp?.plaza_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
   const turnoOpts = `<option value="">Sin turno</option>` + _turnos.map(t => `<option value="${t.id}" ${emp?.turno_id === t.id ? 'selected' : ''}>${t.nombre} (${t.plazas?.nombre})</option>`).join('');
+  const rolOpts   = ROLES.map(r => `<option value="${r}" ${(emp?.rol ?? 'empleado') === r ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('');
 
   openModal(
     isEdit ? `Editar: ${emp.nombre}` : 'Nuevo Empleado',
-    `<div class="form-group">
+    `<div class="emp-foto-row">
+      <img id="e-foto-prev" class="emp-foto-prev" src="${v('foto_url') || ''}" alt="" ${v('foto_url') ? '' : 'hidden'}>
+      <div id="e-foto-ph" class="emp-foto-ph" ${v('foto_url') ? 'hidden' : ''}>Sin foto</div>
+      <div class="form-group" style="flex:1;margin:0">
+        <label for="e-foto">Foto de perfil</label>
+        <input id="e-foto" class="form-input" type="file" accept="image/*">
+      </div>
+    </div>
+    <div class="form-group">
       <label for="e-nombre">Nombre completo *</label>
-      <input id="e-nombre" class="form-input" value="${emp?.nombre ?? ''}" placeholder="Juan Pérez García">
+      <input id="e-nombre" class="form-input" value="${v('nombre')}" placeholder="Juan Pérez García">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label for="e-num">N.º empleado</label>
+        <input id="e-num" class="form-input" value="${v('numero_empleado')}" placeholder="EQS-003">
+      </div>
+      <div class="form-group">
+        <label for="e-puesto">Puesto</label>
+        <input id="e-puesto" class="form-input" value="${v('puesto')}" placeholder="Cajero">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label for="e-email">Correo</label>
+        <input id="e-email" class="form-input" type="email" value="${v('email')}" placeholder="correo@empresa.com">
+      </div>
+      <div class="form-group">
+        <label for="e-tel">Teléfono</label>
+        <input id="e-tel" class="form-input" type="tel" value="${v('telefono')}" placeholder="55 1234 5678">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label for="e-ingreso">Fecha de ingreso</label>
+        <input id="e-ingreso" class="form-input" type="date" value="${v('fecha_ingreso')}">
+      </div>
+      <div class="form-group">
+        <label for="e-rol">Rol</label>
+        <select id="e-rol" class="form-input">${rolOpts}</select>
+      </div>
     </div>
     <div class="form-group">
       <label for="e-plaza">Plaza *</label>
@@ -164,10 +210,24 @@ function openEmpForm(emp = null) {
         return;
       }
 
+      // campos de perfil (RH). Vacío → null para no machacar con "".
+      const datos = {
+        nombre, plaza_id, turno_id,
+        numero_empleado: document.getElementById('e-num').value.trim()    || null,
+        puesto:          document.getElementById('e-puesto').value.trim() || null,
+        email:           document.getElementById('e-email').value.trim()  || null,
+        telefono:        document.getElementById('e-tel').value.trim()     || null,
+        fecha_ingreso:   document.getElementById('e-ingreso').value        || null,
+        rol:             document.getElementById('e-rol').value
+      };
+
       errEl.hidden = true;
       try {
+        const file = document.getElementById('e-foto').files[0];
+        if (file) datos.foto_url = await api.subirFotoPerfil(file);
+
         if (isEdit) {
-          await api.updateEmpleado(emp.id, { nombre, plaza_id, turno_id });
+          await api.updateEmpleado(emp.id, datos);
         } else {
           const pin = document.getElementById('e-pin').value.trim();
           if (!pin || !/^\d+$/.test(pin)) {
@@ -175,7 +235,11 @@ function openEmpForm(emp = null) {
             errEl.hidden = false;
             return;
           }
-          await api.crearEmpleado({ p_nombre: nombre, p_pin: pin, p_plaza_id: plaza_id, p_turno_id: turno_id });
+          const nuevo = await api.crearEmpleado({ p_nombre: nombre, p_pin: pin, p_plaza_id: plaza_id, p_turno_id: turno_id });
+          const id = Array.isArray(nuevo) ? nuevo[0]?.id : nuevo?.id;
+          // crear_empleado sólo guarda nombre/plaza/turno/pin; el resto va por PATCH.
+          const { nombre: _n, plaza_id: _p, turno_id: _t, ...resto } = datos;
+          if (id && Object.values(resto).some(Boolean)) await api.updateEmpleado(id, resto);
         }
         closeModal();
         showToast(isEdit ? 'Empleado actualizado.' : 'Empleado creado.', 'ok');
@@ -186,4 +250,15 @@ function openEmpForm(emp = null) {
       }
     }
   );
+
+  // preview de la foto al elegir archivo
+  document.getElementById('e-foto')?.addEventListener('change', (ev) => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    const prev = document.getElementById('e-foto-prev');
+    const ph   = document.getElementById('e-foto-ph');
+    prev.src = URL.createObjectURL(f);
+    prev.hidden = false;
+    if (ph) ph.hidden = true;
+  });
 }

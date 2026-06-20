@@ -527,3 +527,52 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .hist-lightbox { position:fixed; inset:0; background:rgba(15,23,42,.8); display:flex; align-items:center; justify-content:center; z-index:1000; padding:24px; cursor:zoom-out; }
 .hist-lightbox[hidden] { display:none; }
 .hist-lightbox img { max-width:90vw; max-height:90vh; border-radius:12px; background:#fff; }
+
+/* ── Cuadrícula de asignación semanal (Turnos) ────────────────────────────── */
+.grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.grid-horarios { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 720px; }
+.grid-horarios th, .grid-horarios td {
+  padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--ad-linea);
+}
+.grid-horarios th {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ad-tinta3); background: var(--ad-fondo); position: sticky; top: 0;
+}
+.grid-horarios .grid-emp {
+  text-align: left; font-weight: 600; color: var(--ad-tinta); font-size: .88rem;
+  white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 1;
+}
+.grid-horarios th.grid-emp { background: var(--ad-fondo); z-index: 2; }
+.grid-sel {
+  width: 100%; min-width: 96px; height: 36px; padding: 0 24px 0 8px;
+  font-size: .8rem; color: var(--ad-tinta); border: 1px solid var(--ad-linea);
+  border-radius: 8px; background: #fff; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394A3B8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.grid-sel:focus { outline: none; border-color: var(--ad-primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.grid-sel:disabled { opacity: .5; }
+.grid-sel.shift--am    { background-color: #DCFCE7; border-color: #86EFAC; color: #166534; }
+.grid-sel.shift--pm    { background-color: #FCE7F3; border-color: #F9A8D4; color: #9D174D; }
+.grid-sel.shift--night { background-color: #DBEAFE; border-color: #93C5FD; color: #1E40AF; }
+
+/* ── Empleados: avatar en tabla + foto en formulario ──────────────────────── */
+.emp-cell { display: flex; align-items: center; gap: 10px; }
+.emp-avatar {
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  background: var(--ad-fondo); border: 1px solid var(--ad-linea);
+}
+.emp-avatar--ph {
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700; color: var(--ad-primary); background: #EFF6FF;
+}
+.emp-foto-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.emp-foto-prev, .emp-foto-ph {
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; border: 1px solid var(--ad-linea);
+}
+.emp-foto-ph {
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; color: var(--ad-tinta3); background: var(--ad-fondo); text-align: center;
+}

@@ -1,9 +1,11 @@
-import { verificarPin, limpiarSesion } from './api.js';
+import { verificarPin, limpiarSesion, obtenerMisTurnos, setIdEmpleado } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
 import { BASE } from './config.js';
 
-const sLogin = document.getElementById('s-login');
-const sMenu  = document.getElementById('s-menu');
+const sLogin  = document.getElementById('s-login');
+const sMenu   = document.getElementById('s-menu');
+const sTurnos = document.getElementById('s-turnos');
+const DOW = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 // ── Animate between two .pantalla screens ───────────────────────────────────
 function switchTo(from, to) {
@@ -86,6 +88,8 @@ function enterLogin() {
 
 // ── Menu / Welcome screen ─────────────────────────────────────────────────────
 function enterMenu(perfil) {
+  // restaura el id en el módulo api (la sesión puede venir de sessionStorage)
+  if (perfil.idEmpleado) setIdEmpleado(perfil.idEmpleado);
   const nombre = perfil.nombre ?? '';
 
   // Avatar initials (up to 2 chars)
@@ -111,6 +115,7 @@ function enterMenu(perfil) {
 
   document.getElementById('btn-checar').onclick    = () => { location.href = BASE + '/checador/'; };
   document.getElementById('btn-historial').onclick = () => { location.href = BASE + '/historial/'; };
+  document.getElementById('btn-turnos').onclick    = () => enterTurnos();
   document.getElementById('btn-cerrar-sesion').onclick = () => {
     clearSession();
     limpiarSesion();
@@ -118,4 +123,33 @@ function enterMenu(perfil) {
   };
 
   switchTo(sLogin, sMenu);
+}
+
+// ── Mi turno ───────────────────────────────────────────────────────────────
+const hhmm = (t) => t ? t.slice(0, 5) : '';
+
+async function enterTurnos() {
+  const lista = document.getElementById('turnos-lista');
+  lista.innerHTML = '<p class="turnos-vacio">Cargando…</p>';
+  document.getElementById('btn-turnos-volver').onclick = () => switchTo(sTurnos, sMenu);
+  switchTo(sMenu, sTurnos);
+
+  const turnos = await obtenerMisTurnos();
+  const porDia = new Map(turnos.map(t => [t.dia_semana, t]));
+
+  lista.innerHTML = [1, 2, 3, 4, 5, 6, 7].map(d => {
+    const t = porDia.get(d);
+    const cuerpo = t
+      ? `<span class="turno-dia__turno">${t.turno_nombre}</span>
+         <span class="turno-dia__horas">${hhmm(t.hora_entrada)}–${hhmm(t.hora_salida)}${t.pausa_min ? ` · pausa ${t.pausa_min} min` : ''}</span>`
+      : `<span class="turno-dia__descanso">Descanso</span>`;
+    return `<div class="turno-dia ${t ? '' : 'turno-dia--off'}">
+      <span class="turno-dia__nombre">${DOW[d]}</span>
+      <div class="turno-dia__det">${cuerpo}</div>
+    </div>`;
+  }).join('');
+
+  if (!turnos.length) {
+    lista.insertAdjacentHTML('afterbegin', '<p class="turnos-vacio">Aún no tienes turnos asignados.</p>');
+  }
 }

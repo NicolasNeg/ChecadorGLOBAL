@@ -58,6 +58,34 @@ export const updateEmpleado  = (id, d) => apiFetch(`empleados?id=eq.${id}`, { me
 export const crearEmpleado   = (d) => rpc('crear_empleado', d);
 export const actualizarPin   = (id, pin) => rpc('actualizar_pin_empleado', { p_empleado_id: id, p_nuevo_pin: pin });
 
+// Sube una foto de perfil al bucket público 'fotos' con la anon key (las
+// políticas de storage permiten insert/read anon). Devuelve la URL pública.
+export async function subirFotoPerfil(file) {
+  const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `perfil/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/fotos/${path}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': file.type },
+    body: file
+  });
+  if (!res.ok) throw new Error('No se pudo subir la foto.');
+  return `${SUPABASE_URL}/storage/v1/object/public/fotos/${path}`;
+}
+
+// ── Horarios semanales (asignación turno × día) ────────────────────────────
+export const getHorarios = () => apiFetch('horarios_semana?select=id_empleado,dia_semana,turno_id');
+
+export const setHorario = (id_empleado, dia_semana, turno_id) =>
+  turno_id
+    ? apiFetch('horarios_semana?on_conflict=id_empleado,dia_semana', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ id_empleado, dia_semana, turno_id })
+      })
+    : apiFetch(`horarios_semana?id_empleado=eq.${id_empleado}&dia_semana=eq.${dia_semana}`, {
+        method: 'DELETE', headers: { Prefer: '' }
+      });
+
 // ── Asistencia ────────────────────────────────────────────────────────────
 export function getRegistros({ fecha, plaza_id, limit = 100 } = {}) {
   const q = new URLSearchParams({ order: 'hora.desc', limit: limit.toString() });

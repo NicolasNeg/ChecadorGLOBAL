@@ -17,10 +17,74 @@ export async function init(panel) {
         </button>
       </div>
     </div>
-    <div class="ad-card"><div id="tbl-turnos-wrap"></div></div>`;
+    <div class="ad-card"><div id="tbl-turnos-wrap"></div></div>
+
+    <div class="panel-header" style="margin-top:28px">
+      <h2>Asignación semanal</h2>
+      <span class="td-muted" style="font-size:.85rem">Elige el turno de cada empleado por día. Se guarda al instante.</span>
+    </div>
+    <div class="ad-card"><div id="grid-horarios-wrap"></div></div>`;
 
   document.getElementById('btn-nuevo-turno')?.addEventListener('click', () => openTurnoForm());
   await loadTurnos();
+  await loadGrid();
+}
+
+// ── Cuadrícula de asignación semanal (empleado × día) ──────────────────────
+const shiftClass = (n = '') => {
+  const s = n.toLowerCase();
+  if (s.includes('mañana') || s.includes('matutino')) return 'shift--am';
+  if (s.includes('tarde')  || s.includes('vesp'))     return 'shift--pm';
+  if (s.includes('noche')  || s.includes('nocturno')) return 'shift--night';
+  return '';
+};
+
+async function loadGrid() {
+  const wrap = document.getElementById('grid-horarios-wrap');
+  loading(wrap);
+  try {
+    const [empleados, turnos, horarios] = await Promise.all([
+      api.getEmpleados(), api.getTurnos(), api.getHorarios()
+    ]);
+    const activos = empleados.filter(e => e.activo);
+    if (!activos.length) { wrap.innerHTML = '<div class="ad-empty">No hay empleados activos.</div>'; return; }
+
+    // key "empleado-dia" → turno_id
+    const asignado = new Map(horarios.map(h => [`${h.id_empleado}-${h.dia_semana}`, h.turno_id]));
+    const optsFor = (sel) => `<option value="">—</option>` + turnos.map(t =>
+      `<option value="${t.id}" ${sel === t.id ? 'selected' : ''}>${t.nombre} (${(t.hora_entrada||'').slice(0,5)}-${(t.hora_salida||'').slice(0,5)})</option>`
+    ).join('');
+
+    const head = `<tr><th class="grid-emp">Empleado</th>${[1,2,3,4,5,6,7].map(d => `<th>${DIAS[d]}</th>`).join('')}</tr>`;
+    const rows = activos.map(e => `
+      <tr>
+        <td class="grid-emp">${e.nombre}</td>
+        ${[1,2,3,4,5,6,7].map(d => {
+          const sel = asignado.get(`${e.id}-${d}`) ?? '';
+          const t = turnos.find(t => t.id === sel);
+          return `<td><select class="grid-sel ${shiftClass(t?.nombre)}" data-emp="${e.id}" data-dia="${d}">${optsFor(sel)}</select></td>`;
+        }).join('')}
+      </tr>`).join('');
+
+    wrap.innerHTML = `<div class="grid-scroll"><table class="grid-horarios"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+
+    wrap.querySelectorAll('.grid-sel').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const emp = parseInt(sel.dataset.emp), dia = parseInt(sel.dataset.dia);
+        const turnoId = parseInt(sel.value) || null;
+        sel.disabled = true;
+        try {
+          await api.setHorario(emp, dia, turnoId);
+          const t = turnos.find(t => t.id === turnoId);
+          sel.className = `grid-sel ${shiftClass(t?.nombre)}`;
+          showToast('Horario actualizado.', 'ok');
+        } catch (err) { showToast(err.message, 'error'); }
+        finally { sel.disabled = false; }
+      });
+    });
+  } catch (e) {
+    wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
+  }
 }
 
 let _allTurnos = [];
@@ -90,14 +154,18 @@ function openTurnoForm(turno = null) {
         <input id="t-salida" class="form-input" type="time" value="${turno?.hora_salida?.slice(0,5) ?? '17:00'}">
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="form-group">
-        <label for="t-tol-e">Tolerancia entrada (min)</label>
+        <label for="t-tol-e">Tol. entrada (min)</label>
         <input id="t-tol-e" class="form-input" type="number" min="0" max="120" value="${turno?.tolerancia_entrada_min ?? 15}">
       </div>
       <div class="form-group">
-        <label for="t-tol-s">Tolerancia salida (min)</label>
+        <label for="t-tol-s">Tol. salida (min)</label>
         <input id="t-tol-s" class="form-input" type="number" min="0" max="120" value="${turno?.tolerancia_salida_min ?? 10}">
+      </div>
+      <div class="form-group">
+        <label for="t-pausa">Pausa (min)</label>
+        <input id="t-pausa" class="form-input" type="number" min="0" max="480" value="${turno?.pausa_min ?? 0}">
       </div>
     </div>
     <div class="form-group">
@@ -118,6 +186,7 @@ function openTurnoForm(turno = null) {
       const h_sal    = document.getElementById('t-salida').value;
       const tol_e    = parseInt(document.getElementById('t-tol-e').value) || 0;
       const tol_s    = parseInt(document.getElementById('t-tol-s').value) || 0;
+      const pausa    = parseInt(document.getElementById('t-pausa').value) || 0;
       const dias     = [...document.querySelectorAll('input[name="t-dia"]:checked')].map(el => parseInt(el.value));
       const errEl    = document.getElementById('t-error');
 
@@ -131,6 +200,7 @@ function openTurnoForm(turno = null) {
         nombre, plaza_id,
         hora_entrada: h_ent, hora_salida: h_sal,
         tolerancia_entrada_min: tol_e, tolerancia_salida_min: tol_s,
+        pausa_min: pausa,
         dias_semana: dias
       };
 

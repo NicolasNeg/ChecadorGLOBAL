@@ -159,6 +159,24 @@ export async function obtenerUltimaEntrada() {
   } catch { return null; }
 }
 
+// ── MIS TURNOS (RPC: horario semanal asignado por el admin) ─────────────────
+export async function obtenerMisTurnos() {
+  if (!_idEmpleado) return [];
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/mis_turnos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado })
+    });
+    if (!r.ok) return [];
+    return await r.json(); // [{dia_semana, turno_nombre, hora_entrada, hora_salida, pausa_min}]
+  } catch { return []; }
+}
+
 // ── SET ID DESDE SESIÓN (para páginas que cargan con sessionStorage) ────────
 export function setIdEmpleado(id) { _idEmpleado = id; }
 

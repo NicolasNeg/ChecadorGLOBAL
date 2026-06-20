@@ -187,3 +187,18 @@
 }
 .admin-access:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,23,42,.14); }
 .admin-access:active { transform: translateY(0); }
+
+/* ── Mi turno (horario semanal) ───────────────────────────────────────────── */
+.turnos-lista { display: flex; flex-direction: column; gap: 8px; }
+.turnos-vacio { font-size: .9rem; color: var(--tinta-2); text-align: center; padding: 8px 0; }
+.turno-dia {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--linea); border-radius: 10px;
+  border-left: 3px solid var(--primario); background: #fff;
+}
+.turno-dia--off { border-left-color: var(--tinta-3); background: var(--fondo); }
+.turno-dia__nombre { font-weight: 600; color: var(--tinta); font-size: .95rem; }
+.turno-dia__det { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+.turno-dia__turno { font-weight: 600; color: var(--primario-dk); font-size: .9rem; }
+.turno-dia__horas { font-size: .8rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.turno-dia__descanso { font-size: .85rem; color: var(--tinta-3); font-weight: 500; }
