@@ -4,13 +4,14 @@ import { getAuditLog } from './api.js';
 import { fmtFecha } from './utils.js';
 
 const sesion = requireAdminSession();
-const esRH   = sesion?.perfil?.rol === 'rh';
+// auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
+const esRH   = sesion?.rol === 'rh';
 
 // ── Role-based UI ─────────────────────────────────────────────────────────────
 if (!esRH) {
   document.querySelectorAll('[data-rh-only]').forEach(el => el.remove());
 }
-document.getElementById('admin-nombre').textContent = sesion?.perfil?.nombre ?? 'Admin';
+document.getElementById('admin-nombre').textContent = sesion?.nombre ?? 'Admin';
 document.getElementById('admin-rol-badge').textContent = esRH ? 'Recursos Humanos' : 'Jefe de Plaza';
 
 // ── Sidebar nav + routing ─────────────────────────────────────────────────────
