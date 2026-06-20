@@ -1,6 +1,25 @@
 import * as api from './api.js';
 import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
 
+// Leaflet desde CDN (patrón signature_pad): inyecta CSS+JS una sola vez.
+let _leafletP;
+function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (_leafletP) return _leafletP;
+  _leafletP = new Promise((resolve, reject) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+    js.onload = () => resolve(window.L);
+    js.onerror = () => reject(new Error('No se pudo cargar el mapa.'));
+    document.head.appendChild(js);
+  });
+  return _leafletP;
+}
+
 export async function init(panel) {
   panel.innerHTML = `
     <div class="panel-header">
@@ -81,6 +100,11 @@ function openPlazaForm(plaza = null) {
       <label for="pz-ciudad">Ciudad *</label>
       <input id="pz-ciudad" class="form-input" value="${plaza?.ciudad ?? ''}" placeholder="Ej: Silao, Guanajuato">
     </div>
+
+    <div class="form-group">
+      <label>Ubicación (mueve el pin o haz clic en el mapa) *</label>
+      <div id="pz-map" style="height:240px;border-radius:10px;overflow:hidden;border:1px solid var(--ad-linea);z-index:0"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
         <label for="pz-lat">Latitud *</label>
@@ -95,19 +119,40 @@ function openPlazaForm(plaza = null) {
       <label for="pz-radio">Radio de tolerancia (metros) *</label>
       <input id="pz-radio" class="form-input" type="number" min="10" max="5000" value="${plaza?.radio_metros ?? 100}">
     </div>
+
+    <div class="form-group">
+      <label for="pz-direccion">Dirección</label>
+      <input id="pz-direccion" class="form-input" value="${plaza?.direccion ?? ''}" placeholder="Calle, número, colonia, C.P.">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label for="pz-telefono">Teléfono</label>
+        <input id="pz-telefono" class="form-input" type="tel" value="${plaza?.telefono ?? ''}" placeholder="477 123 4567">
+      </div>
+      <div class="form-group">
+        <label for="pz-responsable">Responsable</label>
+        <input id="pz-responsable" class="form-input" value="${plaza?.responsable ?? ''}" placeholder="Nombre del encargado">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="pz-notas">Notas</label>
+      <textarea id="pz-notas" class="form-input" rows="3" placeholder="Observaciones, horarios especiales, etc.">${plaza?.notas ?? ''}</textarea>
+    </div>
+
     <div class="form-group" style="flex-direction:row;align-items:center;gap:10px">
       <input id="pz-activo" type="checkbox" ${plaza?.activo !== false ? 'checked' : ''} style="width:16px;height:16px">
       <label for="pz-activo" style="text-transform:none;font-size:.9rem;color:var(--ad-tinta)">Plaza activa</label>
     </div>
     <p id="pz-error" class="error-inline" hidden></p>`,
     async () => {
-      const nombre  = document.getElementById('pz-nombre').value.trim();
-      const ciudad  = document.getElementById('pz-ciudad').value.trim();
-      const latitud = parseFloat(document.getElementById('pz-lat').value);
+      const v = (id) => document.getElementById(id).value.trim();
+      const nombre   = v('pz-nombre');
+      const ciudad   = v('pz-ciudad');
+      const latitud  = parseFloat(document.getElementById('pz-lat').value);
       const longitud = parseFloat(document.getElementById('pz-lng').value);
-      const radio   = parseInt(document.getElementById('pz-radio').value);
-      const activo  = document.getElementById('pz-activo').checked;
-      const errEl   = document.getElementById('pz-error');
+      const radio    = parseInt(document.getElementById('pz-radio').value);
+      const activo   = document.getElementById('pz-activo').checked;
+      const errEl    = document.getElementById('pz-error');
 
       if (!nombre || !ciudad || isNaN(latitud) || isNaN(longitud) || isNaN(radio)) {
         errEl.textContent = 'Completa todos los campos obligatorios.';
@@ -121,7 +166,13 @@ function openPlazaForm(plaza = null) {
       }
 
       errEl.hidden = true;
-      const payload = { nombre, ciudad, latitud, longitud, radio_metros: radio, activo };
+      const payload = {
+        nombre, ciudad, latitud, longitud, radio_metros: radio, activo,
+        direccion:   v('pz-direccion') || null,
+        telefono:    v('pz-telefono')  || null,
+        responsable: v('pz-responsable') || null,
+        notas:       v('pz-notas')     || null
+      };
 
       try {
         if (isEdit) await api.updatePlaza(plaza.id, payload);
@@ -136,4 +187,47 @@ function openPlazaForm(plaza = null) {
       }
     }
   );
+
+  initMapaPicker(plaza);
+}
+
+// Mapa Leaflet: pin arrastrable + círculo del radio, sincronizado con los
+// inputs lat/lng/radio en ambos sentidos. Centro por defecto: México.
+async function initMapaPicker(plaza) {
+  const elLat = () => document.getElementById('pz-lat');
+  const elLng = () => document.getElementById('pz-lng');
+  let L;
+  try { L = await loadLeaflet(); } catch (e) { showToast(e.message, 'error'); return; }
+  if (!document.getElementById('pz-map')) return; // modal cerrado mientras cargaba
+
+  const lat0 = plaza?.latitud ?? 23.6345;
+  const lng0 = plaza?.longitud ?? -102.5528;
+  const map = L.map('pz-map').setView([lat0, lng0], plaza ? 16 : 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap', maxZoom: 19
+  }).addTo(map);
+
+  const marker = L.marker([lat0, lng0], { draggable: true }).addTo(map);
+  const circle = L.circle([lat0, lng0], {
+    radius: plaza?.radio_metros ?? 100, color: '#2563eb', weight: 1, fillOpacity: 0.12
+  }).addTo(map);
+  setTimeout(() => map.invalidateSize(), 120); // el modal recién se mostró
+
+  const set = (latlng) => {
+    elLat().value = latlng.lat.toFixed(6);
+    elLng().value = latlng.lng.toFixed(6);
+    circle.setLatLng(latlng);
+  };
+  marker.on('drag', (e) => set(e.target.getLatLng()));
+  map.on('click', (e) => { marker.setLatLng(e.latlng); set(e.latlng); });
+
+  const fromInputs = () => {
+    const la = parseFloat(elLat().value), ln = parseFloat(elLng().value);
+    if (!isNaN(la) && !isNaN(ln)) { marker.setLatLng([la, ln]); circle.setLatLng([la, ln]); map.panTo([la, ln]); }
+  };
+  elLat().addEventListener('change', fromInputs);
+  elLng().addEventListener('change', fromInputs);
+  document.getElementById('pz-radio').addEventListener('input', (e) => {
+    const r = parseInt(e.target.value); if (!isNaN(r)) circle.setRadius(r);
+  });
 }
