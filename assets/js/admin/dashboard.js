@@ -34,6 +34,8 @@ async function showPanel(id) {
     return;
   }
 
+  if (id === 'ajustes') { loadAjustes(panel); return; }
+
   if (_loaded[id]) return;
   _loaded[id] = true;
 
@@ -82,6 +84,71 @@ function closeSidebar() {
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin);
+
+// ── Tema claro/oscuro ───────────────────────────────────────────────────────────
+const THEME_KEY = 'eqs_admin_theme';
+const mq = matchMedia('(prefers-color-scheme: dark)');
+const getTheme = () => localStorage.getItem(THEME_KEY) || 'system';
+const isDark = (t = getTheme()) => t === 'dark' || (t === 'system' && mq.matches);
+
+function applyTheme() {
+  const dark = isDark();
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  const sw = document.getElementById('theme-switch');
+  if (sw) sw.checked = dark;
+  document.querySelectorAll('.seg-theme [data-theme-opt]').forEach(b =>
+    b.classList.toggle('active', b.dataset.themeOpt === getTheme()));
+}
+function setTheme(t) { localStorage.setItem(THEME_KEY, t); applyTheme(); }
+
+mq.addEventListener('change', () => { if (getTheme() === 'system') applyTheme(); });
+document.getElementById('theme-switch')?.addEventListener('change', e => setTheme(e.target.checked ? 'dark' : 'light'));
+applyTheme();
+
+// ── Panel Ajustes ───────────────────────────────────────────────────────────────
+function loadAjustes(panel) {
+  const rolTxt = esRH ? 'Recursos Humanos' : 'Jefe de Plaza';
+  panel.innerHTML = `
+    <div class="panel-header"><h2>Ajustes</h2></div>
+    <div class="ad-card"><div class="ad-card__header"><h3>Apariencia</h3></div>
+      <div class="ad-card__body">
+        <div class="setting-row">
+          <div>
+            <div class="setting-row__label">Tema</div>
+            <div class="setting-row__hint">Elige claro, oscuro o seguir el sistema.</div>
+          </div>
+          <div class="segmented seg-theme">
+            <button data-theme-opt="light">Claro</button>
+            <button data-theme-opt="dark">Oscuro</button>
+            <button data-theme-opt="system">Sistema</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ad-card"><div class="ad-card__header"><h3>Cuenta</h3></div>
+      <div class="ad-card__body">
+        <div class="setting-row"><span class="setting-row__label">Nombre</span><span class="setting-row__val">${esc(sesion?.nombre ?? 'Admin')}</span></div>
+        <div class="setting-row"><span class="setting-row__label">Rol</span><span class="setting-row__val">${rolTxt}</span></div>
+        <div class="setting-row"><span class="setting-row__label">Correo</span><span class="setting-row__val">${esc(sesion?.email ?? '—')}</span></div>
+      </div>
+    </div>
+    <div class="ad-card"><div class="ad-card__header"><h3>Sesión</h3></div>
+      <div class="ad-card__body">
+        <div class="setting-row">
+          <div>
+            <div class="setting-row__label">Cerrar sesión</div>
+            <div class="setting-row__hint">Saldrás del panel administrativo.</div>
+          </div>
+          <button class="abtn abtn--danger" id="ajustes-logout">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>`;
+
+  panel.querySelectorAll('.seg-theme [data-theme-opt]').forEach(b =>
+    b.addEventListener('click', () => setTheme(b.dataset.themeOpt)));
+  panel.querySelector('#ajustes-logout')?.addEventListener('click', logoutAdmin);
+  applyTheme();
+}
 
 // ── Overview stats ────────────────────────────────────────────────────────────
 const ICONS = {
