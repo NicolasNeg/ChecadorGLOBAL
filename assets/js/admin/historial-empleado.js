@@ -1,6 +1,6 @@
 import * as api from './api.js';
 import { horasPorDia, esRetardo, resumen } from './historial-calc.mjs';
-import { openModal, closeModal, showToast, confirm, fmtFecha, loading } from './utils.js';
+import { openModal, closeModal, showToast, confirm, fmtFecha, loading, esc } from './utils.js';
 import { SUPABASE_URL } from '../config.js';
 
 const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones'];
@@ -15,7 +15,7 @@ let _empleados = [];
 
 export async function init(panel) {
   _empleados = await api.getEmpleados().catch(() => []);
-  const opts = _empleados.map((e) => `<option value="${e.id}">${e.nombre}</option>`).join('');
+  const opts = _empleados.map((e) => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('');
 
   panel.innerHTML = `
     <div class="panel-header">
@@ -107,8 +107,8 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
   const filasInc = incidencias.length ? incidencias.map((i) => `
     <tr>
       <td>${i.fecha}</td>
-      <td><span class="abadge abadge--gray">${i.tipo}</span></td>
-      <td>${i.nota ?? '–'}</td>
+      <td><span class="abadge abadge--gray">${esc(i.tipo)}</span></td>
+      <td>${i.nota ? esc(i.nota) : '–'}</td>
       <td><div class="actions">
         <button class="abtn abtn--danger abtn--icon" title="Eliminar" data-del-inc="${i.id}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
@@ -118,7 +118,7 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
 
   wrap.innerHTML = `
     <div class="panel-header" style="border:0;padding-top:0">
-      <h3 style="margin:0">${emp?.nombre ?? 'Empleado'} <span class="td-muted">· ${rango.desde} a ${rango.hasta}</span></h3>
+      <h3 style="margin:0">${esc(emp?.nombre ?? 'Empleado')} <span class="td-muted">· ${rango.desde} a ${rango.hasta}</span></h3>
       <button id="hist-nueva-inc" class="abtn abtn--primary">+ Incidencia</button>
     </div>
     ${cards}${avisoTurno}

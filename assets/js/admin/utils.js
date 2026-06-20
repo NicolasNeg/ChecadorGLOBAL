@@ -1,5 +1,9 @@
 // Shared utilities for admin modules
 
+// Escapa texto de la DB antes de interpolarlo en innerHTML (previene XSS almacenado).
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
+
 export function fmtFecha(iso) {
   if (!iso) return '–';
   return new Date(iso).toLocaleString('es-MX', {

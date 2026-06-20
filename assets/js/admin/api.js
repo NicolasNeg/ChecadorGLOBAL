@@ -74,9 +74,6 @@ export const getIncidencias = (idEmpleado, { desde, hasta }) =>
 export const createIncidencia = (d) =>
   apiFetch('incidencias', { method: 'POST', body: JSON.stringify(d) });
 
-export const updateIncidencia = (id, d) =>
-  apiFetch(`incidencias?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
-
 export const deleteIncidencia = (id) =>
   apiFetch(`incidencias?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
 
