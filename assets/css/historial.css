@@ -50,6 +50,27 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Agrupación por día + cordón (hilo vertical que conecta el turno) */
+.hist-dia { display: flex; flex-direction: column; gap: 10px; }
+.hist-dia__head {
+  font-size: .82rem; font-weight: 700; color: var(--tinta-2);
+  text-transform: capitalize; margin: 6px 0 0;
+}
+.hist-dia__cordon {
+  position: relative; display: flex; flex-direction: column; gap: 12px; padding-left: 22px;
+}
+.hist-dia__cordon::before {
+  content: ''; position: absolute; left: 5px; top: 10px; bottom: 10px; width: 2px;
+  background: repeating-linear-gradient(var(--linea) 0 5px, transparent 5px 9px);
+}
+.hist-card { position: relative; }
+.hist-card__nodo {
+  position: absolute; left: -22px; top: 16px; width: 12px; height: 12px; box-sizing: border-box;
+  border-radius: 50%; background: #fff; border: 2px solid var(--tinta-3);
+}
+.hist-card--entrada .hist-card__nodo { background: #16A34A; border-color: #16A34A; }
+.hist-card--salida  .hist-card__nodo { background: #C2410C; border-color: #C2410C; }
+
 /* Ubicación (dirección legible, click → Google Maps) */
 .hist-ubic {
   display: flex; align-items: flex-start; gap: 7px;

@@ -5,10 +5,15 @@ import { direccionDesdeCoords, mapsLink } from './geo.js';
 
 const pinSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
 
+const diaKey = (iso) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 function fmt(iso) {
   const d = new Date(iso);
   return {
-    fecha: d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+    fecha: d.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }),
     hora:  d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
   };
 }
@@ -19,32 +24,51 @@ export function renderHistorial(contenedorEl, registros) {
     return;
   }
 
-  const cards = registros.map((r, i) => {
-    const { fecha, hora } = fmt(r.hora);
-    const tieneCoords = r.latitud != null && r.longitud != null;
+  // Agrupa por día (más reciente primero); dentro del día, el cordón (línea
+  // vertical en CSS) conecta entrada y salida del mismo turno.
+  const orden = [...registros].sort((a, b) => new Date(b.hora) - new Date(a.hora));
+  const dias = new Map();
+  for (const r of orden) {
+    const k = diaKey(r.hora);
+    (dias.get(k) ?? dias.set(k, []).get(k)).push(r);
+  }
 
-    const ubic = tieneCoords
-      ? `<a class="hist-ubic" id="ubic-${i}" href="${mapsLink(r.latitud, r.longitud)}" target="_blank" rel="noopener">
-           ${pinSvg}<span class="hist-ubic__txt">Cargando ubicación…</span>
-         </a>`
-      : `<span class="hist-ubic hist-ubic--none">${pinSvg}<span class="hist-ubic__txt">Ubicación no registrada</span></span>`;
+  let i = 0;
+  const grupos = [...dias.entries()].map(([, regs]) => {
+    const cards = regs.map((r) => {
+      const idx = i++;
+      const { hora } = fmt(r.hora);
+      const tieneCoords = r.latitud != null && r.longitud != null;
 
-    const medios = [];
-    if (r.foto)  medios.push(`<button class="hist-medio" data-src="${r.foto}" data-tipo="foto"><img src="${r.foto}" alt="Foto del registro"><span>Foto</span></button>`);
-    if (r.firma) medios.push(`<button class="hist-medio hist-medio--firma" data-src="${r.firma}" data-tipo="firma"><img src="${r.firma}" alt="Firma del registro"><span>Firma</span></button>`);
-    const mediosHtml = medios.length ? `<div class="hist-medios">${medios.join('')}</div>` : '';
+      const ubic = tieneCoords
+        ? `<a class="hist-ubic" id="ubic-${idx}" href="${mapsLink(r.latitud, r.longitud)}" target="_blank" rel="noopener">
+             ${pinSvg}<span class="hist-ubic__txt">Cargando ubicación…</span>
+           </a>`
+        : `<span class="hist-ubic hist-ubic--none">${pinSvg}<span class="hist-ubic__txt">Ubicación no registrada</span></span>`;
 
-    return `<article class="hist-card">
-      <div class="hist-card__top">
-        <span class="badge badge--${r.tipo}">${r.tipo}</span>
-        <span class="hist-card__fecha">${fecha} · ${hora}</span>
-      </div>
-      ${ubic}
-      ${mediosHtml}
-    </article>`;
+      const medios = [];
+      if (r.foto)  medios.push(`<button class="hist-medio" data-src="${r.foto}" data-tipo="foto"><img src="${r.foto}" alt="Foto del registro"><span>Foto</span></button>`);
+      if (r.firma) medios.push(`<button class="hist-medio hist-medio--firma" data-src="${r.firma}" data-tipo="firma"><img src="${r.firma}" alt="Firma del registro"><span>Firma</span></button>`);
+      const mediosHtml = medios.length ? `<div class="hist-medios">${medios.join('')}</div>` : '';
+
+      return `<article class="hist-card hist-card--${r.tipo}">
+        <span class="hist-card__nodo" aria-hidden="true"></span>
+        <div class="hist-card__top">
+          <span class="badge badge--${r.tipo}">${r.tipo}</span>
+          <span class="hist-card__fecha">${hora}</span>
+        </div>
+        ${ubic}
+        ${mediosHtml}
+      </article>`;
+    }).join('');
+    const { fecha } = fmt(regs[0].hora);
+    return `<section class="hist-dia">
+      <h2 class="hist-dia__head">${fecha}</h2>
+      <div class="hist-dia__cordon">${cards}</div>
+    </section>`;
   }).join('');
 
-  contenedorEl.innerHTML = `<div class="hist-lista">${cards}</div>`;
+  contenedorEl.innerHTML = `<div class="hist-lista">${grupos}</div>`;
 
   contenedorEl.querySelectorAll('.hist-medio').forEach((btn) => {
     btn.addEventListener('click', () => abrirLightbox(btn.dataset.src, btn.dataset.tipo === 'firma'));

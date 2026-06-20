@@ -314,6 +314,46 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .quick-link svg { color: var(--ad-tinta3); transition: color .15s, transform .15s; }
 .quick-link:hover svg { color: var(--ad-primary); transform: translateX(2px); }
 
+/* ── Historial calendario + cordón ────────────────────────────────────── */
+.cal-card { padding: 4px 0; }
+.cal-day {
+  display: grid; grid-template-columns: 84px 1fr; gap: 14px; align-items: center;
+  padding: 12px 18px; border-bottom: 1px solid var(--ad-linea); border-left: 3px solid transparent;
+}
+.cal-day:last-child { border-bottom: none; }
+.cal-day--presente     { border-left-color: #16A34A; }
+.cal-day--falta        { border-left-color: #DC2626; background: #FEF2F2; }
+.cal-day--justificacion{ border-left-color: #D97706; }
+.cal-day--permiso,
+.cal-day--vacaciones   { border-left-color: #2563EB; }
+.cal-day--festivo      { border-left-color: #94A3B8; }
+.cal-day__date  { display: flex; flex-direction: column; line-height: 1.1; }
+.cal-day__dow   { font-size: .72rem; color: var(--ad-tinta3); text-transform: uppercase; letter-spacing: .05em; }
+.cal-day__num   { font-family: 'Lexend', sans-serif; font-weight: 700; color: var(--ad-tinta); }
+.cal-day__body  { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cal-day__nota  { font-size: .82rem; color: var(--ad-tinta2); }
+
+/* Cordón: entrada ●——dur——● salida */
+.cordon { display: flex; align-items: center; gap: 4px; }
+.cordon__pt { display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; }
+.cordon__pt--miss .cordon__lbl { color: var(--ad-tinta3); }
+.cordon__dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px currentColor; }
+.cordon__dot--in   { color: #16A34A; background: #16A34A; }
+.cordon__dot--out  { color: #C2410C; background: #C2410C; }
+.cordon__dot--miss { color: #CBD5E1; background: #fff; }
+.cordon__t   { font-family: 'Lexend', sans-serif; font-weight: 700; font-size: .92rem; color: var(--ad-tinta); }
+.cordon__lbl { font-size: .68rem; color: var(--ad-tinta3); text-transform: uppercase; letter-spacing: .04em; }
+.cordon__line {
+  flex: 1; max-width: 160px; height: 2px; margin: 0 2px; position: relative;
+  background: repeating-linear-gradient(90deg, var(--ad-primary) 0 6px, transparent 6px 10px);
+  align-self: flex-start; margin-top: 5px;
+}
+.cordon__dur {
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: var(--ad-fondo); padding: 0 6px; font-size: .72rem; font-weight: 600; color: var(--ad-tinta2); white-space: nowrap;
+}
+.cal-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* ── Data table ───────────────────────────────────────────────────────── */
 .table-scroll { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }

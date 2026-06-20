@@ -1,9 +1,22 @@
 import * as api from './api.js';
-import { horasPorDia, esRetardo, resumen } from './historial-calc.mjs';
+import { esRetardo, resumen, diasCalendario } from './historial-calc.mjs';
 import { openModal, closeModal, showToast, confirm, fmtFecha, loading, esc } from './utils.js';
 import { SUPABASE_URL } from '../config.js';
 
-const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones'];
+const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
+
+const ESTADO = {
+  presente:      { txt: 'Presente',          cls: 'green'  },
+  falta:         { txt: 'Falta',             cls: 'red'    },
+  justificacion: { txt: 'Falta justificada', cls: 'orange' },
+  permiso:       { txt: 'Permiso',           cls: 'blue'   },
+  vacaciones:    { txt: 'Vacaciones',        cls: 'blue'   },
+  festivo:       { txt: 'Festivo',           cls: 'gray'   },
+};
+
+const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const horaCorta = (iso) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+const diaCorto  = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 const publicURL = (ruta) => ruta ? `${SUPABASE_URL}/storage/v1/object/public/${ruta}` : null;
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const haceDiasISO = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
@@ -70,12 +83,6 @@ export async function mostrar(panel, idEmpleado, rango) {
   }
 }
 
-function badgeTipo(t) {
-  return t === 'entrada'
-    ? '<span class="abadge abadge--green">Entrada</span>'
-    : '<span class="abadge abadge--orange">Salida</span>';
-}
-
 function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, panel) {
   const r = resumen(registros, turno, incidencias);
   const sinTurno = !turno;
@@ -91,18 +98,47 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
   const avisoTurno = sinTurno
     ? `<p class="td-muted" style="margin-bottom:12px">Sin turno asignado — no se evalúan retardos.</p>` : '';
 
-  const filasReg = registros.length ? registros.map((reg) => {
-    const tarde = esRetardo(reg, turno);
-    const foto = publicURL(reg.ruta_foto);
-    const firma = publicURL(reg.ruta_firma);
-    return `<tr>
-      <td>${fmtFecha(reg.hora)}</td>
-      <td>${badgeTipo(reg.tipo)}${tarde ? ' <span class="abadge abadge--red">Retardo</span>' : ''}</td>
-      <td>${reg.geocerca_valida === false ? '<span class="abadge abadge--red">Fuera de geocerca</span>' : '<span class="abadge abadge--green">OK</span>'}</td>
-      <td>${foto ? `<img src="${foto}" alt="Foto de checada" class="hist-thumb" data-full="${foto}">` : '–'}</td>
-      <td>${firma ? `<img src="${firma}" alt="Firma de checada" class="hist-thumb hist-thumb--firma" data-full="${firma}">` : '–'}</td>
-    </tr>`;
-  }).join('') : `<tr><td colspan="5"><div class="ad-empty">Sin checadas en este rango.</div></td></tr>`;
+  const thumbs = (reg) => {
+    if (!reg) return '';
+    const foto = publicURL(reg.ruta_foto), firma = publicURL(reg.ruta_firma);
+    return `${foto ? `<img src="${foto}" alt="Foto de checada" class="hist-thumb" data-full="${foto}">` : ''}` +
+           `${firma ? `<img src="${firma}" alt="Firma de checada" class="hist-thumb hist-thumb--firma" data-full="${firma}">` : ''}`;
+  };
+  const punto = (reg, lbl, extra = '') => reg
+    ? `<div class="cordon__pt">
+        <span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span>
+        <span class="cordon__t">${horaCorta(reg.hora)}</span>
+        <span class="cordon__lbl">${lbl}${extra}</span>
+        ${reg.geocerca_valida === false ? '<span class="abadge abadge--red">Fuera</span>' : ''}
+      </div>`
+    : `<div class="cordon__pt cordon__pt--miss">
+        <span class="cordon__dot cordon__dot--miss"></span>
+        <span class="cordon__lbl">Sin ${lbl.toLowerCase()}</span>
+      </div>`;
+  const diaPresente = (d) => {
+    const tarde = d.entrada && esRetardo(d.entrada, turno);
+    return `<div class="cordon">
+        ${punto(d.entrada, 'Entrada', tarde ? ' <span class="abadge abadge--red">Retardo</span>' : '')}
+        <div class="cordon__line">${d.horas != null ? `<span class="cordon__dur">${d.horas} h</span>` : ''}</div>
+        ${punto(d.salida, 'Salida')}
+      </div>
+      <div class="cal-thumbs">${thumbs(d.entrada)}${thumbs(d.salida)}</div>`;
+  };
+
+  const dias = diasCalendario(registros, incidencias, rango).filter((d) => d.estado !== 'futuro');
+  const calHtml = dias.length ? dias.map((d) => {
+    const e = ESTADO[d.estado] ?? ESTADO.falta;
+    return `<div class="cal-day cal-day--${d.estado}">
+      <div class="cal-day__date">
+        <span class="cal-day__dow">${DOW[d.dow]}</span>
+        <span class="cal-day__num">${diaCorto(d.fecha)}</span>
+      </div>
+      <div class="cal-day__body">
+        <span class="abadge abadge--${e.cls}">${e.txt}</span>
+        ${d.estado === 'presente' ? diaPresente(d) : (d.inc?.nota ? `<span class="cal-day__nota">${esc(d.inc.nota)}</span>` : '')}
+      </div>
+    </div>`;
+  }).join('') : `<div class="ad-empty">Sin días en este rango.</div>`;
 
   const filasInc = incidencias.length ? incidencias.map((i) => `
     <tr>
@@ -122,12 +158,7 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
       <button id="hist-nueva-inc" class="abtn abtn--primary">+ Incidencia</button>
     </div>
     ${cards}${avisoTurno}
-    <div class="ad-card" style="margin-bottom:16px">
-      <div class="table-scroll"><table class="data-table">
-        <thead><tr><th>Fecha y hora</th><th>Tipo</th><th>Geocerca</th><th>Foto</th><th>Firma</th></tr></thead>
-        <tbody>${filasReg}</tbody>
-      </table></div>
-    </div>
+    <div class="ad-card cal-card" style="margin-bottom:16px">${calHtml}</div>
     <h4 style="margin:0 0 8px">Incidencias</h4>
     <div class="ad-card">
       <div class="table-scroll"><table class="data-table">

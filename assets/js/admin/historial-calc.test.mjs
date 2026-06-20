@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { horaAMin, esRetardo, horasPorDia, resumen } from './historial-calc.mjs';
+import { horaAMin, esRetardo, horasPorDia, resumen, diasCalendario } from './historial-calc.mjs';
 
 const turno = { hora_entrada: '09:00:00', tolerancia_entrada_min: 15 };
 
@@ -36,6 +36,25 @@ test('horasPorDia marca incompleto el día sin salida', () => {
   const dias = horasPorDia([{ tipo: 'entrada', hora: '2026-06-19T09:00:00' }]);
   assert.equal(dias[0].incompleto, true);
   assert.equal(dias[0].horas, 0);
+});
+
+test('diasCalendario: estado por día (presente/justificada/falta/futuro)', () => {
+  const hoy = new Date('2026-06-04T12:00:00');
+  const regs = [
+    { tipo: 'entrada', hora: '2026-06-01T09:00:00' },
+    { tipo: 'salida',  hora: '2026-06-01T17:00:00' },
+  ];
+  const incs = [{ fecha: '2026-06-02', tipo: 'justificacion' }];
+  const dias = diasCalendario(regs, incs, { desde: '2026-06-01', hasta: '2026-06-05' }, hoy);
+
+  const by = Object.fromEntries(dias.map((d) => [d.fecha, d]));
+  assert.equal(dias.length, 5);
+  assert.equal(dias[0].fecha, '2026-06-05');        // más reciente primero
+  assert.equal(by['2026-06-01'].estado, 'presente');
+  assert.equal(by['2026-06-01'].horas, 8);
+  assert.equal(by['2026-06-02'].estado, 'justificacion');
+  assert.equal(by['2026-06-03'].estado, 'falta');    // sin checada, pasado
+  assert.equal(by['2026-06-05'].estado, 'futuro');   // posterior a hoy
 });
 
 test('resumen agrega totales', () => {

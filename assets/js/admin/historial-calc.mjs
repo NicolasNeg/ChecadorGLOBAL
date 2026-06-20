@@ -33,6 +33,52 @@ export function horasPorDia(registros) {
   });
 }
 
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Agrupa registros por día: primera entrada y última salida (objetos completos,
+// conservan ruta_foto/ruta_firma para el lightbox).
+export function agruparPorDia(registros) {
+  const m = new Map();
+  for (const r of registros) {
+    const key = ymd(new Date(r.hora));
+    const g = m.get(key) ?? { entrada: null, salida: null };
+    if (r.tipo === 'entrada' && (!g.entrada || new Date(r.hora) < new Date(g.entrada.hora))) g.entrada = r;
+    if (r.tipo === 'salida'  && (!g.salida  || new Date(r.hora) > new Date(g.salida.hora)))  g.salida  = r;
+    m.set(key, g);
+  }
+  return m;
+}
+
+// Un objeto por día del rango (más reciente primero). estado:
+// presente | falta | justificacion | permiso | vacaciones | festivo | futuro.
+// Día sin checada ni incidencia y <= hoy ⇒ 'falta' implícita.
+// ponytail: la falta implícita no distingue fines de semana ni festivos no
+// marcados; el admin los marca como incidencia. Upgrade: días laborables en turno.
+export function diasCalendario(registros, incidencias, rango, hoy = new Date()) {
+  const regs = agruparPorDia(registros);
+  const incs = new Map(incidencias.map((i) => [i.fecha, i]));
+  const hoyKey = ymd(hoy);
+  const dias = [];
+  const cur = new Date(rango.desde + 'T12:00:00'); // mediodía: evita saltos por DST
+  const fin = new Date(rango.hasta + 'T12:00:00');
+  while (cur <= fin) {
+    const key = ymd(cur);
+    const reg = regs.get(key) ?? null;
+    const inc = incs.get(key) ?? null;
+    const presente = !!(reg && (reg.entrada || reg.salida));
+    const estado = presente ? 'presente'
+      : inc ? inc.tipo
+      : key <= hoyKey ? 'falta'
+      : 'futuro';
+    const horas = (reg?.entrada && reg?.salida)
+      ? Math.round((new Date(reg.salida.hora) - new Date(reg.entrada.hora)) / 360000) / 10
+      : null;
+    dias.push({ fecha: key, dow: cur.getDay(), estado, entrada: reg?.entrada ?? null, salida: reg?.salida ?? null, horas, inc });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dias.reverse();
+}
+
 export function resumen(registros, turno, incidencias = []) {
   const retardos = registros.filter((r) => esRetardo(r, turno)).length;
   const horasTotales = horasPorDia(registros).reduce((s, d) => s + d.horas, 0);
