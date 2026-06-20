@@ -35,7 +35,11 @@
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   padding: 24px 16px; gap: 16px;
-  background: radial-gradient(ellipse 110% 45% at 50% -4%, rgba(3,105,161,.1) 0%, transparent 65%);
+  /* Identidad: oficina EQS de fondo bajo un velo claro para mantener legible la tarjeta */
+  background:
+    radial-gradient(ellipse 110% 45% at 50% -4%, rgba(3,105,161,.12) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(241,245,249,.74), rgba(241,245,249,.88)),
+    url('../imgs/fondo_.png') center/cover no-repeat;
 }
 
 /* ── Card entrance / exit ─────────────────────────────────────────────────── */
@@ -149,8 +153,8 @@
     padding: 40px;
     background:
       radial-gradient(ellipse 80% 50% at 50% -10%, rgba(3,105,161,.16) 0%, transparent 60%),
-      radial-gradient(ellipse 70% 50% at 100% 110%, rgba(7,89,133,.10) 0%, transparent 55%),
-      var(--fondo);
+      linear-gradient(180deg, rgba(241,245,249,.62), rgba(241,245,249,.80)),
+      url('../imgs/fondo_.png') center/cover no-repeat fixed;
   }
 
   /* Slightly larger, more deliberate card with deeper elevation */

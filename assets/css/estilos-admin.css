@@ -59,9 +59,11 @@ input, select, textarea { font: inherit; }
 
 /* Panel de marca (izquierda) */
 .login-aside {
+  /* Foto de oficina EQS bajo un velo navy: identidad sin perder contraste del texto blanco */
   background:
-    radial-gradient(ellipse 90% 70% at 15% 0%, rgba(37,99,235,.35) 0%, transparent 60%),
-    linear-gradient(160deg, #0F172A 0%, #0B1220 100%);
+    radial-gradient(ellipse 90% 70% at 15% 0%, rgba(37,99,235,.32) 0%, transparent 60%),
+    linear-gradient(160deg, rgba(15,23,42,.86) 0%, rgba(11,18,32,.94) 100%),
+    url('../imgs/fondo_admin.png') center/cover no-repeat;
   color: #fff; padding: 40px 36px;
   display: flex; flex-direction: column; gap: 28px;
 }
@@ -104,6 +106,7 @@ input, select, textarea { font: inherit; }
 .login-brand__name { font-family: 'Lexend', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--ad-tinta); }
 .login-brand__sub  { font-size: .75rem; color: var(--ad-tinta3); font-weight: 500; letter-spacing: .05em; text-transform: uppercase; }
 
+.login-logo { width: 88px; height: auto; align-self: flex-start; margin-bottom: 4px; }
 .login-title { font-family: 'Lexend', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--ad-tinta); }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -162,6 +165,8 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sidebar__brand-icon svg { color: #fff; }
+.sidebar__brand-icon--logo { background: #fff; padding: 4px; }
+.sidebar__brand-icon--logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .sidebar__brand-name { font-family: 'Lexend', sans-serif; font-size: .95rem; font-weight: 700; color: var(--sb-text-hi); }
 .sidebar__brand-sub  { font-size: .68rem; color: var(--sb-text); letter-spacing: .05em; text-transform: uppercase; }
 
