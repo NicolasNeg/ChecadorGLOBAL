@@ -69,14 +69,27 @@
 /* ── PIN form ─────────────────────────────────────────────────────────────── */
 #form-pin { display: contents; }
 
+.pin-wrap { position: relative; display: flex; }
 .input-pin {
   width: 100%;
   font-family: 'Lexend', sans-serif; font-size: 2rem; font-weight: 500;
-  letter-spacing: .45rem; text-align: center; padding: 14px;
+  letter-spacing: .45rem; text-align: center; padding: 14px 48px;
   border: 1.5px solid var(--linea); border-radius: 10px;
   background: var(--fondo); color: var(--tinta); outline: none;
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
+.ver-pin {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; color: var(--tinta-3); border-radius: 999px;
+  transition: color .15s, background .15s, transform .1s;
+}
+.ver-pin:hover { color: var(--primario); background: rgba(3,105,161,.08); }
+.ver-pin:active { transform: translateY(-50%) scale(.88); }
+.ver-pin .eye--off { display: none; }
+.ver-pin.revealed { color: var(--primario); }
+.ver-pin.revealed .eye--open { display: none; }
+.ver-pin.revealed .eye--off  { display: block; }
 .input-pin:focus {
   border-color: var(--primario);
   box-shadow: 0 0 0 3px rgba(3,105,161,.12);
@@ -169,7 +182,7 @@
   }
 
   .brand-name { font-size: 1.2rem; }
-  .input-pin  { font-size: 2.2rem; padding: 18px; }
+  .input-pin  { font-size: 2.2rem; padding: 18px 52px; }
   .saludo-avatar { width: 58px; height: 58px; font-size: 1.35rem; }
   #saludo { font-size: 1.4rem; }
 }

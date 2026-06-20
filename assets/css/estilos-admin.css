@@ -126,10 +126,10 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   height: 36px; padding: 0 14px; border-radius: 8px; border: none;
   font-size: .875rem; font-weight: 600; cursor: pointer;
-  touch-action: manipulation; transition: background .15s, box-shadow .15s, opacity .15s;
+  touch-action: manipulation; transition: background .15s, box-shadow .15s, opacity .15s, transform .1s;
   white-space: nowrap;
 }
-.abtn:active { opacity: .85; }
+.abtn:active:not(:disabled) { opacity: .9; transform: scale(.96); }
 .abtn:disabled { opacity: .45; cursor: not-allowed; }
 .abtn--primary  { background: var(--ad-primary); color: #fff; box-shadow: 0 1px 4px rgba(37,99,235,.25); }
 .abtn--primary:hover:not(:disabled)  { background: var(--ad-prim-dk); }
@@ -139,6 +139,12 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .abtn--ghost:hover:not(:disabled)    { background: var(--ad-fondo); border-color: #CBD5E1; }
 .abtn--lg { height: 48px; padding: 0 20px; font-size: 1rem; border-radius: 10px; width: 100%; }
 .abtn--icon { width: 32px; height: 32px; padding: 0; }
+
+/* Toggle de contraseña (ojo abierto/cerrado) */
+.eye-toggle .eye--off { display: none; }
+.eye-toggle.revealed { color: var(--ad-primary) !important; }
+.eye-toggle.revealed .eye--open { display: none; }
+.eye-toggle.revealed .eye--off  { display: block; }
 
 /* ── Admin Shell ──────────────────────────────────────────────────────── */
 .admin-shell {

@@ -53,6 +53,17 @@ function enterLogin() {
   spinner.hidden   = true;
   setError('error-pin', '');
 
+  // Mostrar/ocultar PIN (ojo abierto/cerrado)
+  const verBtn = document.getElementById('btn-ver-pin');
+  verBtn.onclick = () => {
+    const shown = input.type === 'text';
+    input.type = shown ? 'password' : 'text';
+    verBtn.classList.toggle('revealed', !shown);
+    verBtn.setAttribute('aria-pressed', String(!shown));
+    verBtn.setAttribute('aria-label', shown ? 'Mostrar PIN' : 'Ocultar PIN');
+    input.focus();
+  };
+
   switchTo(sMenu, sLogin);
   setTimeout(() => input.focus(), 380);
 
