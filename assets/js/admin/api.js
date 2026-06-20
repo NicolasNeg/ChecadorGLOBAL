@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
-import { getAdminSession } from './auth.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, BASE } from '../config.js';
+import { getAdminSession, refreshAdminSession, clearAdminSession } from './auth.js';
 
 function hdrs(extra = {}) {
   const s = getAdminSession();
@@ -12,11 +12,23 @@ function hdrs(extra = {}) {
   };
 }
 
+// fetch con token; si vence (401) renueva una vez y reintenta. Si el refresh
+// falla, la sesión está muerta → de vuelta al login.
+export async function authedFetch(url, opts = {}) {
+  let res = await fetch(url, { ...opts, headers: { ...hdrs(), ...opts.headers } });
+  if (res.status === 401) {
+    if (await refreshAdminSession()) {
+      res = await fetch(url, { ...opts, headers: { ...hdrs(), ...opts.headers } });
+    } else {
+      clearAdminSession();
+      location.replace(BASE + '/admin/');
+    }
+  }
+  return res;
+}
+
 export async function apiFetch(path, opts = {}) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...opts,
-    headers: { ...hdrs(), ...opts.headers }
-  });
+  const res = await authedFetch(`${SUPABASE_URL}/rest/v1/${path}`, opts);
   if (res.status === 204) return null;
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.message || body.details || body.hint || `Error ${res.status}`);
@@ -88,11 +100,11 @@ export const countEmpleados  = () => apiFetch('empleados?select=id&activo=eq.tru
 export async function statsHoy() {
   const hoy = new Date().toISOString().slice(0, 10);
   const [total, incid] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/registros?select=id&hora=gte.${hoy}T00:00:00&hora=lte.${hoy}T23:59:59`, {
-      headers: { ...hdrs(), 'Prefer': 'count=exact' }
+    authedFetch(`${SUPABASE_URL}/rest/v1/registros?select=id&hora=gte.${hoy}T00:00:00&hora=lte.${hoy}T23:59:59`, {
+      headers: { 'Prefer': 'count=exact' }
     }),
-    fetch(`${SUPABASE_URL}/rest/v1/registros?select=id&geocerca_valida=eq.false&hora=gte.${hoy}T00:00:00`, {
-      headers: { ...hdrs(), 'Prefer': 'count=exact' }
+    authedFetch(`${SUPABASE_URL}/rest/v1/registros?select=id&geocerca_valida=eq.false&hora=gte.${hoy}T00:00:00`, {
+      headers: { 'Prefer': 'count=exact' }
     })
   ]);
   return {
