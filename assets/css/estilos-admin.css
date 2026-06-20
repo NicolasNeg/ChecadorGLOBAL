@@ -278,6 +278,42 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .stat-card--orange .stat-card__icon { background: #FEF3C7; color: #D97706; }
 .stat-card--red    .stat-card__icon { background: #FEE2E2; color: #DC2626; }
 
+/* ── Overview (Resumen) ───────────────────────────────────────────────── */
+.overview-hero {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.overview-hero__hi    { font-size: .9rem; color: var(--ad-tinta2); margin-bottom: 2px; }
+.overview-hero__title { font-family: 'Lexend', sans-serif; font-size: 1.35rem; font-weight: 700; color: var(--ad-tinta); }
+.overview-hero__date  { font-size: .82rem; color: var(--ad-tinta3); text-transform: capitalize; }
+
+.stat-card { transition: box-shadow .18s, transform .18s; }
+.stat-card:hover { box-shadow: 0 6px 18px rgba(15,23,42,.08); transform: translateY(-2px); }
+
+.overview-cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 860px) { .overview-cols { grid-template-columns: 1fr; } }
+
+.activity-list { list-style: none; margin: 0; padding: 0; }
+.activity-item {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center;
+  padding: 11px 18px; border-bottom: 1px solid var(--ad-linea);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-item__name  { font-weight: 600; font-size: .88rem; color: var(--ad-tinta); }
+.activity-item__plaza { grid-column: 2; font-size: .76rem; color: var(--ad-tinta3); }
+.activity-item__time  { grid-row: 1 / 3; grid-column: 3; font-size: .76rem; color: var(--ad-tinta3); white-space: nowrap; }
+
+.quick-links { display: flex; flex-direction: column; gap: 8px; }
+.quick-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 11px 14px; min-height: 44px;
+  background: #F8FAFC; border: 1px solid var(--ad-linea); border-radius: 9px;
+  font: inherit; font-size: .88rem; font-weight: 600; color: var(--ad-tinta); cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.quick-link:hover { background: #fff; border-color: var(--ad-primary); color: var(--ad-primary); }
+.quick-link svg { color: var(--ad-tinta3); transition: color .15s, transform .15s; }
+.quick-link:hover svg { color: var(--ad-primary); transform: translateX(2px); }
+
 /* ── Data table ───────────────────────────────────────────────────────── */
 .table-scroll { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }

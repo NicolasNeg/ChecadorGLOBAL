@@ -1,7 +1,6 @@
 import { requireAdminSession, logoutAdmin } from './auth.js';
-import { statsHoy } from './api.js';
-import { getAuditLog } from './api.js';
-import { fmtFecha } from './utils.js';
+import { statsHoy, getAuditLog, countEmpleados, countPlazas, getRegistros } from './api.js';
+import { fmtFecha, esc } from './utils.js';
 
 const sesion = requireAdminSession();
 // auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
@@ -85,42 +84,108 @@ function closeSidebar() {
 document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin);
 
 // ── Overview stats ────────────────────────────────────────────────────────────
+const ICONS = {
+  empleados: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  plazas:    '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  registros: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  incidencias:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+};
+
+function statCard(tono, icon, label, value, sub) {
+  return `
+    <div class="stat-card stat-card--${tono}">
+      <div class="stat-card__icon">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[icon]}</svg>
+      </div>
+      <div class="stat-card__label">${label}</div>
+      <div class="stat-card__value">${value}</div>
+      ${sub ? `<div class="stat-card__sub">${sub}</div>` : ''}
+    </div>`;
+}
+
 async function loadOverview(panel) {
+  const hoy = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   panel.innerHTML = `
-    <div class="panel-header"><h2>Resumen del día</h2></div>
+    <div class="overview-hero">
+      <div>
+        <p class="overview-hero__hi">Hola, ${esc(sesion?.nombre ?? 'Admin')} 👋</p>
+        <h2 class="overview-hero__title">Resumen del día</h2>
+      </div>
+      <span class="overview-hero__date">${hoy}</span>
+    </div>
+
     <div class="stat-grid" id="stat-grid">
-      ${['Empleados activos','Plazas','Registros hoy','Incidencias hoy'].map(l =>
-        `<div class="stat-card stat-card--loading"><div class="stat-card__label">${l}</div><div class="stat-card__value">—</div></div>`
-      ).join('')}
+      ${[['empleados','Empleados activos'],['plazas','Plazas'],['registros','Registros hoy'],['incidencias','Incidencias hoy']]
+        .map(([ic,l]) => statCard(ic === 'empleados' ? 'blue' : ic === 'plazas' ? 'green' : ic === 'registros' ? 'orange' : 'red', ic, l, '—')).join('')}
+    </div>
+
+    <div class="overview-cols">
+      <div class="ad-card">
+        <div class="ad-card__header"><h3>Actividad reciente</h3></div>
+        <div id="overview-actividad"><div class="ad-loading"><div class="ad-spinner"></div> Cargando…</div></div>
+      </div>
+      <div class="ad-card">
+        <div class="ad-card__header"><h3>Accesos rápidos</h3></div>
+        <div class="ad-card__body quick-links" id="overview-quick"></div>
+      </div>
     </div>`;
 
-  try {
-    const [empRes, plazasRes, hoyStats] = await Promise.all([
-      import('./api.js').then(a => a.countEmpleados()),
-      import('./api.js').then(a => a.countPlazas()),
-      statsHoy()
-    ]);
+  renderQuickLinks();
 
+  // Stats (independientes de la actividad: cada bloque falla por separado).
+  Promise.all([countEmpleados(), countPlazas(), statsHoy()]).then(([emp, plazas, s]) => {
     const grid = document.getElementById('stat-grid');
     if (!grid) return;
-    const vals = [
-      empRes?.length ?? 0,
-      plazasRes?.length ?? 0,
-      hoyStats.hoy,
-      hoyStats.incidencias
-    ];
-    const labels  = ['Empleados activos','Plazas','Registros hoy','Incidencias hoy'];
-    const colors  = ['--ad-primary','#16A34A','#0EA5E9','#DC2626'];
+    grid.innerHTML = [
+      statCard('blue',   'empleados',  'Empleados activos', emp?.length ?? 0),
+      statCard('green',  'plazas',     'Plazas',            plazas?.length ?? 0),
+      statCard('orange', 'registros',  'Registros hoy',     s.hoy),
+      statCard('red',    'incidencias','Incidencias hoy',   s.incidencias, s.incidencias ? 'fuera de geocerca' : 'todo en orden')
+    ].join('');
+  }).catch(() => {
+    const grid = document.getElementById('stat-grid');
+    if (grid) grid.innerHTML = `<p style="color:#DC2626;padding:8px">Error cargando estadísticas.</p>`;
+  });
 
-    grid.innerHTML = vals.map((v, i) => `
-      <div class="stat-card">
-        <div class="stat-card__label">${labels[i]}</div>
-        <div class="stat-card__value" style="color:${colors[i]}">${v}</div>
-      </div>`).join('');
-  } catch {
-    document.getElementById('stat-grid').innerHTML =
-      `<p style="color:#DC2626;padding:16px">Error cargando estadísticas.</p>`;
+  renderActividad();
+}
+
+async function renderActividad() {
+  const wrap = document.getElementById('overview-actividad');
+  if (!wrap) return;
+  try {
+    const rows = await getRegistros({ limit: 8 });
+    if (!rows.length) { wrap.innerHTML = '<div class="ad-empty">Sin actividad reciente.</div>'; return; }
+    wrap.innerHTML = `<ul class="activity-list">${rows.map(r => `
+      <li class="activity-item">
+        <span class="abadge abadge--${r.tipo === 'entrada' ? 'entrada' : 'salida'}">${r.tipo === 'entrada' ? 'Entrada' : 'Salida'}</span>
+        <span class="activity-item__name">${esc(r.empleados?.nombre ?? '–')}</span>
+        <span class="activity-item__plaza">${esc(r.empleados?.plazas?.nombre ?? '')}</span>
+        <span class="activity-item__time">${fmtFecha(r.hora)}</span>
+      </li>`).join('')}</ul>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
   }
+}
+
+function renderQuickLinks() {
+  const wrap = document.getElementById('overview-quick');
+  if (!wrap) return;
+  const links = [
+    ['asistencia', 'Ver asistencia'],
+    ['empleados',  'Empleados'],
+    ['historial',  'Historial por empleado'],
+    ...(esRH ? [['plazas', 'Plazas'], ['turnos', 'Turnos']] : [])
+  ];
+  wrap.innerHTML = links.map(([id, label]) =>
+    `<button class="quick-link" data-goto="${id}">${label}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>`).join('');
+  wrap.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.goto;
+    history.pushState(null, '', `#${id}`);
+    showPanel(id);
+  }));
 }
 
 // ── Audit log panel ───────────────────────────────────────────────────────────
