@@ -28,6 +28,12 @@ async function showPanel(id) {
   panel.hidden = false;
   pageTitle.textContent = panel.dataset.title ?? id;
 
+  if (id === 'historial') {
+    const m = await import('./historial-empleado.js');
+    await m.init(panel);
+    return;
+  }
+
   if (_loaded[id]) return;
   _loaded[id] = true;
 

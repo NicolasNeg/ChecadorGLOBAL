@@ -59,6 +59,24 @@ export function getRegistros({ fecha, plaza_id, limit = 100 } = {}) {
   return apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,empleados(id,nombre,plaza_id,plazas(nombre))${filter}&order=hora.desc&limit=${limit}`);
 }
 
+// ── Historial por empleado ──────────────────────────────────────────────────
+export const getRegistrosEmpleado = (idEmpleado, { desde, hasta }) =>
+  apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,ruta_foto,ruta_firma` +
+    `&id_empleado=eq.${idEmpleado}&hora=gte.${desde}T00:00:00&hora=lte.${hasta}T23:59:59&order=hora.asc`);
+
+export const getEmpleado = (id) =>
+  apiFetch(`empleados?select=*,plazas(nombre),turnos(*)&id=eq.${id}`).then((r) => r[0] ?? null);
+
+// ── Incidencias ───────────────────────────────────────────────────────────────
+export const getIncidencias = (idEmpleado, { desde, hasta }) =>
+  apiFetch(`incidencias?select=*&id_empleado=eq.${idEmpleado}&fecha=gte.${desde}&fecha=lte.${hasta}&order=fecha.desc`);
+
+export const createIncidencia = (d) =>
+  apiFetch('incidencias', { method: 'POST', body: JSON.stringify(d) });
+
+export const deleteIncidencia = (id) =>
+  apiFetch(`incidencias?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
+
 // ── Audit log ─────────────────────────────────────────────────────────────
 export const getAuditLog = (limit = 50) =>
   apiFetch(`audit_log?select=*,perfiles_admin(nombre)&order=created_at.desc&limit=${limit}`);
