@@ -31,14 +31,9 @@ export async function init(panel) {
   await loadGrid();
 }
 
-// ── Cuadrícula de asignación semanal (empleado × día) ──────────────────────
-const shiftClass = (n = '') => {
-  const s = n.toLowerCase();
-  if (s.includes('mañana') || s.includes('matutino')) return 'shift--am';
-  if (s.includes('tarde')  || s.includes('vesp'))     return 'shift--pm';
-  if (s.includes('noche')  || s.includes('nocturno')) return 'shift--night';
-  return '';
-};
+// ── Color estable por turno (mismo en tarjetas y en la cuadrícula) ─────────
+const COLORS = ['c-blue', 'c-emerald', 'c-teal', 'c-amber', 'c-violet'];
+const turnoColor = (t) => COLORS[((t?.id ?? 0) % COLORS.length + COLORS.length) % COLORS.length];
 
 async function loadGrid() {
   const wrap = document.getElementById('grid-horarios-wrap');
@@ -65,7 +60,7 @@ async function loadGrid() {
         ${[1,2,3,4,5,6,7].map(d => {
           const sel = asignado.get(`${e.id}-${d}`) ?? '';
           const t = turnos.find(t => t.id === sel);
-          return `<td><select class="grid-sel ${shiftClass(t?.nombre)}" data-emp="${e.id}" data-dia="${d}">${optsFor(sel)}</select></td>`;
+          return `<td><select class="grid-sel ${t ? 'sel--' + turnoColor(t) : ''}" data-emp="${e.id}" data-dia="${d}">${optsFor(sel)}</select></td>`;
         }).join('')}
       </tr>`).join('');
 
@@ -79,7 +74,7 @@ async function loadGrid() {
         try {
           await api.setHorario(emp, dia, turnoId);
           const t = turnos.find(t => t.id === turnoId);
-          sel.className = `grid-sel ${shiftClass(t?.nombre)}`;
+          sel.className = `grid-sel ${t ? 'sel--' + turnoColor(t) : ''}`;
           showToast('Horario actualizado.', 'ok');
         } catch (err) { showToast(err.message, 'error'); }
         finally { sel.disabled = false; }
@@ -92,14 +87,10 @@ async function loadGrid() {
 
 let _allTurnos = [];
 
-// Color de cada tarjeta: por tipo de turno si se reconoce, si no por índice.
-const CARD_COLORS = ['c-blue', 'c-emerald', 'c-teal', 'c-amber', 'c-violet'];
-const cardColor = (t, i) => ({ 'shift--am': 'c-amber', 'shift--pm': 'c-violet', 'shift--night': 'c-blue' }[shiftClass(t.nombre)] || CARD_COLORS[i % CARD_COLORS.length]);
-
-function turnoCard(t, i) {
+function turnoCard(t) {
   const dias = (t.dias_semana || []).map(d => DIAS[d]).join(' · ') || 'Sin días';
   return `
-    <div class="turno-card turno-card--${cardColor(t, i)}">
+    <div class="turno-card turno-card--${turnoColor(t)}">
       <div class="turno-card__top">
         <h3 class="turno-card__name">${t.nombre}</h3>
         <span class="turno-card__badge">${t.activo ? 'Activo' : 'Inactivo'}</span>
