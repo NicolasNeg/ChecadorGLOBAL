@@ -1,6 +1,7 @@
 import { requireAdminSession, logoutAdmin } from './auth.js';
-import { getAuditLog, countEmpleados, getRegistros } from './api.js';
+import { getAuditLog, countEmpleados, getRegistros, getPlazas } from './api.js';
 import { fmtFecha, esc } from './utils.js';
+import { getPlazaScope, setPlazaScope } from './plaza-scope.js';
 
 const sesion = requireAdminSession();
 // auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
@@ -18,8 +19,10 @@ const panels = document.querySelectorAll('.admin-panel');
 const navLinks = document.querySelectorAll('.sidebar__link[data-panel]');
 const pageTitle = document.getElementById('page-title');
 const _loaded = {};
+let _current = null;
 
 async function showPanel(id) {
+  _current = id;
   panels.forEach(p => p.hidden = true);
   navLinks.forEach(l => l.classList.toggle('active', l.dataset.panel === id));
 
@@ -104,6 +107,31 @@ function setTheme(t) { localStorage.setItem(THEME_KEY, t); applyTheme(); }
 mq.addEventListener('change', () => { if (getTheme() === 'system') applyTheme(); });
 document.getElementById('theme-switch')?.addEventListener('change', e => setTheme(e.target.checked ? 'dark' : 'light'));
 applyTheme();
+
+// ── Selector global de plaza (solo RH; jefe ya está limitado por RLS) ───────────
+// Recarga el panel actual descartando su caché para que el filtro se aplique.
+function reloadCurrent() {
+  if (!_current) return;
+  delete _loaded[_current];
+  showPanel(_current);
+}
+async function initPlazaSelector() {
+  const box = document.getElementById('sidebar-plaza');
+  if (!box) return;
+  if (!esRH) { box.remove(); return; } // jefe: una sola plaza, sin selector
+  const sel = box.querySelector('select');
+  try {
+    const plazas = await getPlazas();
+    sel.innerHTML = `<option value="">Todas</option>` +
+      plazas.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+    sel.value = getPlazaScope() ?? '';
+  } catch { /* sin plazas: deja "Todas" */ }
+  sel.addEventListener('change', () => {
+    setPlazaScope(parseInt(sel.value) || null);
+    reloadCurrent();
+  });
+}
+initPlazaSelector();
 
 // ── Panel Ajustes ───────────────────────────────────────────────────────────────
 function loadAjustes(panel) {

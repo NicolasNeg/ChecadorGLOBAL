@@ -1,5 +1,6 @@
 import * as api from './api.js';
 import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
+import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 
 let _plazas  = [];
 let _turnos  = [];
@@ -48,7 +49,7 @@ async function loadEmpleados() {
     window._toggleEmp = async (id, activo) => {
       try {
         await api.updateEmpleado(id, { activo: !activo });
-        showToast(activo ? 'Empleado dado de baja.' : 'Empleado reactivado.', 'ok');
+        showToast(activo ? 'Empleado desactivado.' : 'Empleado reactivado.', 'ok');
         await loadEmpleados();
       } catch (e) { showToast(e.message, 'error'); }
     };
@@ -88,6 +89,7 @@ async function loadEmpleados() {
 function renderEmpleados(empleados) {
   const wrap = document.getElementById('tbl-emp-wrap');
   if (!wrap) return;
+  empleados = filterByPlaza(empleados, e => e.plaza_id);
   renderTable(
     wrap,
     [
@@ -100,7 +102,7 @@ function renderEmpleados(empleados) {
       { key: 'turno',    label: 'Turno',  render: r => r.turnos?.nombre  ?? '<span class="td-muted">Sin turno</span>' },
       { key: 'activo',   label: 'Estado', render: r => r.activo
           ? '<span class="abadge abadge--green">Activo</span>'
-          : '<span class="abadge abadge--gray">Baja</span>' }
+          : '<span class="abadge abadge--gray">Inactivo</span>' }
     ],
     empleados,
     (r) => `
@@ -113,7 +115,7 @@ function renderEmpleados(empleados) {
       <button class="abtn abtn--ghost abtn--icon" title="Resetear PIN" onclick="window._resetPin(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
-      <button class="abtn abtn--icon" title="${r.activo ? 'Dar de baja' : 'Reactivar'}"
+      <button class="abtn abtn--icon" title="${r.activo ? 'Desactivar' : 'Reactivar'}"
         style="background:${r.activo ? '#FEF2F2' : '#DCFCE7'};color:${r.activo ? '#DC2626' : '#16A34A'}"
         onclick="window._toggleEmp(${r.id}, ${r.activo})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -137,7 +139,8 @@ const ROLES = ['empleado', 'supervisor', 'gerente'];
 function openEmpForm(emp = null) {
   const isEdit = !!emp;
   const v = (k) => emp?.[k] ?? '';
-  const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${emp?.plaza_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
+  const defPlaza  = emp?.plaza_id ?? getPlazaScope();
+  const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${defPlaza === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
   const turnoOpts = `<option value="">Sin turno</option>` + _turnos.map(t => `<option value="${t.id}" ${emp?.turno_id === t.id ? 'selected' : ''}>${t.nombre} (${t.plazas?.nombre})</option>`).join('');
   const rolOpts   = ROLES.map(r => `<option value="${r}" ${(emp?.rol ?? 'empleado') === r ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('');
 

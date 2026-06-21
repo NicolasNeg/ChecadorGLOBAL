@@ -736,3 +736,46 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 }
 .segmented button:hover { color: var(--ad-tinta); }
 .segmented button.active { background: var(--ad-tarjeta); color: var(--ad-primary); box-shadow: 0 1px 3px rgba(15,23,42,.10); }
+
+/* ── Navegador de día (Asistencia) ─────────────────────────────────────────── */
+.day-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.day-nav__title {
+  font-family: var(--ad-font-head); font-size: 1.35rem; font-weight: 700;
+  color: var(--ad-tinta); text-transform: capitalize; flex: 1; min-width: 0;
+}
+.day-nav__cal { position: relative; overflow: hidden; cursor: pointer; }
+.day-nav__cal input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ── Selector global de plaza en el sidebar (solo RH) ──────────────────────── */
+.sidebar__plaza {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; margin-bottom: 8px; border-radius: 8px; color: var(--sb-text);
+}
+.sidebar__plaza svg { flex-shrink: 0; color: #64748B; }
+.sidebar__plaza select {
+  margin-left: auto; max-width: 130px; height: 30px; padding: 0 8px;
+  font-size: .8rem; font-weight: 600; color: var(--sb-text);
+  background: rgba(148,163,184,.12); border: 1px solid rgba(148,163,184,.25);
+  border-radius: 7px; cursor: pointer;
+}
+
+/* ── Tablas apiladas en móvil (alimentado por td[data-label]) ──────────────── */
+@media (max-width: 767px) {
+  .day-nav__title { font-size: 1.1rem; }
+  .data-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+  .data-table tr {
+    border: 1px solid var(--ad-linea); border-radius: 10px;
+    margin-bottom: 10px; padding: 4px 0; background: var(--ad-tarjeta);
+  }
+  .data-table td {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    border: none; padding: 8px 14px; white-space: normal; text-align: right;
+  }
+  .data-table td::before {
+    content: attr(data-label); font-size: .7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--ad-tinta3);
+    text-align: left; flex-shrink: 0;
+  }
+  .data-table td.actions, .data-table td[data-label="Acciones"] { justify-content: flex-end; }
+}

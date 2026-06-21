@@ -38,8 +38,9 @@ export function renderTable(container, cols, rows, actions) {
   if (!rows.length) { empty(container); return; }
   const ths = cols.map(c => `<th>${c.label}</th>`).join('');
   const trs = rows.map(row => {
-    const tds = cols.map(c => `<td>${c.render ? c.render(row) : (row[c.key] ?? '–')}</td>`).join('');
-    const act = actions ? `<td><div class="actions">${actions(row)}</div></td>` : '';
+    // data-label alimenta el layout apilado en móvil (ver estilos-admin.css).
+    const tds = cols.map(c => `<td data-label="${esc(c.label)}">${c.render ? c.render(row) : (row[c.key] ?? '–')}</td>`).join('');
+    const act = actions ? `<td data-label="Acciones"><div class="actions">${actions(row)}</div></td>` : '';
     return `<tr data-id="${row.id}">${tds}${act}</tr>`;
   }).join('');
   const actTh = actions ? '<th style="width:100px">Acciones</th>' : '';
@@ -79,5 +80,31 @@ export function closeModal() {
   modal.querySelector('#modal-save').onclick = null;
 }
 
-// Confirm dialog using native browser confirm (lazy — add custom dialog when needed)
-export const confirm = (msg) => window.confirm(msg);
+// Diálogo de confirmación personalizado (reemplaza window.confirm nativo).
+// Devuelve Promise<boolean>. Reusa las clases .ad-modal ya estilizadas.
+export function confirm(msg, { ok = 'Confirmar', cancel = 'Cancelar', danger = true } = {}) {
+  return new Promise((resolve) => {
+    const ov = document.createElement('div');
+    ov.className = 'ad-modal';
+    ov.innerHTML = `
+      <div class="ad-modal__card" style="max-width:400px">
+        <div class="ad-modal__body" style="padding-top:24px">
+          <p style="font-size:.95rem;color:var(--ad-tinta);line-height:1.5">${esc(msg)}</p>
+        </div>
+        <div class="ad-modal__footer">
+          <button class="abtn abtn--ghost" data-act="cancel">${esc(cancel)}</button>
+          <button class="abtn abtn--${danger ? 'danger' : 'primary'}" data-act="ok">${esc(ok)}</button>
+        </div>
+      </div>`;
+    const done = (val) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
+    const onKey = (e) => { if (e.key === 'Escape') done(false); };
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) done(false);
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act) done(act === 'ok');
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(ov);
+    ov.querySelector('[data-act="ok"]').focus();
+  });
+}

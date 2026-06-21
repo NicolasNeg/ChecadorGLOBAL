@@ -177,6 +177,24 @@ export async function obtenerMisTurnos() {
   } catch { return []; }
 }
 
+// ── TURNOS DE LA PLAZA (RPC: cuadrícula semanal de todos los compañeros) ────
+export async function obtenerTurnosPlaza() {
+  if (!_idEmpleado) return [];
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/turnos_plaza`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado })
+    });
+    if (!r.ok) return [];
+    return await r.json(); // [{empleado_id, empleado, dia_semana, turno_nombre, hora_entrada, hora_salida}]
+  } catch { return []; }
+}
+
 // ── SET ID DESDE SESIÓN (para páginas que cargan con sessionStorage) ────────
 export function setIdEmpleado(id) { _idEmpleado = id; }
 

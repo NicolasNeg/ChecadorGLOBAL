@@ -74,7 +74,7 @@ async function loadPlazas() {
       if (plaza) openPlazaForm(plaza);
     };
     window._deletePlaza = async (id, nombre) => {
-      if (!confirm(`¿Eliminar plaza "${nombre}"? Esta acción no se puede deshacer.`)) return;
+      if (!await confirm(`¿Eliminar plaza "${nombre}"? Esta acción no se puede deshacer.`, { ok: 'Eliminar' })) return;
       try {
         await api.deletePlaza(id);
         showToast(`Plaza "${nombre}" eliminada.`, 'ok');

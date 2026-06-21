@@ -201,17 +201,25 @@
 .admin-access:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,23,42,.14); }
 .admin-access:active { transform: translateY(0); }
 
-/* ── Mi turno (horario semanal) ───────────────────────────────────────────── */
-.turnos-lista { display: flex; flex-direction: column; gap: 8px; }
+/* ── Turnos de la plaza (cuadrícula: empleado × día) ──────────────────────── */
 .turnos-vacio { font-size: .9rem; color: var(--tinta-2); text-align: center; padding: 8px 0; }
-.turno-dia {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 14px; border: 1px solid var(--linea); border-radius: 10px;
-  border-left: 3px solid var(--primario); background: #fff;
+.turnos-grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
+.turnos-grid { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 540px; font-size: .82rem; }
+.turnos-grid th, .turnos-grid td {
+  padding: 7px 8px; text-align: center; border-bottom: 1px solid var(--linea); white-space: nowrap;
 }
-.turno-dia--off { border-left-color: var(--tinta-3); background: var(--fondo); }
-.turno-dia__nombre { font-weight: 600; color: var(--tinta); font-size: .95rem; }
-.turno-dia__det { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
-.turno-dia__turno { font-weight: 600; color: var(--primario-dk); font-size: .9rem; }
-.turno-dia__horas { font-size: .8rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
-.turno-dia__descanso { font-size: .85rem; color: var(--tinta-3); font-weight: 500; }
+.turnos-grid th {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--tinta-2); background: var(--fondo); position: sticky; top: 0;
+}
+.turnos-grid .tg-emp {
+  text-align: left; font-weight: 600; color: var(--tinta);
+  position: sticky; left: 0; background: #fff; z-index: 1;
+}
+.turnos-grid th.tg-emp { background: var(--fondo); z-index: 2; }
+.turnos-grid td { display: table-cell; }
+.tg-turno { display: block; font-weight: 600; color: var(--primario-dk); }
+.tg-horas { display: block; font-size: .72rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.tg-off { color: var(--tinta-3); }
+.turnos-grid .tg-yo td { background: #EFF6FF; }
+.turnos-grid .tg-yo .tg-emp { background: #EFF6FF; }

@@ -1,174 +1,244 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <script>!function(){var b=document.createElement('base');b.href=location.hostname==='nicolasneg.github.io'?'/ChecadorGLOBAL/':'/';document.head.appendChild(b)}()</script>
-  <script>!function(){try{var t=localStorage.getItem('eqs_admin_theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light')}catch(e){}}()</script>
+  <script>!function () { var b = document.createElement('base'); b.href = location.hostname === 'nicolasneg.github.io' ? '/ChecadorGLOBAL/' : '/'; document.head.appendChild(b) }()</script>
+  <script>!function () { try { var t = localStorage.getItem('eqs_admin_theme') || 'system'; var d = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.setAttribute('data-theme', d ? 'dark' : 'light') } catch (e) { } }()</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EQS Admin · Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="assets/css/estilos-admin.css">
 </head>
+
 <body>
 
-<div class="admin-shell" id="admin-shell">
+  <div class="admin-shell" id="admin-shell">
 
-  <!-- ── Sidebar overlay (mobile) ─────────────────────────────── -->
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <!-- ── Sidebar overlay (mobile) ─────────────────────────────── -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-  <!-- ── Sidebar ────────────────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
-    <div class="sidebar__brand">
-      <div class="sidebar__brand-icon sidebar__brand-icon--logo">
-        <img src="assets/imgs/logo_.png" alt="EQS México">
+    <!-- ── Sidebar ────────────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
+      <div class="sidebar__brand">
+        <div class="sidebar__brand-icon sidebar__brand-icon--logo">
+          <img src="assets/imgs/logo_.png" alt="EQS México">
+        </div>
+        <div>
+          <div class="sidebar__brand-name">EQS Checador</div>
+          <div class="sidebar__brand-sub" id="admin-rol-badge">Admin</div>
+        </div>
       </div>
-      <div>
-        <div class="sidebar__brand-name">EQS Checador</div>
-        <div class="sidebar__brand-sub" id="admin-rol-badge">Admin</div>
+
+      <div class="sidebar__user">
+        <div class="sidebar__avatar" aria-hidden="true">A</div>
+        <div class="sidebar__user-info">
+          <div class="sidebar__user-name" id="admin-nombre">—</div>
+          <div class="sidebar__user-role">Sesión activa</div>
+        </div>
       </div>
-    </div>
 
-    <div class="sidebar__user">
-      <div class="sidebar__avatar" aria-hidden="true">A</div>
-      <div class="sidebar__user-info">
-        <div class="sidebar__user-name" id="admin-nombre">—</div>
-        <div class="sidebar__user-role">Sesión activa</div>
-      </div>
-    </div>
-
-    <nav class="sidebar__nav">
-      <div class="sidebar__section-label">Principal</div>
-      <a href="#overview" class="sidebar__link active" data-panel="overview">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Resumen
-      </a>
-      <a href="#asistencia" class="sidebar__link" data-panel="asistencia">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Asistencia
-      </a>
-
-      <div class="sidebar__section-label" data-rh-only>Configuración</div>
-      <a href="#plazas" class="sidebar__link" data-panel="plazas" data-rh-only>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        Plazas
-      </a>
-
-      <div class="sidebar__section-label">Gestión</div>
-      <a href="#turnos" class="sidebar__link" data-panel="turnos">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Turnos
-      </a>
-      <a href="#empleados" class="sidebar__link" data-panel="empleados">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Empleados
-      </a>
-      <a href="#historial" class="sidebar__link" data-panel="historial">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
-        Historial
-      </a>
-      <a href="#auditoria" class="sidebar__link" data-panel="auditoria" data-rh-only>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Log de Auditoría
-      </a>
-
-      <div class="sidebar__section-label">Sistema</div>
-      <a href="#ajustes" class="sidebar__link" data-panel="ajustes">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Ajustes
-      </a>
-    </nav>
-
-    <div class="sidebar__footer">
-      <label class="sidebar__theme">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <span class="sidebar__theme-label">Modo oscuro</span>
-        <span class="switch">
-          <input type="checkbox" id="theme-switch" aria-label="Modo oscuro">
-          <span class="switch__track"></span>
-        </span>
-      </label>
-      <button class="sidebar__link sidebar__link--logout" id="btn-logout">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Cerrar sesión
-      </button>
-    </div>
-  </aside>
-
-  <!-- ── Main area ─────────────────────────────────────────────── -->
-  <div class="admin-main">
-
-    <!-- Header -->
-    <header class="admin-header">
-      <button class="admin-header__hamburger" id="btn-hamburger" aria-label="Abrir menú">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="3" y1="6"  x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
-      <h1 class="admin-header__title" id="page-title">Resumen</h1>
-      <div class="admin-header__right">
-        <a href="../../" class="abtn abtn--ghost" style="font-size:.82rem">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          App
+      <nav class="sidebar__nav">
+        <div class="sidebar__section-label">Principal</div>
+        <a href="#overview" class="sidebar__link active" data-panel="overview">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          Resumen
         </a>
+        <a href="#asistencia" class="sidebar__link" data-panel="asistencia">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          Asistencia
+        </a>
+
+        <div class="sidebar__section-label" data-rh-only>Configuración</div>
+        <a href="#plazas" class="sidebar__link" data-panel="plazas" data-rh-only>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          Plazas
+        </a>
+
+        <div class="sidebar__section-label">Gestión</div>
+        <a href="#turnos" class="sidebar__link" data-panel="turnos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Turnos
+        </a>
+        <a href="#empleados" class="sidebar__link" data-panel="empleados">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          Empleados
+        </a>
+        <a href="#historial" class="sidebar__link" data-panel="historial">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M3 3v18h18" />
+            <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
+          </svg>
+          Historial
+        </a>
+        <a href="#auditoria" class="sidebar__link" data-panel="auditoria" data-rh-only>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+          Log de Auditoría
+        </a>
+
+        <div class="sidebar__section-label">Sistema</div>
+        <a href="#ajustes" class="sidebar__link" data-panel="ajustes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          Ajustes
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <div class="sidebar__plaza" id="sidebar-plaza" data-rh-only>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span class="sidebar__theme-label">Plaza</span>
+          <select aria-label="Filtrar por plaza"><option value="">Todas</option></select>
+        </div>
+        <label class="sidebar__theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+          <span class="sidebar__theme-label">Modo oscuro</span>
+          <span class="switch">
+            <input type="checkbox" id="theme-switch" aria-label="Modo oscuro">
+            <span class="switch__track"></span>
+          </span>
+        </label>
+        <button class="sidebar__link sidebar__link--logout" id="btn-logout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Cerrar sesión
+        </button>
       </div>
-    </header>
+    </aside>
 
-    <!-- Panels -->
-    <main class="admin-content" id="admin-content">
+    <!-- ── Main area ─────────────────────────────────────────────── -->
+    <div class="admin-main">
 
-      <div id="panel-overview" class="admin-panel" data-title="Resumen" hidden></div>
-      <div id="panel-asistencia" class="admin-panel" data-title="Asistencia en tiempo real" hidden></div>
-      <div id="panel-plazas" class="admin-panel" data-title="Plazas" hidden></div>
-      <div id="panel-turnos" class="admin-panel" data-title="Turnos" hidden></div>
-      <div id="panel-empleados" class="admin-panel" data-title="Empleados" hidden></div>
-      <div id="panel-historial" class="admin-panel" data-title="Historial por empleado" hidden></div>
-      <div id="panel-auditoria" class="admin-panel" data-title="Log de Auditoría" hidden></div>
-      <div id="panel-ajustes" class="admin-panel" data-title="Ajustes" hidden></div>
+      <!-- Header -->
+      <header class="admin-header">
+        <button class="admin-header__hamburger" id="btn-hamburger" aria-label="Abrir menú">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <h1 class="admin-header__title" id="page-title">Resumen</h1>
+        <div class="admin-header__right">
+          <a href="../" class="abtn abtn--ghost" style="font-size:.82rem">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            App
+          </a>
+        </div>
+      </header>
 
-    </main>
-  </div><!-- /admin-main -->
-</div><!-- /admin-shell -->
+      <!-- Panels -->
+      <main class="admin-content" id="admin-content">
 
-<!-- ── Shared modal ────────────────────────────────────────────── -->
-<div id="ad-modal" class="ad-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="ad-modal__card">
-    <div class="ad-modal__header">
-      <h3 id="modal-title" class="ad-modal__title">Modal</h3>
-      <button class="abtn abtn--icon" id="modal-close" aria-label="Cerrar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="ad-modal__body" id="modal-body"></div>
-    <div class="ad-modal__footer">
-      <button class="abtn abtn--ghost" id="modal-cancel">Cancelar</button>
-      <button class="abtn abtn--primary" id="modal-save">
-        <span id="modal-save-label">Guardar</span>
-      </button>
+        <div id="panel-overview" class="admin-panel" data-title="Resumen" hidden></div>
+        <div id="panel-asistencia" class="admin-panel" data-title="Asistencia en tiempo real" hidden></div>
+        <div id="panel-plazas" class="admin-panel" data-title="Plazas" hidden></div>
+        <div id="panel-turnos" class="admin-panel" data-title="Turnos" hidden></div>
+        <div id="panel-empleados" class="admin-panel" data-title="Empleados" hidden></div>
+        <div id="panel-historial" class="admin-panel" data-title="Historial por empleado" hidden></div>
+        <div id="panel-auditoria" class="admin-panel" data-title="Log de Auditoría" hidden></div>
+        <div id="panel-ajustes" class="admin-panel" data-title="Ajustes" hidden></div>
+
+      </main>
+    </div><!-- /admin-main -->
+  </div><!-- /admin-shell -->
+
+  <!-- ── Shared modal ────────────────────────────────────────────── -->
+  <div id="ad-modal" class="ad-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="ad-modal__card">
+      <div class="ad-modal__header">
+        <h3 id="modal-title" class="ad-modal__title">Modal</h3>
+        <button class="abtn abtn--icon" id="modal-close" aria-label="Cerrar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="ad-modal__body" id="modal-body"></div>
+      <div class="ad-modal__footer">
+        <button class="abtn abtn--ghost" id="modal-cancel">Cancelar</button>
+        <button class="abtn abtn--primary" id="modal-save">
+          <span id="modal-save-label">Guardar</span>
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ── Toast container ─────────────────────────────────────────── -->
-<div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <!-- ── Toast container ─────────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
-<script type="module" src="assets/js/admin/dashboard.js"></script>
-<script type="module">
-  // Wire modal close buttons (no module needed)
-  document.getElementById('modal-close').addEventListener('click',  () => { document.getElementById('ad-modal').hidden = true; });
-  document.getElementById('modal-cancel').addEventListener('click', () => { document.getElementById('ad-modal').hidden = true; });
-  // Close modal on backdrop click
-  document.getElementById('ad-modal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
-  });
-  // Close sidebar overlay on click
-  document.getElementById('sidebar-overlay').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.remove('open');
-  });
-</script>
+  <script type="module" src="assets/js/admin/dashboard.js"></script>
+  <script type="module">
+    // Wire modal close buttons (no module needed)
+    document.getElementById('modal-close').addEventListener('click', () => { document.getElementById('ad-modal').hidden = true; });
+    document.getElementById('modal-cancel').addEventListener('click', () => { document.getElementById('ad-modal').hidden = true; });
+    // Close modal on backdrop click
+    document.getElementById('ad-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+    });
+    // Close sidebar overlay on click
+    document.getElementById('sidebar-overlay').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+    });
+  </script>
 </body>
+
 </html>

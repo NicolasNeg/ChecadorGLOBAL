@@ -1,5 +1,6 @@
 import * as api from './api.js';
 import { renderTable, loading, showToast, openModal, closeModal, fmtHora, confirm } from './utils.js';
+import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 
 let _plazas = [];
 const DIAS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -43,10 +44,12 @@ async function loadGrid() {
   const wrap = document.getElementById('grid-horarios-wrap');
   loading(wrap);
   try {
-    const [empleados, turnos, horarios] = await Promise.all([
+    const [empleados, allTurnos, horarios] = await Promise.all([
       api.getEmpleados(), api.getTurnos(), api.getHorarios()
     ]);
-    const activos = empleados.filter(e => e.activo);
+    // Solo turnos de la plaza en foco: no asignar un turno de otra plaza.
+    const turnos = filterByPlaza(allTurnos, t => t.plaza_id);
+    const activos = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
     if (!activos.length) { wrap.innerHTML = '<div class="ad-empty">No hay empleados activos.</div>'; return; }
 
     // key "empleado-dia" → turno_id
@@ -93,7 +96,7 @@ async function loadTurnos() {
   const wrap = document.getElementById('tbl-turnos-wrap');
   loading(wrap);
   try {
-    _allTurnos = await api.getTurnos();
+    _allTurnos = filterByPlaza(await api.getTurnos(), t => t.plaza_id);
     renderTable(
       wrap,
       [
@@ -120,7 +123,7 @@ async function loadTurnos() {
 
     window._editTurno   = (id) => { const t = _allTurnos.find(t => t.id === id); if (t) openTurnoForm(t); };
     window._deleteTurno = async (id, nombre) => {
-      if (!confirm(`¿Eliminar turno "${nombre}"?`)) return;
+      if (!await confirm(`¿Eliminar turno "${nombre}"?`, { ok: 'Eliminar' })) return;
       try { await api.deleteTurno(id); showToast('Turno eliminado.', 'ok'); await loadTurnos(); }
       catch (e) { showToast(e.message, 'error'); }
     };
@@ -131,7 +134,8 @@ async function loadTurnos() {
 
 function openTurnoForm(turno = null) {
   const isEdit = !!turno;
-  const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${turno?.plaza_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
+  const defPlaza  = turno?.plaza_id ?? getPlazaScope();
+  const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${defPlaza === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
   const diasActivos = turno?.dias_semana ?? [1, 2, 3, 4, 5];
 
   openModal(

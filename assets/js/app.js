@@ -1,11 +1,10 @@
-import { verificarPin, limpiarSesion, obtenerMisTurnos, setIdEmpleado } from './api.js';
+import { verificarPin, limpiarSesion, obtenerTurnosPlaza, setIdEmpleado } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
 import { BASE } from './config.js';
 
 const sLogin  = document.getElementById('s-login');
 const sMenu   = document.getElementById('s-menu');
 const sTurnos = document.getElementById('s-turnos');
-const DOW = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 // ── Animate between two .pantalla screens ───────────────────────────────────
 function switchTo(from, to) {
@@ -98,9 +97,11 @@ function enterLogin() {
 }
 
 // ── Menu / Welcome screen ─────────────────────────────────────────────────────
+let _miId = null;
 function enterMenu(perfil) {
   // restaura el id en el módulo api (la sesión puede venir de sessionStorage)
   if (perfil.idEmpleado) setIdEmpleado(perfil.idEmpleado);
+  _miId = perfil.idEmpleado ?? null;
   const nombre = perfil.nombre ?? '';
 
   // Avatar initials (up to 2 chars)
@@ -136,8 +137,9 @@ function enterMenu(perfil) {
   switchTo(sLogin, sMenu);
 }
 
-// ── Mi turno ───────────────────────────────────────────────────────────────
+// ── Turnos de la plaza ───────────────────────────────────────────────────────
 const hhmm = (t) => t ? t.slice(0, 5) : '';
+const DIAS_AB = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 async function enterTurnos() {
   const lista = document.getElementById('turnos-lista');
@@ -145,22 +147,34 @@ async function enterTurnos() {
   document.getElementById('btn-turnos-volver').onclick = () => switchTo(sTurnos, sMenu);
   switchTo(sMenu, sTurnos);
 
-  const turnos = await obtenerMisTurnos();
-  const porDia = new Map(turnos.map(t => [t.dia_semana, t]));
-
-  lista.innerHTML = [1, 2, 3, 4, 5, 6, 7].map(d => {
-    const t = porDia.get(d);
-    const cuerpo = t
-      ? `<span class="turno-dia__turno">${t.turno_nombre}</span>
-         <span class="turno-dia__horas">${hhmm(t.hora_entrada)}–${hhmm(t.hora_salida)}${t.pausa_min ? ` · pausa ${t.pausa_min} min` : ''}</span>`
-      : `<span class="turno-dia__descanso">Descanso</span>`;
-    return `<div class="turno-dia ${t ? '' : 'turno-dia--off'}">
-      <span class="turno-dia__nombre">${DOW[d]}</span>
-      <div class="turno-dia__det">${cuerpo}</div>
-    </div>`;
-  }).join('');
-
-  if (!turnos.length) {
-    lista.insertAdjacentHTML('afterbegin', '<p class="turnos-vacio">Aún no tienes turnos asignados.</p>');
+  const filas = await obtenerTurnosPlaza();
+  if (!filas.length) {
+    lista.innerHTML = '<p class="turnos-vacio">Aún no hay turnos asignados en tu plaza.</p>';
+    return;
   }
+
+  // Empleados en orden de aparición (el RPC ordena por nombre) + celdas por día.
+  const empleados = [];
+  const celdas = new Map(); // `${id}-${dia}` → fila
+  for (const f of filas) {
+    if (!empleados.some(e => e.id === f.empleado_id)) {
+      empleados.push({ id: f.empleado_id, nombre: f.empleado });
+    }
+    celdas.set(`${f.empleado_id}-${f.dia_semana}`, f);
+  }
+
+  const head = `<tr><th class="tg-emp">Empleado</th>${
+    [1,2,3,4,5,6,7].map(d => `<th>${DIAS_AB[d]}</th>`).join('')}</tr>`;
+  const body = empleados.map(e => `
+    <tr class="${e.id === _miId ? 'tg-yo' : ''}">
+      <td class="tg-emp">${e.nombre}</td>
+      ${[1,2,3,4,5,6,7].map(d => {
+        const c = celdas.get(`${e.id}-${d}`);
+        return c
+          ? `<td><span class="tg-turno">${c.turno_nombre}</span><span class="tg-horas">${hhmm(c.hora_entrada)}–${hhmm(c.hora_salida)}</span></td>`
+          : `<td class="tg-off">–</td>`;
+      }).join('')}
+    </tr>`).join('');
+
+  lista.innerHTML = `<div class="turnos-grid-scroll"><table class="turnos-grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
