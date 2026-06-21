@@ -1,6 +1,8 @@
 import * as api from './api.js';
 import { esRetardo, resumen, diasCalendario } from './historial-calc.mjs';
 import { openModal, closeModal, showToast, confirm, fmtFecha, loading, esc } from './utils.js';
+import { combobox } from './combobox.js';
+import { getPlazaScope } from './plaza-scope.js';
 import { SUPABASE_URL } from '../config.js';
 
 const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
@@ -14,46 +16,114 @@ const ESTADO = {
   festivo:       { txt: 'Festivo',           cls: 'gray'   },
 };
 
+// 'SELECCIONAR' ('') = todos. El rol arranca en todos; el empleado es obligatorio.
+const ROLES = [
+  { value: '',           label: 'Seleccionar (todos)' },
+  { value: 'empleado',   label: 'Empleado' },
+  { value: 'supervisor', label: 'Supervisor' },
+  { value: 'gerente',    label: 'Gerente' },
+];
+
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const horaCorta = (iso) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 const diaCorto  = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 const publicURL = (ruta) => ruta ? `${SUPABASE_URL}/storage/v1/object/public/${ruta}` : null;
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const haceDiasISO = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const initials = (n) => (n || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const DEFECTO = '<div class="ad-empty">Selecciona un empleado y pulsa “Ver historial”.</div>';
 
 let _preId = null;
 export function preseleccionar(id) { _preId = id; }
 
 let _empleados = [];
+let _cbPlaza, _cbRol, _cbEmp;
 
 export async function init(panel) {
-  _empleados = await api.getEmpleados().catch(() => []);
-  const opts = _empleados.map((e) => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('');
+  panel.classList.add('admin-panel--full'); // historial ocupa todo el ancho en PC
+  const [empleados, plazas] = await Promise.all([
+    api.getEmpleados().catch(() => []),
+    api.getPlazas().catch(() => []),
+  ]);
+  _empleados = empleados;
 
   panel.innerHTML = `
-    <div class="panel-header">
-      <h2>Historial por empleado</h2>
-      <div class="panel-header__actions" style="flex-wrap:wrap;gap:8px">
-        <select id="hist-emp" class="form-input" style="height:36px;min-width:200px" aria-label="Empleado">
-          <option value="">– Selecciona empleado –</option>${opts}
-        </select>
-        <input id="hist-desde" type="date" class="form-input" style="height:36px" value="${haceDiasISO(30)}" aria-label="Desde">
-        <input id="hist-hasta" type="date" class="form-input" style="height:36px" value="${hoyISO()}" aria-label="Hasta">
-        <button id="hist-ver" class="abtn abtn--primary">Ver</button>
+    <div class="hist-head">
+      <div class="hist-head__icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+      </div>
+      <div>
+        <h2 class="hist-head__title">Historial por empleado</h2>
+        <p class="hist-head__sub">Asistencia, retardos e incidencias por persona y rango de fechas.</p>
       </div>
     </div>
-    <div id="hist-resultado"></div>`;
 
-  const verBtn = panel.querySelector('#hist-ver');
-  const empSel = panel.querySelector('#hist-emp');
-  verBtn.addEventListener('click', () => {
-    const id = parseInt(empSel.value);
+    <div class="ad-card hist-filtros">
+      <div class="hist-filtros__grid">
+        <div class="ff"><label>Plaza</label><div id="hf-plaza"></div></div>
+        <div class="ff"><label>Tipo de empleado</label><div id="hf-rol"></div></div>
+        <div class="ff ff--emp"><label>Empleado <span class="ff__req">*</span></label><div id="hf-emp"></div></div>
+        <div class="ff">
+          <label>Fecha inicio</label>
+          <div class="ff__date">
+            <input id="hf-desde" type="date" class="form-input" value="${haceDiasISO(30)}" aria-label="Fecha inicio">
+            <button type="button" class="abtn abtn--ghost ff__hoy" id="hf-hoy" title="Usar fecha de hoy">Hoy</button>
+          </div>
+        </div>
+        <div class="ff"><label>Fecha final</label><input id="hf-hasta" type="date" class="form-input" value="${hoyISO()}" aria-label="Fecha final"></div>
+      </div>
+      <div class="hist-filtros__acts">
+        <button class="abtn abtn--ghost" id="hf-reset">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+          Resetear
+        </button>
+        <button class="abtn abtn--primary" id="hf-ver">Ver historial</button>
+      </div>
+    </div>
+
+    <div id="hist-resultado">${DEFECTO}</div>`;
+
+  // ── Comboboxes ──────────────────────────────────────────────────────────
+  const plazaOpts = [{ value: '', label: 'Seleccionar (todas)' }, ...plazas.map(p => ({ value: p.id, label: p.nombre }))];
+  _cbPlaza = combobox({ placeholder: 'Todas las plazas', options: plazaOpts, value: getPlazaScope() ?? '', onChange: rebuildEmp });
+  _cbRol   = combobox({ placeholder: 'Todos', options: ROLES, value: '', searchable: false, onChange: rebuildEmp });
+  _cbEmp   = combobox({ placeholder: 'Selecciona empleado…', options: empOpts(), value: '' });
+  panel.querySelector('#hf-plaza').appendChild(_cbPlaza.el);
+  panel.querySelector('#hf-rol').appendChild(_cbRol.el);
+  panel.querySelector('#hf-emp').appendChild(_cbEmp.el);
+
+  function empOpts() {
+    const plaza = parseInt(_cbPlaza?.getValue?.() ?? '') || null;
+    const rol   = _cbRol?.getValue?.() ?? '';
+    return _empleados
+      .filter(e => (!plaza || e.plaza_id === plaza) && (!rol || e.rol === rol))
+      .map(e => ({
+        value: e.id, label: e.nombre,
+        img: e.foto_url || null, ph: e.foto_url ? null : initials(e.nombre),
+        sub: e.puesto || e.plazas?.nombre || '',
+      }));
+  }
+  function rebuildEmp() { _cbEmp.setOptions(empOpts()); }
+
+  // ── Atajos ──────────────────────────────────────────────────────────────
+  panel.querySelector('#hf-hoy').onclick = () => { panel.querySelector('#hf-desde').value = hoyISO(); };
+  panel.querySelector('#hf-reset').onclick = () => {
+    _cbPlaza.setValue(getPlazaScope() ?? '');
+    _cbRol.setValue('');
+    rebuildEmp();
+    _cbEmp.setValue('');
+    panel.querySelector('#hf-desde').value = haceDiasISO(30);
+    panel.querySelector('#hf-hasta').value = hoyISO();
+    panel.querySelector('#hist-resultado').innerHTML = DEFECTO;
+  };
+  panel.querySelector('#hf-ver').onclick = () => {
+    const id = parseInt(_cbEmp.getValue());
     if (!id) { showToast('Selecciona un empleado.', 'error'); return; }
     mostrar(panel, id, rangoDe(panel));
-  });
+  };
 
   if (_preId) {
-    empSel.value = String(_preId);
+    _cbEmp.setValue(String(_preId));
     mostrar(panel, _preId, rangoDe(panel));
     _preId = null;
   }
@@ -61,8 +131,8 @@ export async function init(panel) {
 
 function rangoDe(panel) {
   return {
-    desde: panel.querySelector('#hist-desde').value || haceDiasISO(30),
-    hasta: panel.querySelector('#hist-hasta').value || hoyISO(),
+    desde: panel.querySelector('#hf-desde').value || haceDiasISO(30),
+    hasta: panel.querySelector('#hf-hasta').value || hoyISO(),
   };
 }
 
@@ -87,12 +157,27 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
   const r = resumen(registros, turno, incidencias);
   const sinTurno = !turno;
 
+  const foto = emp?.foto_url
+    ? `<img class="hist-subj__av" src="${esc(emp.foto_url)}" alt="">`
+    : `<span class="hist-subj__av hist-subj__av--ph">${initials(emp?.nombre)}</span>`;
+  const meta = [emp?.puesto, emp?.plazas?.nombre].filter(Boolean).join(' · ');
+  const subject = `
+    <div class="hist-subj">
+      ${foto}
+      <div class="hist-subj__info">
+        <h3 class="hist-subj__name">${esc(emp?.nombre ?? 'Empleado')}</h3>
+        ${meta ? `<span class="hist-subj__meta">${esc(meta)}</span>` : ''}
+      </div>
+      <span class="hist-subj__range">${diaCorto(rango.desde)} – ${diaCorto(rango.hasta)}</span>
+      <button id="hist-nueva-inc" class="abtn abtn--primary">+ Incidencia</button>
+    </div>`;
+
   const cards = `
-    <div class="stat-grid" style="margin-bottom:16px">
-      <div class="stat-card"><div class="stat-card__label">Checadas</div><div class="stat-card__value">${r.totalChecadas}</div></div>
-      <div class="stat-card"><div class="stat-card__label">Retardos</div><div class="stat-card__value" style="color:#DC2626">${sinTurno ? '–' : r.retardos}</div></div>
-      <div class="stat-card"><div class="stat-card__label">Horas trabajadas</div><div class="stat-card__value" style="color:#16A34A">${r.horasTotales}</div></div>
-      <div class="stat-card"><div class="stat-card__label">Incidencias</div><div class="stat-card__value" style="color:#0EA5E9">${r.incidencias}</div></div>
+    <div class="stat-grid hist-stats">
+      <div class="stat-card stat-card--blue"><div class="stat-card__label">Checadas</div><div class="stat-card__value">${r.totalChecadas}</div></div>
+      <div class="stat-card stat-card--red"><div class="stat-card__label">Retardos</div><div class="stat-card__value">${sinTurno ? '–' : r.retardos}</div></div>
+      <div class="stat-card stat-card--green"><div class="stat-card__label">Horas trabajadas</div><div class="stat-card__value">${r.horasTotales}</div></div>
+      <div class="stat-card stat-card--orange"><div class="stat-card__label">Incidencias</div><div class="stat-card__value">${r.incidencias}</div></div>
     </div>`;
 
   const avisoTurno = sinTurno
@@ -100,9 +185,9 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
 
   const thumbs = (reg) => {
     if (!reg) return '';
-    const foto = publicURL(reg.ruta_foto), firma = publicURL(reg.ruta_firma);
-    return `${foto ? `<img src="${foto}" alt="Foto de checada" class="hist-thumb" data-full="${foto}">` : ''}` +
-           `${firma ? `<img src="${firma}" alt="Firma de checada" class="hist-thumb hist-thumb--firma" data-full="${firma}">` : ''}`;
+    const f = publicURL(reg.ruta_foto), s = publicURL(reg.ruta_firma);
+    return `${f ? `<img src="${f}" alt="Foto de checada" class="hist-thumb" data-full="${f}">` : ''}` +
+           `${s ? `<img src="${s}" alt="Firma de checada" class="hist-thumb hist-thumb--firma" data-full="${s}">` : ''}`;
   };
   const punto = (reg, lbl, extra = '') => reg
     ? `<div class="cordon__pt">
@@ -142,10 +227,10 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
 
   const filasInc = incidencias.length ? incidencias.map((i) => `
     <tr>
-      <td>${i.fecha}</td>
-      <td><span class="abadge abadge--gray">${esc(i.tipo)}</span></td>
-      <td>${i.nota ? esc(i.nota) : '–'}</td>
-      <td><div class="actions">
+      <td data-label="Fecha">${i.fecha}</td>
+      <td data-label="Tipo"><span class="abadge abadge--gray">${esc(i.tipo)}</span></td>
+      <td data-label="Nota">${i.nota ? esc(i.nota) : '–'}</td>
+      <td data-label="Acciones"><div class="actions">
         <button class="abtn abtn--danger abtn--icon" title="Eliminar" data-del-inc="${i.id}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
         </button>
@@ -153,13 +238,10 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
     </tr>`).join('') : `<tr><td colspan="4"><div class="ad-empty">Sin incidencias.</div></td></tr>`;
 
   wrap.innerHTML = `
-    <div class="panel-header" style="border:0;padding-top:0">
-      <h3 style="margin:0">${esc(emp?.nombre ?? 'Empleado')} <span class="td-muted">· ${rango.desde} a ${rango.hasta}</span></h3>
-      <button id="hist-nueva-inc" class="abtn abtn--primary">+ Incidencia</button>
-    </div>
+    ${subject}
     ${cards}${avisoTurno}
-    <div class="ad-card cal-card" style="margin-bottom:16px">${calHtml}</div>
-    <h4 style="margin:0 0 8px">Incidencias</h4>
+    <div class="ad-card cal-card hist-cal">${calHtml}</div>
+    <div class="panel-header" style="border:0;padding:0;margin-bottom:4px"><h4 style="margin:0;font-size:.95rem">Incidencias</h4></div>
     <div class="ad-card">
       <div class="table-scroll"><table class="data-table">
         <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th style="width:80px">Acciones</th></tr></thead>
@@ -182,7 +264,7 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
   // Eliminar incidencia
   wrap.querySelectorAll('[data-del-inc]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (!confirm('¿Eliminar esta incidencia?')) return;
+      if (!await confirm('¿Eliminar esta incidencia?', { ok: 'Eliminar' })) return;
       try {
         await api.deleteIncidencia(parseInt(btn.dataset.delInc));
         showToast('Incidencia eliminada.', 'ok');
