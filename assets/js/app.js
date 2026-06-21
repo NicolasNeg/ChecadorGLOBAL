@@ -62,6 +62,8 @@ function enterLogin() {
   const spinner = document.getElementById('pin-btn-spinner');
 
   input.value      = '';
+  // PIN: sólo 4 dígitos, no permitir más ni caracteres no numéricos.
+  input.oninput = () => { input.value = input.value.replace(/\D/g, '').slice(0, 4); };
   btnPin.disabled  = false;
   label.textContent = 'Continuar';
   spinner.hidden   = true;

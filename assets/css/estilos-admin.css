@@ -444,6 +444,11 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   background: var(--ad-fondo); padding: 0 6px; font-size: .72rem; font-weight: 600; color: var(--ad-tinta2); white-space: nowrap;
 }
 .cal-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.hist-fotos { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.hist-fotos__grupo { display: flex; flex-direction: column; gap: 5px; }
+.hist-fotos__lbl { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.hist-fotos__lbl--in  { color: #15803D; }
+.hist-fotos__lbl--out { color: #B45309; }
 
 /* ── Data table ───────────────────────────────────────────────────────── */
 .table-scroll { overflow-x: auto; }
@@ -1152,4 +1157,43 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 }
 @media (max-width: 380px) {
   .emp-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Log de auditoría (feed compacto, mobile-first) ───────────────────────── */
+.audit-feed { display: flex; flex-direction: column; }
+.audit-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 4px; border-bottom: 1px solid var(--ad-linea, #E2E8F0);
+}
+.audit-item:last-child { border-bottom: none; }
+.audit-item__op { flex: 0 0 auto; margin-top: 1px; }
+.audit-item__main { flex: 1 1 auto; min-width: 0; }
+.audit-item__txt { margin: 0; font-size: .9rem; color: var(--ad-tinta, #0F172A); font-weight: 600; }
+.audit-item__meta { display: block; font-size: .74rem; color: var(--ad-tinta3, #94A3B8); margin-top: 2px; }
+.audit-item__det { margin-top: 6px; }
+.audit-item__det > summary {
+  cursor: pointer; font-size: .76rem; font-weight: 600; color: var(--ad-primary, #0284C7);
+  list-style: none; width: max-content;
+}
+.audit-item__det > summary::-webkit-details-marker { display: none; }
+.audit-item__det[open] > summary { margin-bottom: 6px; }
+.audit-item__cambios { font-size: .8rem; line-height: 1.6; }
+.audit-item__ip { display: block; margin-top: 6px; font-size: .72rem; color: var(--ad-tinta3, #94A3B8); font-variant-numeric: tabular-nums; }
+
+/* ── Historial: división de KPIs + animaciones de búsqueda/resultados ──────── */
+/* KPIs fijos (inline): separados del calendario con margen y un rótulo sutil. */
+.hist-stats { margin: 4px 0 18px; }
+/* Resultado: cada bloque entra con fade+slide al cambiar la búsqueda. */
+#hist-resultado > * { animation: hist-in .26s ease-out both; }
+#hist-resultado > .hist-subj      { animation-delay: 0s; }
+#hist-resultado > .hist-stats     { animation-delay: .05s; }
+#hist-resultado > .cal-month      { animation-delay: .1s; }
+@keyframes hist-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* Filtros: el contenido se despliega animado al abrir el <details>. */
+.hist-filtros[open] .hist-filtros__grid,
+.hist-filtros[open] .hist-filtros__acts { animation: hist-in .22s ease-out both; }
+.hist-filtros[open] .hist-filtros__acts { animation-delay: .06s; }
+@media (prefers-reduced-motion: reduce) {
+  #hist-resultado > *, .hist-filtros[open] .hist-filtros__grid,
+  .hist-filtros[open] .hist-filtros__acts { animation: none; }
 }

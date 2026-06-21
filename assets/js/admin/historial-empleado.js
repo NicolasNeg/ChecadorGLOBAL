@@ -10,6 +10,7 @@ const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
 
 const ESTADO = {
   presente:      { txt: 'Presente',          cls: 'green'  },
+  asistencia:    { txt: 'Asistencia',        cls: 'green'  },
   falta:         { txt: 'Falta',             cls: 'red'    },
   justificacion: { txt: 'Justificada',       cls: 'orange' },
   permiso:       { txt: 'Permiso',           cls: 'blue'   },
@@ -282,7 +283,28 @@ function wireCal(wrap) {
   const cal = wrap.querySelector('#hist-cal');
   cal.querySelector('#cal-prev')?.addEventListener('click', () => { _mes = new Date(_mes.getFullYear(), _mes.getMonth() - 1, 1); clampMes(); cal.innerHTML = mesHTML(); wireCal(wrap); });
   cal.querySelector('#cal-next')?.addEventListener('click', () => { _mes = new Date(_mes.getFullYear(), _mes.getMonth() + 1, 1); clampMes(); cal.innerHTML = mesHTML(); wireCal(wrap); });
-  cal.querySelectorAll('[data-day]').forEach((c) => c.addEventListener('click', () => abrirDia(c.dataset.day)));
+  cal.querySelectorAll('[data-day]').forEach((c) => {
+    c.addEventListener('click', () => abrirDia(c.dataset.day));
+    // Admin: click derecho sobre un día sin checada real → alterna falta ⇄ asistencia.
+    c.addEventListener('contextmenu', (e) => { e.preventDefault(); toggleAsistencia(c.dataset.day); });
+  });
+}
+
+async function toggleAsistencia(key) {
+  if (key > hoyISO()) return;
+  const reg = _ctx.mapDia.get(key);
+  if (reg?.entrada || reg?.salida) { showToast('Ese día tiene checada real; no se puede marcar a mano.', 'error'); return; }
+  const yaAsis = _ctx.incidencias.filter((i) => i.fecha === key && i.tipo === 'asistencia');
+  try {
+    if (yaAsis.length) {
+      for (const i of yaAsis) await api.deleteIncidencia(i.id);
+      showToast('Marcado como falta.', 'ok');
+    } else {
+      await api.createIncidencia({ id_empleado: _ctx.idEmpleado, fecha: key, tipo: 'asistencia', nota: 'Asistencia manual', autor_nombre: autorActual() });
+      showToast('Marcado como asistencia.', 'ok');
+    }
+    recargar();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 // ── Cuadrícula mensual (estilo Google Calendar) ─────────────────────────────
@@ -314,7 +336,7 @@ function mesHTML() {
         : (estado !== 'futuro' ? `<span class="cal-cell__tag cal-cell__tag--${e.cls}">${e.txt}</span>` : '')) +
       (tarde ? '<span class="cal-cell__tag cal-cell__tag--red">Retardo</span>' : '') +
       (notas.length ? `<span class="cal-cell__notas">📝 ${notas.length}</span>` : '');
-    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}${esInicio ? ' cal-cell--inicio' : ''}" data-day="${key}" role="button" tabindex="0">
+    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}${esInicio ? ' cal-cell--inicio' : ''}" data-day="${key}" role="button" tabindex="0" title="Abrir día · click derecho: alternar asistencia/falta">
       <span class="cal-cell__num">${d}</span>
       <div class="cal-cell__marks">${marks}</div>
     </div>`;
@@ -358,7 +380,10 @@ function abrirDia(key) {
         <div class="cordon__line">${horas != null ? `<span class="cordon__dur">${horas} h</span>` : ''}</div>
         ${punto(reg.salida, 'Salida')}
       </div>
-      <div class="cal-thumbs">${thumbs(reg.entrada)}${thumbs(reg.salida)}</div>`
+      <div class="hist-fotos">
+        ${reg.entrada && thumbs(reg.entrada) ? `<div class="hist-fotos__grupo"><span class="hist-fotos__lbl hist-fotos__lbl--in">Entrada</span><div class="cal-thumbs">${thumbs(reg.entrada)}</div></div>` : ''}
+        ${reg.salida && thumbs(reg.salida) ? `<div class="hist-fotos__grupo"><span class="hist-fotos__lbl hist-fotos__lbl--out">Salida</span><div class="cal-thumbs">${thumbs(reg.salida)}</div></div>` : ''}
+      </div>`
     : `<p class="td-muted" style="margin:0">Sin checadas este día.</p>`;
 
   const notasHTML = notas.length ? notas.map((n) => {

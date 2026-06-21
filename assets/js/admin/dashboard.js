@@ -410,21 +410,21 @@ async function loadAuditoria(panel) {
     const wrap = document.getElementById('audit-wrap');
     if (!rows.length) { wrap.innerHTML = '<div class="ad-empty">Sin registros.</div>'; return; }
 
-    wrap.innerHTML = `<div class="table-scroll"><table class="data-table">
-      <thead><tr>
-        <th>Fecha</th><th>Acción</th><th>Cambios (antes → ahora)</th><th>Realizado por</th><th>Ubicación (IP)</th>
-      </tr></thead>
-      <tbody>${rows.map(r => `<tr>
-        <td>${fmtFecha(r.created_at)}</td>
-        <td>
-          <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'}">${OP_VERBO[r.operacion] ?? r.operacion}</span>
-          ${esc(accionHumana(r))}
-        </td>
-        <td style="font-size:.8rem;line-height:1.6">${cambiosHTML(r)}</td>
-        <td>${esc(r.perfiles_admin?.nombre ?? 'Sistema')}</td>
-        <td style="font-variant-numeric:tabular-nums;font-size:.8rem">${esc(r.ip_address ?? '—')}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>`;
+    wrap.innerHTML = `<div class="audit-feed">${rows.map(r => {
+      const cambios = cambiosHTML(r);
+      const hayCambios = cambios.includes('<b>');
+      return `<div class="audit-item">
+        <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'} audit-item__op">${OP_VERBO[r.operacion] ?? r.operacion}</span>
+        <div class="audit-item__main">
+          <p class="audit-item__txt">${esc(accionHumana(r))}</p>
+          <span class="audit-item__meta">${esc(r.perfiles_admin?.nombre ?? 'Sistema')} · ${fmtFecha(r.created_at)}</span>
+          ${hayCambios ? `<details class="audit-item__det"><summary>Ver detalle</summary>
+            <div class="audit-item__cambios">${cambios}</div>
+            <span class="audit-item__ip">IP: ${esc(r.ip_address ?? '—')}</span>
+          </details>` : ''}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
   } catch (e) {
     document.getElementById('audit-wrap').innerHTML =
       `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
