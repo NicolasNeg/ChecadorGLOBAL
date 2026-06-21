@@ -121,24 +121,6 @@
       </nav>
 
       <div class="sidebar__footer">
-        <div class="sidebar__plaza" id="sidebar-plaza" data-rh-only>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-          </svg>
-          <span class="sidebar__theme-label">Plaza</span>
-          <select aria-label="Filtrar por plaza"><option value="">Todas</option></select>
-        </div>
-        <label class="sidebar__theme">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-          <span class="sidebar__theme-label">Modo oscuro</span>
-          <span class="switch">
-            <input type="checkbox" id="theme-switch" aria-label="Modo oscuro">
-            <span class="switch__track"></span>
-          </span>
-        </label>
-
         <div class="sidebar__profile">
           <div class="sidebar__avatar sidebar__avatar--sm" aria-hidden="true">A</div>
           <div class="sidebar__user-info">
@@ -175,13 +157,27 @@
         </button>
         <h1 class="admin-header__title" id="page-title">Resumen</h1>
         <div class="admin-header__right">
-          <a href="index.html" class="abtn abtn--ghost" style="font-size:.82rem">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
+          <!-- Selector de plaza personalizado (animado) -->
+          <div class="hplaza" id="header-plaza">
+            <button class="hplaza__trigger" id="hplaza-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <svg class="hplaza__pin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+              </svg>
+              <span class="hplaza__label" id="hplaza-label">Seleccionar Plaza</span>
+              <svg class="hplaza__chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            <ul class="hplaza__menu" id="hplaza-menu" role="listbox" aria-label="Plazas" hidden></ul>
+          </div>
+
+          <button class="hicon-btn" id="btn-theme" aria-label="Cambiar tema" title="Cambiar tema">
+            <svg class="hicon-btn__moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+            <svg class="hicon-btn__sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></svg>
+          </button>
+
+          <a href="index.html" class="hicon-btn" aria-label="Ir a la app" title="Ir a la app">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            App
           </a>
         </div>
       </header>

@@ -101,15 +101,14 @@ const isDark = (t = getTheme()) => t === 'dark' || (t === 'system' && mq.matches
 function applyTheme() {
   const dark = isDark();
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  const sw = document.getElementById('theme-switch');
-  if (sw) sw.checked = dark;
   document.querySelectorAll('.seg-theme [data-theme-opt]').forEach(b =>
     b.classList.toggle('active', b.dataset.themeOpt === getTheme()));
 }
 function setTheme(t) { localStorage.setItem(THEME_KEY, t); applyTheme(); }
 
 mq.addEventListener('change', () => { if (getTheme() === 'system') applyTheme(); });
-document.getElementById('theme-switch')?.addEventListener('change', e => setTheme(e.target.checked ? 'dark' : 'light'));
+// Botón luna/sol en el header: alterna entre claro y oscuro.
+document.getElementById('btn-theme')?.addEventListener('click', () => setTheme(isDark() ? 'light' : 'dark'));
 applyTheme();
 
 // ── Selector global de plaza (solo RH; jefe ya está limitado por RLS) ───────────
@@ -120,19 +119,73 @@ function reloadCurrent() {
   showPanel(_current);
 }
 async function initPlazaSelector() {
-  const box = document.getElementById('sidebar-plaza');
+  const box = document.getElementById('header-plaza');
   if (!box) return;
-  if (!esRH) { box.remove(); return; } // jefe: una sola plaza, sin selector
-  const sel = box.querySelector('select');
-  try {
-    const plazas = await getPlazas();
-    sel.innerHTML = `<option value="">Todas</option>` +
-      plazas.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
-    sel.value = getPlazaScope() ?? '';
-  } catch { /* sin plazas: deja "Todas" */ }
-  sel.addEventListener('change', () => {
-    setPlazaScope(parseInt(sel.value) || null);
-    reloadCurrent();
+  const trigger = document.getElementById('hplaza-trigger');
+  const labelEl = document.getElementById('hplaza-label');
+  const menu = document.getElementById('hplaza-menu');
+
+  let plazas = [];
+  try { plazas = await getPlazas(); } catch { /* sin plazas */ }
+
+  // jefe: una sola plaza (ya limitado por RLS). Solo muestra el nombre, sin dropdown.
+  if (!esRH) {
+    labelEl.textContent = plazas[0]?.nombre ?? 'Mi plaza';
+    box.classList.add('hplaza--static');
+    return;
+  }
+
+  const opciones = [{ id: null, nombre: 'Todas las plazas' }, ...plazas];
+  const nombreDe = (id) => opciones.find(o => o.id === id)?.nombre ?? 'Seleccionar Plaza';
+  const setLabel = (id) => { labelEl.textContent = id == null ? 'Todas las plazas' : nombreDe(id); };
+  setLabel(getPlazaScope());
+
+  menu.innerHTML = opciones.map(o => {
+    const sel = (getPlazaScope() ?? null) === o.id;
+    return `<li role="option" class="hplaza__opt${sel ? ' is-sel' : ''}" data-id="${o.id ?? ''}" aria-selected="${sel}">
+      <span>${esc(o.nombre)}</span>
+      <svg class="hplaza__check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </li>`;
+  }).join('');
+
+  const close = () => {
+    if (menu.hidden) return;
+    box.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+    // espera a que termine la animación de salida antes de ocultar
+    setTimeout(() => { menu.hidden = true; }, 160);
+    document.removeEventListener('click', onDocClick, true);
+  };
+  const open = () => {
+    menu.hidden = false;
+    requestAnimationFrame(() => box.classList.add('open'));
+    trigger.setAttribute('aria-expanded', 'true');
+    document.addEventListener('click', onDocClick, true);
+  };
+  const onDocClick = (e) => { if (!box.contains(e.target)) close(); };
+
+  trigger.addEventListener('click', (e) => { e.stopPropagation(); box.classList.contains('open') ? close() : open(); });
+
+  menu.addEventListener('click', (e) => {
+    const li = e.target.closest('.hplaza__opt');
+    if (!li) return;
+    const id = parseInt(li.dataset.id) || null;
+    menu.querySelectorAll('.hplaza__opt').forEach(o => {
+      const on = o === li;
+      o.classList.toggle('is-sel', on);
+      o.setAttribute('aria-selected', on);
+    });
+    setLabel(id);
+    close();
+    if (id !== getPlazaScope()) {
+      setPlazaScope(id);
+      // animación "con vida" al cambiar de plaza
+      const content = document.getElementById('admin-content');
+      content?.classList.remove('plaza-flash');
+      void content?.offsetWidth;            // reinicia la animación
+      content?.classList.add('plaza-flash');
+      reloadCurrent();
+    }
   });
 }
 initPlazaSelector();
