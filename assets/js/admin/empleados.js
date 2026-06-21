@@ -1,6 +1,20 @@
 import * as api from './api.js';
-import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
+import { loading, showToast, openModal, closeModal, esc } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
+
+const iniciales = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+// Iconos SVG de las tarjetas (stroke currentColor; un solo juego, mismo grosor).
+const IC = {
+  plaza: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>',
+  turno: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
+  estado:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  hist:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>',
+  edit:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  pin:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  baja:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  alta:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+};
 
 let _plazas  = [];
 let _turnos  = [];
@@ -19,8 +33,8 @@ export async function init(panel) {
         </button>
       </div>
     </div>
-    <div class="ad-card">
-      <div id="tbl-emp-wrap"></div>
+    <div class="ad-card emp-card-shell">
+      <div id="emp-grid-wrap"></div>
     </div>`;
 
   document.getElementById('btn-nuevo-emp').addEventListener('click', () => openEmpForm());
@@ -31,7 +45,7 @@ export async function init(panel) {
 let _allEmpleados = [];
 
 async function loadEmpleados() {
-  const wrap = document.getElementById('tbl-emp-wrap');
+  const wrap = document.getElementById('emp-grid-wrap');
   loading(wrap);
   try {
     _allEmpleados = await api.getEmpleados();
@@ -81,50 +95,46 @@ async function loadEmpleados() {
       );
     };
   } catch (e) {
-    document.getElementById('tbl-emp-wrap').innerHTML =
-      `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
+    document.getElementById('emp-grid-wrap').innerHTML =
+      `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
   }
 }
 
+function tarjetaEmp(r) {
+  const foto = r.foto_url
+    ? `<img class="emp-c__img" src="${esc(r.foto_url)}" alt="">`
+    : `<span class="emp-c__img emp-c__img--ph">${esc(iniciales(r.nombre))}</span>`;
+  const nombreJs = r.nombre.replace(/'/g, "\\'");
+  return `
+    <article class="emp-c">
+      <div class="emp-c__photo">${foto}</div>
+      <div class="emp-c__body">
+        <h3 class="emp-c__name" title="${esc(r.nombre)}">${esc(r.nombre)}</h3>
+        <p class="emp-c__role">${esc(r.puesto || 'Sin puesto')}</p>
+        <div class="emp-c__stats">
+          <div class="emp-c__stat" title="Plaza">${IC.plaza}<span>${esc(r.plazas?.nombre || 'Sin plaza')}</span></div>
+          <div class="emp-c__stat" title="Turno">${IC.turno}<span>${esc(r.turnos?.nombre || 'Sin turno')}</span></div>
+          <div class="emp-c__stat" title="Estado">${IC.estado}<span class="abadge ${r.activo ? 'abadge--green' : 'abadge--gray'}">${r.activo ? 'Activo' : 'Inactivo'}</span></div>
+        </div>
+      </div>
+      <div class="emp-c__actions">
+        <button class="emp-c__act" title="Editar" aria-label="Editar" onclick="window._editEmp(${r.id})">${IC.edit}</button>
+        <button class="emp-c__act" title="Ver historial" aria-label="Ver historial" onclick="window._verHistorial(${r.id})">${IC.hist}</button>
+        <button class="emp-c__act" title="Resetear PIN" aria-label="Resetear PIN" onclick="window._resetPin(${r.id}, '${nombreJs}')">${IC.pin}</button>
+        <button class="emp-c__act ${r.activo ? 'emp-c__act--danger' : 'emp-c__act--ok'}"
+          title="${r.activo ? 'Desactivar' : 'Reactivar'}" aria-label="${r.activo ? 'Desactivar' : 'Reactivar'}"
+          onclick="window._toggleEmp(${r.id}, ${r.activo})">${r.activo ? IC.baja : IC.alta}</button>
+      </div>
+    </article>`;
+}
+
 function renderEmpleados(empleados) {
-  const wrap = document.getElementById('tbl-emp-wrap');
+  const wrap = document.getElementById('emp-grid-wrap');
   if (!wrap) return;
   empleados = filterByPlaza(empleados, e => e.plaza_id);
-  renderTable(
-    wrap,
-    [
-      { key: 'nombre',   label: 'Nombre', render: r => `<div class="emp-cell">${
-        r.foto_url
-          ? `<img class="emp-avatar" src="${r.foto_url}" alt="">`
-          : `<span class="emp-avatar emp-avatar--ph">${r.nombre.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>`
-      }<span>${r.nombre}${r.puesto ? `<br><span class="td-muted">${r.puesto}</span>` : ''}</span></div>` },
-      { key: 'plaza',    label: 'Plaza',  render: r => r.plazas?.nombre  ?? '<span class="td-muted">Sin plaza</span>' },
-      { key: 'turno',    label: 'Turno',  render: r => r.turnos?.nombre  ?? '<span class="td-muted">Sin turno</span>' },
-      { key: 'activo',   label: 'Estado', render: r => r.activo
-          ? '<span class="abadge abadge--green">Activo</span>'
-          : '<span class="abadge abadge--gray">Inactivo</span>' }
-    ],
-    empleados,
-    (r) => `
-      <button class="abtn abtn--ghost abtn--icon" title="Ver historial" onclick="window._verHistorial(${r.id})">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
-      </button>
-      <button class="abtn abtn--ghost abtn--icon" title="Editar" onclick="window._editEmp(${r.id})">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
-      <button class="abtn abtn--ghost abtn--icon" title="Resetear PIN" onclick="window._resetPin(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      </button>
-      <button class="abtn abtn--icon" title="${r.activo ? 'Desactivar' : 'Reactivar'}"
-        style="background:${r.activo ? '#FEF2F2' : '#DCFCE7'};color:${r.activo ? '#DC2626' : '#16A34A'}"
-        onclick="window._toggleEmp(${r.id}, ${r.activo})">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          ${r.activo
-            ? '<path d="M18 6L6 18M6 6l12 12"/>'
-            : '<polyline points="20 6 9 17 4 12"/>'}
-        </svg>
-      </button>`
-  );
+  wrap.innerHTML = empleados.length
+    ? `<div class="emp-grid">${empleados.map(tarjetaEmp).join('')}</div>`
+    : `<div class="ad-empty">No hay empleados que coincidan.</div>`;
 }
 
 function filterTable(q) {
