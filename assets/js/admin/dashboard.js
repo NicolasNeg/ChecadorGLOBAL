@@ -11,8 +11,11 @@ const esRH   = sesion?.rol === 'rh';
 if (!esRH) {
   document.querySelectorAll('[data-rh-only]').forEach(el => el.remove());
 }
-document.getElementById('admin-nombre').textContent = sesion?.nombre ?? 'Admin';
+const _adminNombre = sesion?.nombre ?? 'Admin';
+document.getElementById('admin-nombre').textContent = _adminNombre;
+document.getElementById('admin-nombre-foot').textContent = _adminNombre;
 document.getElementById('admin-rol-badge').textContent = esRH ? 'Recursos Humanos' : 'Jefe de Plaza';
+document.querySelectorAll('.sidebar__avatar').forEach(a => { a.firstChild.textContent = _adminNombre.trim().charAt(0).toUpperCase() || 'A'; });
 
 // ── Sidebar nav + routing ─────────────────────────────────────────────────────
 const panels = document.querySelectorAll('.admin-panel');
