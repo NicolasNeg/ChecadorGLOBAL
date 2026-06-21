@@ -653,14 +653,41 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   display: flex; align-items: center; justify-content: center;
   font-size: .75rem; font-weight: 700; color: var(--ad-primary); background: #EFF6FF;
 }
-.emp-foto-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-.emp-foto-prev, .emp-foto-ph {
-  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
-  object-fit: cover; border: 1px solid var(--ad-linea);
+/* ── Editar/Nuevo empleado: foto + formulario en dos columnas ─────────────── */
+#ad-modal:has(.emp-edit) .ad-modal__card { max-width: 720px; }
+.emp-edit { display: grid; grid-template-columns: 180px 1fr; gap: 24px; align-items: start; }
+.emp-edit__photo { position: relative; width: 180px; }
+.emp-edit__pic {
+  width: 180px; height: 180px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--ad-linea); background: var(--ad-surf2);
 }
-.emp-foto-ph {
+.emp-edit__pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.emp-edit__ph {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 3rem; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, var(--ad-primary), #1E40AF);
+}
+.emp-edit__cam {
+  position: absolute; right: -8px; bottom: -8px;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: .7rem; color: var(--ad-tinta3); background: var(--ad-fondo); text-align: center;
+  background: var(--ad-primary); color: #fff;
+  box-shadow: 0 2px 8px rgba(15,23,42,.25);
+  transition: background .15s ease, transform .15s ease;
+}
+.emp-edit__cam:hover { background: #1D4ED8; transform: scale(1.06); }
+.emp-edit__cam svg { width: 18px; height: 18px; }
+.emp-edit__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.emp-edit__grid .form-group { margin: 0; }
+.emp-edit__grid .form-group--full { grid-column: 1 / -1; }
+.emp-edit__grid label {
+  font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ad-tinta3);
+}
+
+@media (max-width: 600px) {
+  .emp-edit { grid-template-columns: 1fr; justify-items: center; }
+  .emp-edit__grid { grid-template-columns: 1fr; width: 100%; }
 }
 
 /* ── Dark mode: ajustes de superficies tintadas ───────────────────────────── */

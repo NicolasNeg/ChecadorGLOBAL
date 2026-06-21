@@ -155,61 +155,60 @@ function openEmpForm(emp = null) {
   const rolOpts   = ROLES.map(r => `<option value="${r}" ${(emp?.rol ?? 'empleado') === r ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('');
 
   openModal(
-    isEdit ? `Editar: ${emp.nombre}` : 'Nuevo Empleado',
-    `<div class="emp-foto-row">
-      <img id="e-foto-prev" class="emp-foto-prev" src="${v('foto_url') || ''}" alt="" ${v('foto_url') ? '' : 'hidden'}>
-      <div id="e-foto-ph" class="emp-foto-ph" ${v('foto_url') ? 'hidden' : ''}>Sin foto</div>
-      <div class="form-group" style="flex:1;margin:0">
-        <label for="e-foto">Foto de perfil</label>
-        <input id="e-foto" class="form-input" type="file" accept="image/*">
+    isEdit ? 'Editar perfil de empleado' : 'Nuevo empleado',
+    `<div class="emp-edit">
+      <div class="emp-edit__photo">
+        <div class="emp-edit__pic">
+          <img id="e-foto-prev" src="${esc(v('foto_url'))}" alt="" ${v('foto_url') ? '' : 'hidden'}>
+          <span id="e-foto-ph" class="emp-edit__ph" ${v('foto_url') ? 'hidden' : ''}>${esc(iniciales(v('nombre')))}</span>
+        </div>
+        <label class="emp-edit__cam" for="e-foto" title="Cambiar foto" aria-label="Cambiar foto">${IC.edit}</label>
+        <input id="e-foto" type="file" accept="image/*" hidden>
+      </div>
+
+      <div class="emp-edit__grid">
+        <div class="form-group">
+          <label for="e-nombre">Nombre completo *</label>
+          <input id="e-nombre" class="form-input" value="${esc(v('nombre'))}" placeholder="Juan Pérez García">
+        </div>
+        <div class="form-group">
+          <label for="e-num">N.º empleado</label>
+          <input id="e-num" class="form-input" value="${esc(v('numero_empleado'))}" placeholder="EQS-003">
+        </div>
+        <div class="form-group form-group--full">
+          <label for="e-puesto">Puesto</label>
+          <input id="e-puesto" class="form-input" value="${esc(v('puesto'))}" placeholder="Cajero">
+        </div>
+        <div class="form-group">
+          <label for="e-email">Correo</label>
+          <input id="e-email" class="form-input" type="email" value="${esc(v('email'))}" placeholder="correo@empresa.com">
+        </div>
+        <div class="form-group">
+          <label for="e-tel">Teléfono</label>
+          <input id="e-tel" class="form-input" type="tel" value="${esc(v('telefono'))}" placeholder="55 1234 5678">
+        </div>
+        <div class="form-group">
+          <label for="e-ingreso">Fecha de ingreso</label>
+          <input id="e-ingreso" class="form-input" type="date" value="${esc(v('fecha_ingreso'))}">
+        </div>
+        <div class="form-group">
+          <label for="e-rol">Rol</label>
+          <select id="e-rol" class="form-input">${rolOpts}</select>
+        </div>
+        <div class="form-group">
+          <label for="e-plaza">Plaza *</label>
+          <select id="e-plaza" class="form-input"><option value="">– Selecciona –</option>${plazaOpts}</select>
+        </div>
+        <div class="form-group">
+          <label for="e-turno">Turno</label>
+          <select id="e-turno" class="form-input">${turnoOpts}</select>
+        </div>
+        ${!isEdit ? `<div class="form-group form-group--full">
+          <label for="e-pin">PIN inicial (solo números) *</label>
+          <input id="e-pin" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
+        </div>` : ''}
       </div>
     </div>
-    <div class="form-group">
-      <label for="e-nombre">Nombre completo *</label>
-      <input id="e-nombre" class="form-input" value="${v('nombre')}" placeholder="Juan Pérez García">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label for="e-num">N.º empleado</label>
-        <input id="e-num" class="form-input" value="${v('numero_empleado')}" placeholder="EQS-003">
-      </div>
-      <div class="form-group">
-        <label for="e-puesto">Puesto</label>
-        <input id="e-puesto" class="form-input" value="${v('puesto')}" placeholder="Cajero">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label for="e-email">Correo</label>
-        <input id="e-email" class="form-input" type="email" value="${v('email')}" placeholder="correo@empresa.com">
-      </div>
-      <div class="form-group">
-        <label for="e-tel">Teléfono</label>
-        <input id="e-tel" class="form-input" type="tel" value="${v('telefono')}" placeholder="55 1234 5678">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label for="e-ingreso">Fecha de ingreso</label>
-        <input id="e-ingreso" class="form-input" type="date" value="${v('fecha_ingreso')}">
-      </div>
-      <div class="form-group">
-        <label for="e-rol">Rol</label>
-        <select id="e-rol" class="form-input">${rolOpts}</select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="e-plaza">Plaza *</label>
-      <select id="e-plaza" class="form-input"><option value="">– Selecciona –</option>${plazaOpts}</select>
-    </div>
-    <div class="form-group">
-      <label for="e-turno">Turno</label>
-      <select id="e-turno" class="form-input">${turnoOpts}</select>
-    </div>
-    ${!isEdit ? `<div class="form-group">
-      <label for="e-pin">PIN inicial (solo números) *</label>
-      <input id="e-pin" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
-    </div>` : ''}
     <p id="e-error" class="error-inline" hidden></p>`,
     async () => {
       const nombre   = document.getElementById('e-nombre').value.trim();
@@ -261,7 +260,8 @@ function openEmpForm(emp = null) {
         errEl.textContent = e.message;
         errEl.hidden = false;
       }
-    }
+    },
+    isEdit ? 'Guardar cambios' : 'Crear empleado'
   );
 
   // preview de la foto al elegir archivo
