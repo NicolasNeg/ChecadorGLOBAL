@@ -99,6 +99,14 @@ export function getRegistros({ fecha, plaza_id, limit = 100 } = {}) {
   return apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,empleados(id,nombre,plaza_id,plazas(nombre))${filter}&order=hora.desc&limit=${limit}`);
 }
 
+// Todos los registros del rango (para el tablero de asistencia mensual).
+export const getRegistrosRango = ({ desde, hasta }) =>
+  apiFetch(`registros?select=id,tipo,hora,id_empleado&hora=gte.${desde}T00:00:00&hora=lte.${hasta}T23:59:59&order=hora.asc`);
+
+// Todas las incidencias del rango (para el tablero de asistencia mensual).
+export const getIncidenciasRango = ({ desde, hasta }) =>
+  apiFetch(`incidencias?select=id_empleado,fecha,tipo&fecha=gte.${desde}&fecha=lte.${hasta}`);
+
 // ── Historial por empleado ──────────────────────────────────────────────────
 export const getRegistrosEmpleado = (idEmpleado, { desde, hasta }) =>
   apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,ruta_foto,ruta_firma` +
