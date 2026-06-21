@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { renderTable, loading, showToast, openModal, closeModal, fmtHora, confirm } from './utils.js';
+import { loading, showToast, openModal, closeModal, fmtHora, confirm } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 
 let _plazas = [];
@@ -18,7 +18,7 @@ export async function init(panel) {
         </button>
       </div>
     </div>
-    <div class="ad-card"><div id="tbl-turnos-wrap"></div></div>
+    <div id="tbl-turnos-wrap"></div>
 
     <div class="panel-header" style="margin-top:28px">
       <h2>Asignación semanal</h2>
@@ -92,34 +92,46 @@ async function loadGrid() {
 
 let _allTurnos = [];
 
+// Color de cada tarjeta: por tipo de turno si se reconoce, si no por índice.
+const CARD_COLORS = ['c-blue', 'c-emerald', 'c-teal', 'c-amber', 'c-violet'];
+const cardColor = (t, i) => ({ 'shift--am': 'c-amber', 'shift--pm': 'c-violet', 'shift--night': 'c-blue' }[shiftClass(t.nombre)] || CARD_COLORS[i % CARD_COLORS.length]);
+
+function turnoCard(t, i) {
+  const dias = (t.dias_semana || []).map(d => DIAS[d]).join(' · ') || 'Sin días';
+  return `
+    <div class="turno-card turno-card--${cardColor(t, i)}">
+      <div class="turno-card__top">
+        <h3 class="turno-card__name">${t.nombre}</h3>
+        <span class="turno-card__badge">${t.activo ? 'Activo' : 'Inactivo'}</span>
+      </div>
+      <div class="turno-card__time">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+        ${fmtHora(t.hora_entrada)} – ${fmtHora(t.hora_salida)}
+      </div>
+      <ul class="turno-card__meta">
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${t.plazas?.nombre ?? '–'}</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${dias}</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg> Tol. ${t.tolerancia_entrada_min}/${t.tolerancia_salida_min} min</li>
+      </ul>
+      <div class="turno-card__actions" data-rh-only>
+        <button class="turno-card__btn" title="Editar" onclick="window._editTurno(${t.id})">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="turno-card__btn" title="Eliminar" onclick="window._deleteTurno(${t.id}, '${t.nombre.replace(/'/g, "\\'")}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>
+    </div>`;
+}
+
 async function loadTurnos() {
   const wrap = document.getElementById('tbl-turnos-wrap');
   loading(wrap);
   try {
     _allTurnos = filterByPlaza(await api.getTurnos(), t => t.plaza_id);
-    renderTable(
-      wrap,
-      [
-        { key: 'nombre',    label: 'Nombre' },
-        { key: 'plaza',     label: 'Plaza',    render: r => r.plazas?.nombre ?? '–' },
-        { key: 'entrada',   label: 'Entrada',  render: r => fmtHora(r.hora_entrada) },
-        { key: 'salida',    label: 'Salida',   render: r => fmtHora(r.hora_salida) },
-        { key: 'tol_ent',   label: 'Tol. entrada', render: r => `${r.tolerancia_entrada_min} min` },
-        { key: 'tol_sal',   label: 'Tol. salida',  render: r => `${r.tolerancia_salida_min} min` },
-        { key: 'dias',      label: 'Días',     render: r => (r.dias_semana || []).map(d => DIAS[d]).join(', ') },
-        { key: 'activo',    label: 'Estado',   render: r => r.activo
-            ? '<span class="abadge abadge--green">Activo</span>'
-            : '<span class="abadge abadge--gray">Inactivo</span>' }
-      ],
-      _allTurnos,
-      (r) => `
-        <button class="abtn abtn--ghost abtn--icon" title="Editar" onclick="window._editTurno(${r.id})">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="abtn abtn--danger abtn--icon" title="Eliminar" onclick="window._deleteTurno(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-        </button>`
-    );
+    wrap.innerHTML = _allTurnos.length
+      ? `<div class="turno-cards">${_allTurnos.map(turnoCard).join('')}</div>`
+      : '<div class="ad-card"><div class="ad-empty">No hay turnos en esta plaza. Crea el primero.</div></div>';
 
     window._editTurno   = (id) => { const t = _allTurnos.find(t => t.id === id); if (t) openTurnoForm(t); };
     window._deleteTurno = async (id, nombre) => {
@@ -128,7 +140,7 @@ async function loadTurnos() {
       catch (e) { showToast(e.message, 'error'); }
     };
   } catch (e) {
-    document.getElementById('tbl-turnos-wrap').innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
+    wrap.innerHTML = `<div class="ad-card"><div class="ad-empty" style="color:#DC2626">${e.message}</div></div>`;
   }
 }
 

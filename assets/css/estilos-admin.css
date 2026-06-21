@@ -634,6 +634,50 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .hist-lightbox[hidden] { display:none; }
 .hist-lightbox img { max-width:90vw; max-height:90vh; border-radius:12px; background:#fff; }
 
+/* ── Tarjetas de turno (Visual Shift Planner) ─────────────────────────────── */
+.turno-cards {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.turno-card {
+  --tc: #2563EB; --tc2: #1D4ED8;
+  position: relative; overflow: hidden;
+  padding: 18px; border-radius: 16px; color: #fff;
+  background: linear-gradient(135deg, var(--tc), var(--tc2));
+  box-shadow: 0 6px 20px -8px var(--tc);
+}
+.turno-card--c-blue    { --tc:#3B82F6; --tc2:#2563EB; }
+.turno-card--c-emerald { --tc:#10B981; --tc2:#059669; }
+.turno-card--c-teal    { --tc:#14B8A6; --tc2:#0D9488; }
+.turno-card--c-amber   { --tc:#F59E0B; --tc2:#D97706; }
+.turno-card--c-violet  { --tc:#8B5CF6; --tc2:#7C3AED; }
+.turno-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.turno-card__name { font-family: var(--ad-font-head); font-size: 1.1rem; font-weight: 700; color: #fff; }
+.turno-card__badge {
+  font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  background: rgba(255,255,255,.22); padding: 3px 9px; border-radius: 99px;
+}
+.turno-card__time {
+  display: flex; align-items: center; gap: 7px;
+  margin: 14px 0 12px; font-size: 1.18rem; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.turno-card__meta { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.turno-card__meta li { display: flex; align-items: center; gap: 7px; font-size: .82rem; color: rgba(255,255,255,.92); }
+.turno-card__meta svg { flex-shrink: 0; opacity: .85; }
+.turno-card__actions {
+  position: absolute; top: 14px; right: 14px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s;
+}
+.turno-card:hover .turno-card__actions, .turno-card:focus-within .turno-card__actions { opacity: 1; }
+.turno-card__btn {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 8px; cursor: pointer;
+  background: rgba(255,255,255,.18); color: #fff;
+}
+.turno-card__btn:hover { background: rgba(255,255,255,.32); }
+/* El badge "Activo" tapa los botones al hover: lo ocultamos para dar espacio */
+.turno-card:hover .turno-card__badge, .turno-card:focus-within .turno-card__badge { visibility: hidden; }
+
 /* ── Cuadrícula de asignación semanal (Turnos) ────────────────────────────── */
 .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .grid-horarios { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 720px; }
