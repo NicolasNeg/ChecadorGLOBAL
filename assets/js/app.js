@@ -34,6 +34,7 @@ function shakeInput(id) {
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
+let _miId = null; // id del empleado en sesión (lo usa enterTurnos); declarado antes del boot por TDZ
 const existing = getSession();
 if (existing) enterMenu(existing);
 else          enterLogin();
@@ -97,7 +98,6 @@ function enterLogin() {
 }
 
 // ── Menu / Welcome screen ─────────────────────────────────────────────────────
-let _miId = null;
 function enterMenu(perfil) {
   // restaura el id en el módulo api (la sesión puede venir de sessionStorage)
   if (perfil.idEmpleado) setIdEmpleado(perfil.idEmpleado);
