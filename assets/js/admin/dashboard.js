@@ -368,6 +368,36 @@ function accionHumana(r) {
   return `Se ${verbo} ${entidad}${quien}`;
 }
 
+// Nombres de campo en español + campos de ruido que no aportan al lector.
+const CAMPO_LBL = {
+  turno_id: 'Turno', dia_semana: 'Día', hora_entrada: 'Entrada', hora_salida: 'Salida',
+  nombre: 'Nombre', numero_empleado: 'N° empleado', puesto: 'Puesto', email: 'Email',
+  telefono: 'Teléfono', plaza_id: 'Plaza', turno: 'Turno', activo: 'Activo', rol: 'Rol',
+  radio_metros: 'Radio (m)', latitud: 'Latitud', longitud: 'Longitud', direccion: 'Dirección',
+  tipo: 'Tipo', descripcion: 'Descripción', fecha: 'Fecha', fecha_ingreso: 'Ingreso',
+};
+const CAMPO_IGNORAR = new Set([
+  'id', 'created_at', 'updated_at', 'actualizado_en', 'pin_hash',
+  'autor_nombre', 'editor_nombre', 'imagen_url',
+]);
+const fmtVal = (v) =>
+  v === null || v === undefined || v === '' ? '∅' : v === true ? 'Sí' : v === false ? 'No' : String(v);
+
+// "Antiguo → nuevo" de los campos que cambiaron (solo los modificados).
+function cambiosHTML(r) {
+  const a = r.datos_antes ?? {}, b = r.datos_despues ?? {};
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(k => !CAMPO_IGNORAR.has(k));
+  const filas = [];
+  for (const k of keys) {
+    if (JSON.stringify(a[k]) === JSON.stringify(b[k])) continue;
+    const lbl = esc(CAMPO_LBL[k] ?? k);
+    if (r.operacion === 'INSERT')      filas.push(`<b>${lbl}:</b> ${esc(fmtVal(b[k]))}`);
+    else if (r.operacion === 'DELETE') filas.push(`<b>${lbl}:</b> ${esc(fmtVal(a[k]))}`);
+    else filas.push(`<b>${lbl}:</b> <span style="color:#DC2626;text-decoration:line-through">${esc(fmtVal(a[k]))}</span> → <span style="color:#15803D">${esc(fmtVal(b[k]))}</span>`);
+  }
+  return filas.length ? filas.join('<br>') : '<span style="color:var(--ad-tinta-3)">—</span>';
+}
+
 async function loadAuditoria(panel) {
   panel.innerHTML = `
     <div class="panel-header"><h2>Log de Auditoría</h2></div>
@@ -381,7 +411,7 @@ async function loadAuditoria(panel) {
 
     wrap.innerHTML = `<div class="table-scroll"><table class="data-table">
       <thead><tr>
-        <th>Fecha</th><th>Acción</th><th>Realizado por</th>
+        <th>Fecha</th><th>Acción</th><th>Cambios (antes → ahora)</th><th>Realizado por</th><th>Ubicación (IP)</th>
       </tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td>${fmtFecha(r.created_at)}</td>
@@ -389,7 +419,9 @@ async function loadAuditoria(panel) {
           <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'}">${OP_VERBO[r.operacion] ?? r.operacion}</span>
           ${esc(accionHumana(r))}
         </td>
+        <td style="font-size:.8rem;line-height:1.6">${cambiosHTML(r)}</td>
         <td>${esc(r.perfiles_admin?.nombre ?? 'Sistema')}</td>
+        <td style="font-variant-numeric:tabular-nums;font-size:.8rem">${esc(r.ip_address ?? '—')}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   } catch (e) {
