@@ -1,8 +1,9 @@
 import * as api from './api.js';
-import { esRetardo, resumen, diasCalendario } from './historial-calc.mjs';
-import { openModal, closeModal, showToast, confirm, fmtFecha, loading, esc } from './utils.js';
+import { esRetardo, resumen, agruparPorDia, notasPorDia, estadoDia } from './historial-calc.mjs';
+import { openModal, closeModal, showToast, confirm, loading, esc } from './utils.js';
 import { combobox } from './combobox.js';
 import { getPlazaScope } from './plaza-scope.js';
+import { getAdminSession } from './auth.js';
 import { SUPABASE_URL } from '../config.js';
 
 const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
@@ -10,10 +11,11 @@ const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
 const ESTADO = {
   presente:      { txt: 'Presente',          cls: 'green'  },
   falta:         { txt: 'Falta',             cls: 'red'    },
-  justificacion: { txt: 'Falta justificada', cls: 'orange' },
+  justificacion: { txt: 'Justificada',       cls: 'orange' },
   permiso:       { txt: 'Permiso',           cls: 'blue'   },
   vacaciones:    { txt: 'Vacaciones',        cls: 'blue'   },
   festivo:       { txt: 'Festivo',           cls: 'gray'   },
+  futuro:        { txt: '',                  cls: 'gray'   },
 };
 
 // 'SELECCIONAR' ('') = todos. El rol arranca en todos; el empleado es obligatorio.
@@ -27,17 +29,27 @@ const ROLES = [
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const horaCorta = (iso) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 const diaCorto  = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+const diaLargo  = (ymd) => { const s = new Date(ymd + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 const publicURL = (ruta) => ruta ? `${SUPABASE_URL}/storage/v1/object/public/${ruta}` : null;
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const haceDiasISO = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 const initials = (n) => (n || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const firstOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+const horasDe = (d) => (d?.entrada && d?.salida) ? Math.round((new Date(d.salida.hora) - new Date(d.entrada.hora)) / 360000) / 10 : null;
 const DEFECTO = '<div class="ad-empty">Selecciona un empleado y pulsa “Ver historial”.</div>';
+
+// Config: KPIs fijos (inline) vs. bajo demanda (toast). La escribe Ajustes.
+const kpisFijos = () => localStorage.getItem('eqs_admin_kpis_fijos') === '1';
+const autorActual = () => getAdminSession()?.nombre || 'Admin';
 
 let _preId = null;
 export function preseleccionar(id) { _preId = id; }
 
 let _empleados = [];
 let _cbPlaza, _cbRol, _cbEmp;
+let _ctx = null;   // { panel, idEmpleado, rango, emp, turno, registros, incidencias, desde, hasta, mapDia, notasMap }
+let _mes = null;   // Date: primer día del mes mostrado
 
 export async function init(panel) {
   panel.classList.add('admin-panel--full'); // historial ocupa todo el ancho en PC
@@ -50,15 +62,20 @@ export async function init(panel) {
   panel.innerHTML = `
     <div class="hist-head">
       <div class="hist-head__icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
       <div>
         <h2 class="hist-head__title">Historial por empleado</h2>
-        <p class="hist-head__sub">Asistencia, retardos e incidencias por persona y rango de fechas.</p>
+        <p class="hist-head__sub">Asistencia y notas en calendario, por persona y rango de fechas.</p>
       </div>
     </div>
 
-    <div class="ad-card hist-filtros">
+    <details class="ad-card hist-filtros" id="hf-wrap" open>
+      <summary class="hist-filtros__summary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <span>Filtros</span>
+        <svg class="hist-filtros__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
       <div class="hist-filtros__grid">
         <div class="ff"><label>Plaza</label><div id="hf-plaza"></div></div>
         <div class="ff"><label>Tipo de empleado</label><div id="hf-rol"></div></div>
@@ -79,7 +96,7 @@ export async function init(panel) {
         </button>
         <button class="abtn abtn--primary" id="hf-ver">Ver historial</button>
       </div>
-    </div>
+    </details>
 
     <div id="hist-resultado">${DEFECTO}</div>`;
 
@@ -114,6 +131,7 @@ export async function init(panel) {
     _cbEmp.setValue('');
     panel.querySelector('#hf-desde').value = haceDiasISO(30);
     panel.querySelector('#hf-hasta').value = hoyISO();
+    panel.querySelector('#hf-wrap').open = true;
     panel.querySelector('#hist-resultado').innerHTML = DEFECTO;
   };
   panel.querySelector('#hf-ver').onclick = () => {
@@ -137,8 +155,27 @@ function rangoDe(panel) {
 }
 
 export async function mostrar(panel, idEmpleado, rango) {
+  _ctx = { panel, idEmpleado, rango };
+  if (!await cargar()) return;
+  _mes = firstOfMonth(new Date(_ctx.hasta + 'T12:00:00'));
+  clampMes();
+  pintar();
+  const wrap = panel.querySelector('#hf-wrap'); // colapsa los filtros para ver más
+  if (wrap) wrap.open = false;
+}
+
+// Refetch + re-render conservando el mes actual; reabre un día si se pide.
+async function recargar(reopenYmd) {
+  if (!await cargar()) return;
+  clampMes();
+  pintar();
+  if (reopenYmd) abrirDia(reopenYmd);
+}
+
+async function cargar() {
+  const { panel, idEmpleado, rango } = _ctx;
   const wrap = panel.querySelector('#hist-resultado');
-  if (!wrap) return;
+  if (!wrap) return false;
   loading(wrap);
   try {
     const [emp, registros, incidencias] = await Promise.all([
@@ -146,16 +183,68 @@ export async function mostrar(panel, idEmpleado, rango) {
       api.getRegistrosEmpleado(idEmpleado, rango),
       api.getIncidencias(idEmpleado, rango),
     ]);
-    const turno = emp?.turnos ?? null;
-    render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, panel);
+    // Regla 1: nunca antes de la fecha de alta del empleado.
+    const desdeEf = (emp?.fecha_ingreso && emp.fecha_ingreso > rango.desde) ? emp.fecha_ingreso : rango.desde;
+    _ctx.emp = emp;
+    _ctx.turno = emp?.turnos ?? null;
+    _ctx.registros = registros;
+    _ctx.incidencias = incidencias;
+    _ctx.desde = desdeEf;
+    _ctx.hasta = rango.hasta;
+    _ctx.mapDia = agruparPorDia(registros);
+    _ctx.notasMap = notasPorDia(incidencias);
+    return true;
   } catch (e) {
-    wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
+    wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
+    return false;
   }
 }
 
-function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, panel) {
-  const r = resumen(registros, turno, incidencias);
-  const sinTurno = !turno;
+// ── Límites del navegador de meses ──────────────────────────────────────────
+function clampMes() {
+  const min = firstOfMonth(new Date(_ctx.desde + 'T12:00:00'));
+  const max = firstOfMonth(new Date(_ctx.hasta + 'T12:00:00'));
+  if (_mes < min) _mes = min;
+  if (_mes > max) _mes = max;
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────────────
+function statsCardsHTML() {
+  const r = resumen(_ctx.registros, _ctx.turno, _ctx.incidencias);
+  const sinTurno = !_ctx.turno;
+  return `
+    <div class="stat-grid hist-stats">
+      <div class="stat-card stat-card--blue"><div class="stat-card__label">Checadas</div><div class="stat-card__value">${r.totalChecadas}</div></div>
+      <div class="stat-card stat-card--red"><div class="stat-card__label">Retardos</div><div class="stat-card__value">${sinTurno ? '–' : r.retardos}</div></div>
+      <div class="stat-card stat-card--green"><div class="stat-card__label">Horas trabajadas</div><div class="stat-card__value">${r.horasTotales}</div></div>
+      <div class="stat-card stat-card--orange"><div class="stat-card__label">Notas</div><div class="stat-card__value">${r.incidencias}</div></div>
+    </div>`;
+}
+
+function showStatsPop() {
+  document.getElementById('hist-statspop')?.remove();
+  const pop = document.createElement('div');
+  pop.id = 'hist-statspop';
+  pop.className = 'hist-statspop';
+  pop.innerHTML = `
+    <div class="hist-statspop__card">
+      <div class="hist-statspop__head"><span>Estadísticas del rango</span>
+        <button class="hist-statspop__x" aria-label="Cerrar">✕</button>
+      </div>
+      ${statsCardsHTML()}
+    </div>`;
+  const cerrar = () => { pop.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+  pop.addEventListener('click', (e) => { if (e.target === pop || e.target.closest('.hist-statspop__x')) cerrar(); });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(pop);
+}
+
+// ── Render principal ─────────────────────────────────────────────────────
+function pintar() {
+  const { panel, emp } = _ctx;
+  const wrap = panel.querySelector('#hist-resultado');
+  if (!wrap) return;
 
   const foto = emp?.foto_url
     ? `<img class="hist-subj__av" src="${esc(emp.foto_url)}" alt="">`
@@ -168,140 +257,220 @@ function render(wrap, idEmpleado, emp, turno, registros, incidencias, rango, pan
         <h3 class="hist-subj__name">${esc(emp?.nombre ?? 'Empleado')}</h3>
         ${meta ? `<span class="hist-subj__meta">${esc(meta)}</span>` : ''}
       </div>
-      <span class="hist-subj__range">${diaCorto(rango.desde)} – ${diaCorto(rango.hasta)}</span>
-      <button id="hist-nueva-inc" class="abtn abtn--primary">+ Incidencia</button>
+      <span class="hist-subj__range">${diaCorto(_ctx.desde)} – ${diaCorto(_ctx.hasta)}</span>
+      <button id="hist-stats-btn" class="abtn abtn--ghost abtn--icon" title="Estadísticas" aria-label="Ver estadísticas">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
+      <button id="hist-nueva-nota" class="abtn abtn--primary">+ Nota</button>
     </div>`;
 
-  const cards = `
-    <div class="stat-grid hist-stats">
-      <div class="stat-card stat-card--blue"><div class="stat-card__label">Checadas</div><div class="stat-card__value">${r.totalChecadas}</div></div>
-      <div class="stat-card stat-card--red"><div class="stat-card__label">Retardos</div><div class="stat-card__value">${sinTurno ? '–' : r.retardos}</div></div>
-      <div class="stat-card stat-card--green"><div class="stat-card__label">Horas trabajadas</div><div class="stat-card__value">${r.horasTotales}</div></div>
-      <div class="stat-card stat-card--orange"><div class="stat-card__label">Incidencias</div><div class="stat-card__value">${r.incidencias}</div></div>
-    </div>`;
-
-  const avisoTurno = sinTurno
-    ? `<p class="td-muted" style="margin-bottom:12px">Sin turno asignado — no se evalúan retardos.</p>` : '';
-
-  const thumbs = (reg) => {
-    if (!reg) return '';
-    const f = publicURL(reg.ruta_foto), s = publicURL(reg.ruta_firma);
-    return `${f ? `<img src="${f}" alt="Foto de checada" class="hist-thumb" data-full="${f}">` : ''}` +
-           `${s ? `<img src="${s}" alt="Firma de checada" class="hist-thumb hist-thumb--firma" data-full="${s}">` : ''}`;
-  };
-  const punto = (reg, lbl, extra = '') => reg
-    ? `<div class="cordon__pt">
-        <span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span>
-        <span class="cordon__t">${horaCorta(reg.hora)}</span>
-        <span class="cordon__lbl">${lbl}${extra}</span>
-        ${reg.geocerca_valida === false ? '<span class="abadge abadge--red">Fuera</span>' : ''}
-      </div>`
-    : `<div class="cordon__pt cordon__pt--miss">
-        <span class="cordon__dot cordon__dot--miss"></span>
-        <span class="cordon__lbl">Sin ${lbl.toLowerCase()}</span>
-      </div>`;
-  const diaPresente = (d) => {
-    const tarde = d.entrada && esRetardo(d.entrada, turno);
-    return `<div class="cordon">
-        ${punto(d.entrada, 'Entrada', tarde ? ' <span class="abadge abadge--red">Retardo</span>' : '')}
-        <div class="cordon__line">${d.horas != null ? `<span class="cordon__dur">${d.horas} h</span>` : ''}</div>
-        ${punto(d.salida, 'Salida')}
-      </div>
-      <div class="cal-thumbs">${thumbs(d.entrada)}${thumbs(d.salida)}</div>`;
-  };
-
-  const dias = diasCalendario(registros, incidencias, rango).filter((d) => d.estado !== 'futuro');
-  const calHtml = dias.length ? dias.map((d) => {
-    const e = ESTADO[d.estado] ?? ESTADO.falta;
-    return `<div class="cal-day cal-day--${d.estado}">
-      <div class="cal-day__date">
-        <span class="cal-day__dow">${DOW[d.dow]}</span>
-        <span class="cal-day__num">${diaCorto(d.fecha)}</span>
-      </div>
-      <div class="cal-day__body">
-        <span class="abadge abadge--${e.cls}">${e.txt}</span>
-        ${d.estado === 'presente' ? diaPresente(d) : (d.inc?.nota ? `<span class="cal-day__nota">${esc(d.inc.nota)}</span>` : '')}
-      </div>
-    </div>`;
-  }).join('') : `<div class="ad-empty">Sin días en este rango.</div>`;
-
-  const filasInc = incidencias.length ? incidencias.map((i) => `
-    <tr>
-      <td data-label="Fecha">${i.fecha}</td>
-      <td data-label="Tipo"><span class="abadge abadge--gray">${esc(i.tipo)}</span></td>
-      <td data-label="Nota">${i.nota ? esc(i.nota) : '–'}</td>
-      <td data-label="Acciones"><div class="actions">
-        <button class="abtn abtn--danger abtn--icon" title="Eliminar" data-del-inc="${i.id}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-        </button>
-      </div></td>
-    </tr>`).join('') : `<tr><td colspan="4"><div class="ad-empty">Sin incidencias.</div></td></tr>`;
+  const avisoTurno = !_ctx.turno
+    ? `<p class="td-muted" style="margin:0 0 12px">Sin turno asignado — no se evalúan retardos.</p>` : '';
 
   wrap.innerHTML = `
     ${subject}
-    ${cards}${avisoTurno}
-    <div class="ad-card cal-card hist-cal">${calHtml}</div>
-    <div class="panel-header" style="border:0;padding:0;margin-bottom:4px"><h4 style="margin:0;font-size:.95rem">Incidencias</h4></div>
-    <div class="ad-card">
-      <div class="table-scroll"><table class="data-table">
-        <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th style="width:80px">Acciones</th></tr></thead>
-        <tbody>${filasInc}</tbody>
-      </table></div>
-    </div>
-    <div id="hist-lightbox" class="hist-lightbox" hidden><img alt="Vista ampliada"></div>`;
+    ${kpisFijos() ? statsCardsHTML() : ''}
+    ${avisoTurno}
+    <div class="ad-card cal-month" id="hist-cal">${mesHTML()}</div>`;
 
-  // Lightbox
-  const lb = wrap.querySelector('#hist-lightbox');
-  const lbImg = lb.querySelector('img');
-  wrap.querySelectorAll('.hist-thumb').forEach((img) => {
-    img.addEventListener('click', () => { lbImg.src = img.dataset.full; lb.hidden = false; });
-  });
-  lb.addEventListener('click', () => { lb.hidden = true; lbImg.src = ''; });
-
-  // Nueva incidencia
-  wrap.querySelector('#hist-nueva-inc').addEventListener('click', () => abrirFormInc(idEmpleado, rango, panel));
-
-  // Eliminar incidencia
-  wrap.querySelectorAll('[data-del-inc]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!await confirm('¿Eliminar esta incidencia?', { ok: 'Eliminar' })) return;
-      try {
-        await api.deleteIncidencia(parseInt(btn.dataset.delInc));
-        showToast('Incidencia eliminada.', 'ok');
-        mostrar(panel, idEmpleado, rango);
-      } catch (e) { showToast(e.message, 'error'); }
-    });
-  });
+  wrap.querySelector('#hist-stats-btn').onclick = showStatsPop;
+  wrap.querySelector('#hist-nueva-nota').onclick = () => formNota(hoyISO());
+  wireCal(wrap);
 }
 
-function abrirFormInc(idEmpleado, rango, panel) {
-  const tipoOpts = TIPOS.map((t) => `<option value="${t}">${t}</option>`).join('');
-  openModal('Nueva incidencia',
-    `<div class="form-group">
-      <label for="inc-fecha">Fecha *</label>
-      <input id="inc-fecha" class="form-input" type="date" value="${hoyISO()}">
+function wireCal(wrap) {
+  const cal = wrap.querySelector('#hist-cal');
+  cal.querySelector('#cal-prev')?.addEventListener('click', () => { _mes = new Date(_mes.getFullYear(), _mes.getMonth() - 1, 1); clampMes(); cal.innerHTML = mesHTML(); wireCal(wrap); });
+  cal.querySelector('#cal-next')?.addEventListener('click', () => { _mes = new Date(_mes.getFullYear(), _mes.getMonth() + 1, 1); clampMes(); cal.innerHTML = mesHTML(); wireCal(wrap); });
+  cal.querySelectorAll('[data-day]').forEach((c) => c.addEventListener('click', () => abrirDia(c.dataset.day)));
+}
+
+// ── Cuadrícula mensual (estilo Google Calendar) ─────────────────────────────
+function mesHTML() {
+  const y = _mes.getFullYear(), m = _mes.getMonth();
+  const desde = _ctx.desde, hasta = _ctx.hasta, hoyKey = hoyISO();
+  const min = firstOfMonth(new Date(desde + 'T12:00:00'));
+  const max = firstOfMonth(new Date(hasta + 'T12:00:00'));
+  const titulo = _mes.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+  const startDow = new Date(y, m, 1).getDay();
+  const nDias = new Date(y, m + 1, 0).getDate();
+  let celdas = '';
+  for (let i = 0; i < startDow; i++) celdas += '<div class="cal-cell cal-cell--blank"></div>';
+  for (let d = 1; d <= nDias; d++) {
+    const key = ymdLocal(new Date(y, m, d));
+    if (key < desde || key > hasta) { celdas += `<div class="cal-cell cal-cell--out"><span class="cal-cell__num">${d}</span></div>`; continue; }
+    const reg = _ctx.mapDia.get(key) ?? {};
+    const notas = _ctx.notasMap.get(key) ?? [];
+    const estado = estadoDia({ entrada: reg.entrada, salida: reg.salida, notas }, key, hoyKey);
+    const tarde = reg.entrada && esRetardo(reg.entrada, _ctx.turno);
+    const horas = horasDe(reg);
+    const e = ESTADO[estado] ?? ESTADO.falta;
+    const marks =
+      (estado === 'presente'
+        ? `<span class="cal-cell__tag cal-cell__tag--green">${horas != null ? horas + ' h' : 'Presente'}</span>`
+        : (estado !== 'futuro' ? `<span class="cal-cell__tag cal-cell__tag--${e.cls}">${e.txt}</span>` : '')) +
+      (tarde ? '<span class="cal-cell__tag cal-cell__tag--red">Retardo</span>' : '') +
+      (notas.length ? `<span class="cal-cell__notas">📝 ${notas.length}</span>` : '');
+    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}" data-day="${key}" role="button" tabindex="0">
+      <span class="cal-cell__num">${d}</span>
+      <div class="cal-cell__marks">${marks}</div>
+    </div>`;
+  }
+
+  return `
+    <div class="cal-month__head">
+      <button class="abtn abtn--ghost abtn--icon" id="cal-prev" ${_mes <= min ? 'disabled' : ''} aria-label="Mes anterior">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h4 class="cal-month__title">${titulo.charAt(0).toUpperCase() + titulo.slice(1)}</h4>
+      <button class="abtn abtn--ghost abtn--icon" id="cal-next" ${_mes >= max ? 'disabled' : ''} aria-label="Mes siguiente">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
-    <div class="form-group">
-      <label for="inc-tipo">Tipo *</label>
-      <select id="inc-tipo" class="form-input">${tipoOpts}</select>
-    </div>
-    <div class="form-group">
-      <label for="inc-nota">Nota</label>
-      <input id="inc-nota" class="form-input" placeholder="Opcional">
-    </div>
-    <p id="inc-error" class="error-inline" hidden></p>`,
-    async () => {
-      const fecha = document.getElementById('inc-fecha').value;
-      const tipo  = document.getElementById('inc-tipo').value;
-      const nota  = document.getElementById('inc-nota').value.trim() || null;
-      const errEl = document.getElementById('inc-error');
-      if (!fecha || !tipo) { errEl.textContent = 'Fecha y tipo son obligatorios.'; errEl.hidden = false; return; }
+    <div class="cal-grid">
+      ${DOW.map((d) => `<div class="cal-dow">${d}</div>`).join('')}
+      ${celdas}
+    </div>`;
+}
+
+// ── Detalle de un día (asistencia + notas) ──────────────────────────────────
+function abrirDia(key) {
+  document.getElementById('hist-day')?.remove();
+  const reg = _ctx.mapDia.get(key) ?? {};
+  const notas = _ctx.notasMap.get(key) ?? [];
+
+  const thumbs = (r) => {
+    if (!r) return '';
+    const f = publicURL(r.ruta_foto), s = publicURL(r.ruta_firma);
+    return `${f ? `<img src="${f}" class="hist-thumb" data-full="${f}" alt="Foto">` : ''}${s ? `<img src="${s}" class="hist-thumb hist-thumb--firma" data-full="${s}" alt="Firma">` : ''}`;
+  };
+  const punto = (r, lbl) => r
+    ? `<div class="cordon__pt"><span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span><span class="cordon__t">${horaCorta(r.hora)}</span><span class="cordon__lbl">${lbl}${r.geocerca_valida === false ? ' <span class="abadge abadge--red">Fuera</span>' : ''}</span></div>`
+    : `<div class="cordon__pt cordon__pt--miss"><span class="cordon__dot cordon__dot--miss"></span><span class="cordon__lbl">Sin ${lbl.toLowerCase()}</span></div>`;
+  const horas = horasDe(reg);
+  const tarde = reg.entrada && esRetardo(reg.entrada, _ctx.turno);
+  const asistencia = (reg.entrada || reg.salida)
+    ? `<div class="cordon">
+        ${punto(reg.entrada, 'Entrada')}${tarde ? '<span class="abadge abadge--red">Retardo</span>' : ''}
+        <div class="cordon__line">${horas != null ? `<span class="cordon__dur">${horas} h</span>` : ''}</div>
+        ${punto(reg.salida, 'Salida')}
+      </div>
+      <div class="cal-thumbs">${thumbs(reg.entrada)}${thumbs(reg.salida)}</div>`
+    : `<p class="td-muted" style="margin:0">Sin checadas este día.</p>`;
+
+  const notasHTML = notas.length ? notas.map((n) => {
+    const e = ESTADO[n.tipo] ?? ESTADO.falta;
+    const edit = n.actualizado_en ? `Editada por ${esc(n.editor_nombre || '—')} · ${new Date(n.actualizado_en).toLocaleDateString('es-MX')}` : `Por ${esc(n.autor_nombre || '—')}`;
+    return `<div class="nota-item">
+      <div class="nota-item__top">
+        <span class="abadge abadge--${e.cls}">${esc(n.tipo)}</span>
+        <div class="nota-item__acts">
+          <button class="abtn abtn--ghost abtn--icon" title="Editar" data-edit-nota="${n.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+          <button class="abtn abtn--danger abtn--icon" title="Eliminar" data-del-nota="${n.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+        </div>
+      </div>
+      ${n.nota ? `<p class="nota-item__txt">${esc(n.nota)}</p>` : ''}
+      ${n.imagen_url ? `<img src="${esc(n.imagen_url)}" class="hist-thumb nota-item__img" data-full="${esc(n.imagen_url)}" alt="Adjunto">` : ''}
+      <span class="nota-item__meta">${edit}</span>
+    </div>`;
+  }).join('') : '<p class="td-muted" style="margin:0">Sin notas este día.</p>';
+
+  const ov = document.createElement('div');
+  ov.id = 'hist-day';
+  ov.className = 'ad-modal hist-day';
+  ov.innerHTML = `
+    <div class="ad-modal__card hist-day__card">
+      <div class="ad-modal__header">
+        <h3 style="margin:0;font-size:1rem">${diaLargo(key)}</h3>
+        <button class="ad-modal__close" data-close aria-label="Cerrar">✕</button>
+      </div>
+      <div class="ad-modal__body hist-day__body">
+        <h4 class="hist-day__sec">Asistencia</h4>
+        ${asistencia}
+        <div class="hist-day__notas-head">
+          <h4 class="hist-day__sec" style="margin:0">Notas</h4>
+          <button class="abtn abtn--primary abtn--sm" data-add-nota>+ Nota</button>
+        </div>
+        ${notasHTML}
+      </div>
+      <div id="hist-lightbox" class="hist-lightbox" hidden><img alt="Vista ampliada"></div>
+    </div>`;
+
+  const cerrar = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov || e.target.closest('[data-close]')) { cerrar(); return; }
+    const thumb = e.target.closest('.hist-thumb');
+    if (thumb) { const lb = ov.querySelector('#hist-lightbox'); lb.querySelector('img').src = thumb.dataset.full; lb.hidden = false; return; }
+    const lb = e.target.closest('#hist-lightbox');
+    if (lb) { lb.hidden = true; lb.querySelector('img').src = ''; return; }
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(ov);
+
+  ov.querySelector('[data-add-nota]').onclick = () => formNota(key);
+  ov.querySelectorAll('[data-edit-nota]').forEach((b) =>
+    b.onclick = () => formNota(key, notas.find((n) => n.id === parseInt(b.dataset.editNota))));
+  ov.querySelectorAll('[data-del-nota]').forEach((b) =>
+    b.onclick = async () => {
+      if (!await confirm('¿Eliminar esta nota?', { ok: 'Eliminar' })) return;
       try {
-        await api.createIncidencia({ id_empleado: idEmpleado, fecha, tipo, nota });
+        await api.deleteIncidencia(parseInt(b.dataset.delNota));
+        showToast('Nota eliminada.', 'ok');
+        cerrar();
+        recargar(key);
+      } catch (e) { showToast(e.message, 'error'); }
+    });
+}
+
+// ── Crear / editar nota ─────────────────────────────────────────────────────
+function formNota(fecha, existing = null) {
+  const tipoOpts = TIPOS.map((t) => `<option value="${t}" ${existing?.tipo === t ? 'selected' : ''}>${t}</option>`).join('');
+  openModal(existing ? 'Editar nota' : 'Nueva nota',
+    `<div class="form-group">
+      <label for="nota-fecha">Fecha *</label>
+      <input id="nota-fecha" class="form-input" type="date" value="${existing?.fecha ?? fecha}">
+    </div>
+    <div class="form-group">
+      <label for="nota-tipo">Tipo *</label>
+      <select id="nota-tipo" class="form-input">${tipoOpts}</select>
+    </div>
+    <div class="form-group">
+      <label for="nota-texto">Nota</label>
+      <textarea id="nota-texto" class="form-input" rows="3" placeholder="Detalle (opcional)">${esc(existing?.nota ?? '')}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="nota-img">Imagen adjunta</label>
+      <input id="nota-img" class="form-input" type="file" accept="image/*">
+      ${existing?.imagen_url ? `<img src="${esc(existing.imagen_url)}" class="hist-thumb" style="margin-top:8px" alt="Actual">` : ''}
+    </div>
+    <p id="nota-error" class="error-inline" hidden></p>`,
+    async () => {
+      const f = document.getElementById('nota-fecha').value;
+      const tipo = document.getElementById('nota-tipo').value;
+      const nota = document.getElementById('nota-texto').value.trim() || null;
+      const file = document.getElementById('nota-img').files[0];
+      const errEl = document.getElementById('nota-error');
+      if (!f || !tipo) { errEl.textContent = 'Fecha y tipo son obligatorios.'; errEl.hidden = false; return; }
+      const saveBtn = document.getElementById('modal-save');
+      saveBtn.disabled = true;
+      try {
+        let imagen_url = existing?.imagen_url ?? null;
+        if (file) imagen_url = await api.subirImagenNota(file);
+        if (existing) {
+          await api.updateIncidencia(existing.id, {
+            fecha: f, tipo, nota, imagen_url,
+            editor_nombre: autorActual(), actualizado_en: new Date().toISOString(),
+          });
+        } else {
+          await api.createIncidencia({ id_empleado: _ctx.idEmpleado, fecha: f, tipo, nota, imagen_url, autor_nombre: autorActual() });
+        }
         closeModal();
-        showToast('Incidencia registrada.', 'ok');
-        mostrar(panel, idEmpleado, rango);
-      } catch (e) { errEl.textContent = e.message; errEl.hidden = false; }
+        document.getElementById('hist-day')?.remove();
+        showToast(existing ? 'Nota actualizada.' : 'Nota registrada.', 'ok');
+        recargar(f);
+      } catch (e) { errEl.textContent = e.message; errEl.hidden = false; saveBtn.disabled = false; }
     },
     'Guardar'
   );

@@ -843,6 +843,15 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .hist-head__sub { font-size: .9rem; color: var(--ad-tinta3); margin-top: 2px; }
 
 .hist-filtros { padding: 18px; overflow: visible; } /* deja salir el popup del combobox */
+.hist-filtros__summary {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+  font-size: .9rem; font-weight: 700; color: var(--ad-tinta);
+}
+.hist-filtros__summary::-webkit-details-marker { display: none; }
+.hist-filtros__summary svg:first-child { color: var(--ad-primary); }
+.hist-filtros__chev { margin-left: auto; color: var(--ad-tinta3); transition: transform .2s; }
+.hist-filtros[open] .hist-filtros__chev { transform: rotate(180deg); }
+.hist-filtros[open] .hist-filtros__grid { margin-top: 16px; }
 .hist-filtros__grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px;
 }
@@ -877,5 +886,59 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   .hist-filtros__acts { flex-direction: column-reverse; }
   .hist-filtros__acts .abtn { width: 100%; justify-content: center; }
   .hist-subj__range { margin-left: 0; }
-  .hist-subj #hist-nueva-inc { width: 100%; justify-content: center; }
+  .hist-subj #hist-nueva-nota { flex: 1; justify-content: center; }
 }
+
+/* ── Calendario mensual (estilo Google Calendar) ─────────────────────────── */
+.cal-month { padding: 14px 16px 18px; }
+.cal-month__head { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; }
+.cal-month__title { font-family: var(--ad-font-head); font-size: 1.05rem; font-weight: 700; color: var(--ad-tinta); min-width: 180px; text-align: center; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-dow { text-align: center; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ad-tinta3); padding-bottom: 4px; }
+.cal-cell {
+  min-height: 78px; border: 1px solid var(--ad-linea); border-radius: 10px; padding: 6px;
+  display: flex; flex-direction: column; gap: 4px; background: var(--ad-surf); cursor: pointer;
+  transition: box-shadow .15s, transform .1s;
+}
+.cal-cell:hover { box-shadow: 0 2px 10px rgba(15,23,42,.1); transform: translateY(-1px); }
+.cal-cell--blank { border: none; background: none; cursor: default; }
+.cal-cell--out { background: var(--ad-surf2); color: var(--ad-tinta3); cursor: default; opacity: .55; }
+.cal-cell--out:hover { box-shadow: none; transform: none; }
+.cal-cell__num { font-size: .8rem; font-weight: 700; color: var(--ad-tinta2); }
+.cal-cell--hoy .cal-cell__num { color: #fff; background: var(--ad-primary); border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; }
+.cal-cell--presente     { border-left: 4px solid #16A34A; }
+.cal-cell--falta        { border-left: 4px solid #DC2626; background: #FEF2F2; }
+.cal-cell--justificacion{ border-left: 4px solid #D97706; }
+.cal-cell--permiso,
+.cal-cell--vacaciones   { border-left: 4px solid #2563EB; }
+.cal-cell--festivo      { border-left: 4px solid #94A3B8; }
+.cal-cell__marks { display: flex; flex-direction: column; gap: 3px; }
+.cal-cell__tag { font-size: .64rem; font-weight: 700; border-radius: 5px; padding: 1px 5px; align-self: flex-start; }
+.cal-cell__tag--green  { color: #15803D; background: #DCFCE7; }
+.cal-cell__tag--red    { color: #B91C1C; background: #FEE2E2; }
+.cal-cell__tag--orange { color: #B45309; background: #FEF3C7; }
+.cal-cell__tag--blue   { color: #1D4ED8; background: #DBEAFE; }
+.cal-cell__tag--gray   { color: #475569; background: #E2E8F0; }
+.cal-cell__notas { font-size: .64rem; color: var(--ad-tinta3); font-weight: 600; }
+
+/* ── Popover de estadísticas (KPIs bajo demanda) ─────────────────────────── */
+.hist-statspop { position: fixed; inset: 0; z-index: 200; background: rgba(15,23,42,.35); display: flex; align-items: flex-start; justify-content: center; padding: 80px 16px; }
+.hist-statspop__card { width: 100%; max-width: 520px; background: var(--ad-surf); border-radius: 14px; box-shadow: 0 20px 60px rgba(15,23,42,.3); padding: 16px; animation: ad-rise .18s ease-out; }
+.hist-statspop__head { display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--ad-tinta); margin-bottom: 12px; }
+.hist-statspop__x { border: none; background: none; font-size: 1rem; color: var(--ad-tinta3); cursor: pointer; }
+
+/* ── Detalle del día ──────────────────────────────────────────────────────── */
+.hist-day__card { max-width: 560px; }
+.hist-day__body { display: flex; flex-direction: column; gap: 10px; }
+.hist-day__sec { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ad-tinta3); margin: 6px 0 0; }
+.hist-day__notas-head { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.abtn--sm { padding: 6px 12px; font-size: .82rem; }
+
+.nota-item { border: 1px solid var(--ad-linea); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.nota-item__top { display: flex; align-items: center; justify-content: space-between; }
+.nota-item__acts { display: flex; gap: 6px; }
+.nota-item__txt { font-size: .9rem; color: var(--ad-tinta); line-height: 1.5; margin: 0; }
+.nota-item__img { max-width: 120px; border-radius: 8px; }
+.nota-item__meta { font-size: .72rem; color: var(--ad-tinta3); }
+[data-theme="dark"] .cal-cell--falta { background: rgba(239,68,68,.08); }
+[data-theme="dark"] .cal-cell--out { background: rgba(148,163,184,.06); }

@@ -79,6 +79,25 @@ export function diasCalendario(registros, incidencias, rango, hoy = new Date()) 
   return dias.reverse();
 }
 
+// Agrupa notas (antes "incidencias") por día → Map<ymd, nota[]>. Un día puede
+// tener varias (permiso + justificación, etc.).
+export function notasPorDia(incidencias) {
+  const m = new Map();
+  for (const i of incidencias) {
+    if (!m.has(i.fecha)) m.set(i.fecha, []);
+    m.get(i.fecha).push(i);
+  }
+  return m;
+}
+
+// Estado de un día para la cuadrícula mensual: presente si hubo checada; si no,
+// el tipo de la primera nota; si no y el día ya pasó: falta; si no: futuro.
+export function estadoDia({ entrada, salida, notas }, ymdKey, hoyKey) {
+  if (entrada || salida) return 'presente';
+  if (notas && notas.length) return notas[0].tipo;
+  return ymdKey <= hoyKey ? 'falta' : 'futuro';
+}
+
 export function resumen(registros, turno, incidencias = []) {
   const retardos = registros.filter((r) => esRetardo(r, turno)).length;
   const horasTotales = horasPorDia(registros).reduce((s, d) => s + d.horas, 0);
@@ -88,4 +107,21 @@ export function resumen(registros, turno, incidencias = []) {
     horasTotales: Math.round(horasTotales * 10) / 10,
     incidencias: incidencias.length,
   };
+}
+
+// ── Self-check (node assets/js/admin/historial-calc.mjs) ──────────────────────
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1); } };
+  const incs = [
+    { fecha: '2026-06-10', tipo: 'permiso' },
+    { fecha: '2026-06-10', tipo: 'justificacion' },
+    { fecha: '2026-06-11', tipo: 'falta' },
+  ];
+  const m = notasPorDia(incs);
+  assert(m.get('2026-06-10').length === 2, 'dos notas el mismo día');
+  assert(estadoDia({ entrada: {}, notas: [] }, '2026-06-10', '2026-06-15') === 'presente', 'checada ⇒ presente');
+  assert(estadoDia({ notas: m.get('2026-06-10') }, '2026-06-10', '2026-06-15') === 'permiso', 'primera nota define estado');
+  assert(estadoDia({ notas: [] }, '2026-06-09', '2026-06-15') === 'falta', 'día pasado sin nada ⇒ falta');
+  assert(estadoDia({ notas: [] }, '2026-06-20', '2026-06-15') === 'futuro', 'día futuro ⇒ futuro');
+  console.log('historial-calc OK');
 }

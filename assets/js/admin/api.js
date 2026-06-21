@@ -114,8 +114,24 @@ export const getIncidencias = (idEmpleado, { desde, hasta }) =>
 export const createIncidencia = (d) =>
   apiFetch('incidencias', { method: 'POST', body: JSON.stringify(d) });
 
+export const updateIncidencia = (id, d) =>
+  apiFetch(`incidencias?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
+
 export const deleteIncidencia = (id) =>
   apiFetch(`incidencias?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
+
+// Sube una imagen adjunta de nota al bucket público 'fotos' (carpeta notas/).
+export async function subirImagenNota(file) {
+  const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `notas/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/fotos/${path}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': file.type },
+    body: file
+  });
+  if (!res.ok) throw new Error('No se pudo subir la imagen.');
+  return `${SUPABASE_URL}/storage/v1/object/public/fotos/${path}`;
+}
 
 // ── Audit log ─────────────────────────────────────────────────────────────
 export const getAuditLog = (limit = 50) =>

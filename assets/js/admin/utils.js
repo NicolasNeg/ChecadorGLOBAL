@@ -70,7 +70,9 @@ export function openModal(title, bodyHTML, onSave, saveLabel = 'Guardar') {
   modal.querySelector('#modal-body').innerHTML      = bodyHTML;
   modal.querySelector('#modal-save-label').textContent = saveLabel;
   modal.hidden = false;
-  modal.querySelector('#modal-save').onclick = onSave;
+  const save = modal.querySelector('#modal-save');
+  save.disabled = false; // limpia un disabled dejado por un guardado anterior
+  save.onclick = onSave;
   modal.querySelector('#modal-body').querySelector('input,select,textarea')?.focus();
 }
 

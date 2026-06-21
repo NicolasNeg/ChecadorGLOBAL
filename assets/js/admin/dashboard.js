@@ -151,6 +151,16 @@ function loadAjustes(panel) {
             <button data-theme-opt="system">Sistema</button>
           </div>
         </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-row__label">Ver KPIs fijos</div>
+            <div class="setting-row__hint">Muestra las estadísticas siempre en el historial, no solo al pulsar el icono.</div>
+          </div>
+          <div class="segmented seg-kpis">
+            <button data-kpis-opt="1">Sí</button>
+            <button data-kpis-opt="0">No</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="ad-card"><div class="ad-card__header"><h3>Cuenta</h3></div>
@@ -174,6 +184,15 @@ function loadAjustes(panel) {
 
   panel.querySelectorAll('.seg-theme [data-theme-opt]').forEach(b =>
     b.addEventListener('click', () => setTheme(b.dataset.themeOpt)));
+
+  const syncKpis = () => {
+    const v = localStorage.getItem('eqs_admin_kpis_fijos') === '1' ? '1' : '0';
+    panel.querySelectorAll('.seg-kpis [data-kpis-opt]').forEach(b => b.classList.toggle('active', b.dataset.kpisOpt === v));
+  };
+  panel.querySelectorAll('.seg-kpis [data-kpis-opt]').forEach(b =>
+    b.addEventListener('click', () => { localStorage.setItem('eqs_admin_kpis_fijos', b.dataset.kpisOpt); syncKpis(); }));
+  syncKpis();
+
   panel.querySelector('#ajustes-logout')?.addEventListener('click', logoutAdmin);
   applyTheme();
 }
