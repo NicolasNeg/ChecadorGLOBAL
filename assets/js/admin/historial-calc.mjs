@@ -110,7 +110,7 @@ export function resumen(registros, turno, incidencias = []) {
 }
 
 // ── Self-check (node assets/js/admin/historial-calc.mjs) ──────────────────────
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (typeof process !== 'undefined' && process.argv?.[1] && import.meta.url === `file://${process.argv[1]}`) {
   const assert = (c, m) => { if (!c) { console.error('FAIL:', m); process.exit(1); } };
   const incs = [
     { fecha: '2026-06-10', tipo: 'permiso' },

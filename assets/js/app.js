@@ -33,6 +33,20 @@ function shakeInput(id) {
   el.addEventListener('animationend', () => el.classList.remove('input-pin--shake'), { once: true });
 }
 
+// ── Switch de tema (sol/luna) — el tema ya se aplicó en el <script> del <head> ──
+(function initTheme() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const sync = () => btn.setAttribute('aria-checked', document.documentElement.dataset.theme === 'dark');
+  sync();
+  btn.addEventListener('click', () => {
+    const oscuro = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = oscuro ? 'dark' : 'light';
+    try { localStorage.setItem('eqs_theme', oscuro ? 'dark' : 'light'); } catch {}
+    sync();
+  });
+})();
+
 // ── Boot ─────────────────────────────────────────────────────────────────────
 let _miId = null; // id del empleado en sesión (lo usa enterTurnos); declarado antes del boot por TDZ
 const existing = getSession();
@@ -172,7 +186,7 @@ async function enterTurnos() {
         const c = celdas.get(`${e.id}-${d}`);
         return c
           ? `<td><span class="tg-turno">${c.turno_nombre}</span><span class="tg-horas">${hhmm(c.hora_entrada)}–${hhmm(c.hora_salida)}</span></td>`
-          : `<td class="tg-off">–</td>`;
+          : `<td class="tg-off">Descanso</td>`;
       }).join('')}
     </tr>`).join('');
 

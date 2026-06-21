@@ -54,7 +54,7 @@ async function loadGrid() {
 
     // key "empleado-dia" → turno_id
     const asignado = new Map(horarios.map(h => [`${h.id_empleado}-${h.dia_semana}`, h.turno_id]));
-    const optsFor = (sel) => `<option value="">—</option>` + turnos.map(t =>
+    const optsFor = (sel) => `<option value="">Descanso</option>` + turnos.map(t =>
       `<option value="${t.id}" ${sel === t.id ? 'selected' : ''}>${t.nombre} (${(t.hora_entrada||'').slice(0,5)}-${(t.hora_salida||'').slice(0,5)})</option>`
     ).join('');
 

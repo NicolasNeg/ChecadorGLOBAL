@@ -350,6 +350,24 @@ function renderQuickLinks() {
 }
 
 // ── Audit log panel ───────────────────────────────────────────────────────────
+// Traduce un renglón del audit_log a lenguaje administrativo (no de programador).
+const OP_VERBO = { INSERT: 'Creó', UPDATE: 'Modificó', DELETE: 'Eliminó' };
+const TABLA_ENTIDAD = {
+  empleados:      'el horario del usuario',  // los cambios de turno_id se registran sobre empleados
+  turnos:         'un turno',
+  plazas:         'una plaza',
+  registros:      'un registro de asistencia',
+  incidencias:    'una nota',
+  perfiles_admin: 'un administrador',
+};
+function accionHumana(r) {
+  const entidad = TABLA_ENTIDAD[r.tabla] ?? `un registro (${r.tabla})`;
+  const verbo   = (OP_VERBO[r.operacion] ?? r.operacion).toLowerCase();
+  const d       = r.datos_despues ?? r.datos_antes ?? {};
+  const quien   = d.nombre ? ` de ${d.nombre}` : '';
+  return `Se ${verbo} ${entidad}${quien}`;
+}
+
 async function loadAuditoria(panel) {
   panel.innerHTML = `
     <div class="panel-header"><h2>Log de Auditoría</h2></div>
@@ -363,16 +381,15 @@ async function loadAuditoria(panel) {
 
     wrap.innerHTML = `<div class="table-scroll"><table class="data-table">
       <thead><tr>
-        <th>Fecha</th><th>Tabla</th><th>Operación</th><th>Admin</th><th>Detalle</th>
+        <th>Fecha</th><th>Acción</th><th>Realizado por</th>
       </tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td>${fmtFecha(r.created_at)}</td>
-        <td><code>${r.tabla}</code></td>
-        <td><span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'}">${r.operacion}</span></td>
-        <td>${r.perfiles_admin?.nombre ?? '–'}</td>
-        <td style="font-size:.78rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${JSON.stringify(r.datos_despues ?? r.datos_antes).replace(/"/g,'&quot;')}">
-          ID ${r.registro_id}
+        <td>
+          <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'}">${OP_VERBO[r.operacion] ?? r.operacion}</span>
+          ${esc(accionHumana(r))}
         </td>
+        <td>${esc(r.perfiles_admin?.nombre ?? 'Sistema')}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   } catch (e) {

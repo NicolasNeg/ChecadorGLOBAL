@@ -20,6 +20,34 @@
   --sombra-sm:    0 1px 3px rgba(15,23,42,.06);
 }
 
+/* ── Modo oscuro (tokens desaturados, no inversión) ───────────────────────── */
+[data-theme="dark"] {
+  --fondo:        #0B111F;
+  --tarjeta:      #151E30;
+  --tinta:        #E5EAF2;
+  --tinta-2:      #A2AEC2;
+  --tinta-3:      #6B7890;
+  --linea:        #28344A;
+  --primario:     #38BDF8;   /* acento/enlaces: claro para contraste sobre fondo oscuro */
+  --primario-dk:  #0EA5E9;
+  --primario-bg:  rgba(56,189,248,.14);
+  --entrada:      #34D399;
+  --salida:       #FB923C;
+  --peligro:      #F87171;
+  --sombra:       0 1px 3px rgba(0,0,0,.45), 0 6px 24px rgba(0,0,0,.55);
+  --sombra-sm:    0 1px 3px rgba(0,0,0,.45);
+}
+/* El botón primario mantiene texto blanco: en oscuro usa un azul de marca con
+   contraste suficiente (≥3:1 para texto bold), no el acento claro --primario. */
+[data-theme="dark"] .btn--primario { background: #0284C7; }
+[data-theme="dark"] .btn--primario:hover:not(:disabled) { background: #0369A1; }
+
+/* Transición gradual de color al cambiar de tema (reduced-motion la anula abajo) */
+body, .tarjeta, .input-pin, .divider, .btn--secundario,
+.admin-access, .top-actions, .theme-toggle__track, .saludo-num {
+  transition: background-color .35s ease, border-color .35s ease, color .35s ease;
+}
+
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
