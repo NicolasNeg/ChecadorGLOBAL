@@ -52,6 +52,11 @@ export const createTurno     = (d) => apiFetch('turnos', { method: 'POST', body:
 export const updateTurno     = (id, d) => apiFetch(`turnos?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
 export const deleteTurno     = (id) => apiFetch(`turnos?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
 
+// ── Puestos (catálogo para el select de empleados) ──────────────────────────
+export const getPuestos    = () => apiFetch('puestos?select=*&order=nombre.asc');
+export const createPuesto   = (nombre) => apiFetch('puestos', { method: 'POST', body: JSON.stringify({ nombre }) });
+export const deletePuesto   = (id) => apiFetch(`puestos?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
+
 // ── Empleados ─────────────────────────────────────────────────────────────
 export const getEmpleados    = () => apiFetch('empleados?select=*,plazas(nombre),turnos(nombre)&order=nombre.asc');
 export const updateEmpleado  = (id, d) => apiFetch(`empleados?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });

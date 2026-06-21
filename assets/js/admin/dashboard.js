@@ -45,6 +45,7 @@ async function showPanel(id) {
   switch (id) {
     case 'overview':   await loadOverview(panel); break;
     case 'plazas':     { const m = await import('./plazas.js');    await m.init(panel); break; }
+    case 'puestos':    { const m = await import('./puestos.js');   await m.init(panel); break; }
     case 'empleados':  { const m = await import('./empleados.js'); await m.init(panel); break; }
     case 'turnos':     { const m = await import('./turnos.js');    await m.init(panel); break; }
     case 'asistencia': {

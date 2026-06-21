@@ -17,10 +17,10 @@ const IC = {
 };
 
 let _plazas  = [];
-let _turnos  = [];
+let _puestos = [];
 
 export async function init(panel) {
-  [_plazas, _turnos] = await Promise.all([api.getPlazas(), api.getTurnos()]).catch(() => [[], []]);
+  [_plazas, _puestos] = await Promise.all([api.getPlazas(), api.getPuestos()]).catch(() => [[], []]);
 
   panel.innerHTML = `
     <div class="panel-header">
@@ -113,7 +113,6 @@ function tarjetaEmp(r) {
         <p class="emp-c__role">${esc(r.puesto || 'Sin puesto')}</p>
         <div class="emp-c__stats">
           <div class="emp-c__stat" title="Plaza">${IC.plaza}<span>${esc(r.plazas?.nombre || 'Sin plaza')}</span></div>
-          <div class="emp-c__stat" title="Turno">${IC.turno}<span>${esc(r.turnos?.nombre || 'Sin turno')}</span></div>
           <div class="emp-c__stat" title="Estado">${IC.estado}<span class="abadge ${r.activo ? 'abadge--green' : 'abadge--gray'}">${r.activo ? 'Activo' : 'Inactivo'}</span></div>
         </div>
       </div>
@@ -146,13 +145,23 @@ function filterTable(q) {
 
 const ROLES = ['empleado', 'supervisor', 'gerente'];
 
+// Siguiente N.º empleado: max sufijo numérico existente + 1, formato EQS-00N.
+function nextNumeroEmpleado() {
+  const max = _allEmpleados.reduce((m, e) => {
+    const n = parseInt(String(e.numero_empleado || '').match(/\d+/)?.[0] || 0);
+    return n > m ? n : m;
+  }, 0);
+  return 'EQS-' + String(max + 1).padStart(3, '0');
+}
+
 function openEmpForm(emp = null) {
   const isEdit = !!emp;
   const v = (k) => emp?.[k] ?? '';
   const defPlaza  = emp?.plaza_id ?? getPlazaScope();
   const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${defPlaza === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
-  const turnoOpts = `<option value="">Sin turno</option>` + _turnos.map(t => `<option value="${t.id}" ${emp?.turno_id === t.id ? 'selected' : ''}>${t.nombre} (${t.plazas?.nombre})</option>`).join('');
+  const puestoOpts = `<option value="">– Sin puesto –</option>` + _puestos.map(p => `<option value="${esc(p.nombre)}" ${emp?.puesto === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
   const rolOpts   = ROLES.map(r => `<option value="${r}" ${(emp?.rol ?? 'empleado') === r ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('');
+  const numero    = isEdit ? v('numero_empleado') : nextNumeroEmpleado();
 
   openModal(
     isEdit ? 'Editar perfil de empleado' : 'Nuevo empleado',
@@ -173,11 +182,11 @@ function openEmpForm(emp = null) {
         </div>
         <div class="form-group">
           <label for="e-num">N.º empleado</label>
-          <input id="e-num" class="form-input" value="${esc(v('numero_empleado'))}" placeholder="EQS-003">
+          <input id="e-num" class="form-input" value="${esc(numero)}" readonly title="Se asigna automáticamente">
         </div>
         <div class="form-group form-group--full">
           <label for="e-puesto">Puesto</label>
-          <input id="e-puesto" class="form-input" value="${esc(v('puesto'))}" placeholder="Cajero">
+          <select id="e-puesto" class="form-input">${puestoOpts}</select>
         </div>
         <div class="form-group">
           <label for="e-email">Correo</label>
@@ -199,10 +208,6 @@ function openEmpForm(emp = null) {
           <label for="e-plaza">Plaza *</label>
           <select id="e-plaza" class="form-input"><option value="">– Selecciona –</option>${plazaOpts}</select>
         </div>
-        <div class="form-group">
-          <label for="e-turno">Turno</label>
-          <select id="e-turno" class="form-input">${turnoOpts}</select>
-        </div>
         ${!isEdit ? `<div class="form-group form-group--full">
           <label for="e-pin">PIN inicial (solo números) *</label>
           <input id="e-pin" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
@@ -213,7 +218,6 @@ function openEmpForm(emp = null) {
     async () => {
       const nombre   = document.getElementById('e-nombre').value.trim();
       const plaza_id = parseInt(document.getElementById('e-plaza').value) || null;
-      const turno_id = parseInt(document.getElementById('e-turno').value) || null;
       const errEl    = document.getElementById('e-error');
 
       if (!nombre || !plaza_id) {
@@ -222,11 +226,11 @@ function openEmpForm(emp = null) {
         return;
       }
 
-      // campos de perfil (RH). Vacío → null para no machacar con "".
+      // campos de perfil (RH). Vacío → null para no machacar con "". turno se asigna en horarios.
       const datos = {
-        nombre, plaza_id, turno_id,
+        nombre, plaza_id,
         numero_empleado: document.getElementById('e-num').value.trim()    || null,
-        puesto:          document.getElementById('e-puesto').value.trim() || null,
+        puesto:          document.getElementById('e-puesto').value        || null,
         email:           document.getElementById('e-email').value.trim()  || null,
         telefono:        document.getElementById('e-tel').value.trim()     || null,
         fecha_ingreso:   document.getElementById('e-ingreso').value        || null,
@@ -247,10 +251,10 @@ function openEmpForm(emp = null) {
             errEl.hidden = false;
             return;
           }
-          const nuevo = await api.crearEmpleado({ p_nombre: nombre, p_pin: pin, p_plaza_id: plaza_id, p_turno_id: turno_id });
+          const nuevo = await api.crearEmpleado({ p_nombre: nombre, p_pin: pin, p_plaza_id: plaza_id, p_turno_id: null });
           const id = Array.isArray(nuevo) ? nuevo[0]?.id : nuevo?.id;
-          // crear_empleado sólo guarda nombre/plaza/turno/pin; el resto va por PATCH.
-          const { nombre: _n, plaza_id: _p, turno_id: _t, ...resto } = datos;
+          // crear_empleado sólo guarda nombre/plaza/pin; el resto va por PATCH.
+          const { nombre: _n, plaza_id: _p, ...resto } = datos;
           if (id && Object.values(resto).some(Boolean)) await api.updateEmpleado(id, resto);
         }
         closeModal();

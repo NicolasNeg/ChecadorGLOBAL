@@ -306,13 +306,15 @@ function mesHTML() {
     const tarde = reg.entrada && esRetardo(reg.entrada, _ctx.turno);
     const horas = horasDe(reg);
     const e = ESTADO[estado] ?? ESTADO.falta;
+    const esInicio = key === _ctx.emp?.fecha_ingreso;
     const marks =
+      (esInicio ? '<span class="cal-cell__tag cal-cell__tag--inicio">⭐ DÍA DE INICIO</span>' : '') +
       (estado === 'presente'
         ? `<span class="cal-cell__tag cal-cell__tag--green">${horas != null ? horas + ' h' : 'Presente'}</span>`
         : (estado !== 'futuro' ? `<span class="cal-cell__tag cal-cell__tag--${e.cls}">${e.txt}</span>` : '')) +
       (tarde ? '<span class="cal-cell__tag cal-cell__tag--red">Retardo</span>' : '') +
       (notas.length ? `<span class="cal-cell__notas">📝 ${notas.length}</span>` : '');
-    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}" data-day="${key}" role="button" tabindex="0">
+    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}${esInicio ? ' cal-cell--inicio' : ''}" data-day="${key}" role="button" tabindex="0">
       <span class="cal-cell__num">${d}</span>
       <div class="cal-cell__marks">${marks}</div>
     </div>`;

@@ -947,6 +947,9 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .cal-cell__tag--blue   { color: #1D4ED8; background: #DBEAFE; }
 .cal-cell__tag--gray   { color: #475569; background: #E2E8F0; }
 .cal-cell__notas { font-size: .64rem; color: var(--ad-tinta3); font-weight: 600; }
+.cal-cell__tag--inicio { color: #92400E; background: linear-gradient(135deg, #FDE68A, #F59E0B); box-shadow: 0 0 0 1px #F59E0B inset; }
+.cal-cell--inicio { background: #FFFBEB; box-shadow: 0 0 0 2px #F59E0B inset; }
+.cal-cell--inicio .cal-cell__num { color: #92400E; font-weight: 800; }
 
 /* ── Popover de estadísticas (KPIs bajo demanda) ─────────────────────────── */
 .hist-statspop { position: fixed; inset: 0; z-index: 200; background: rgba(15,23,42,.35); display: flex; align-items: flex-start; justify-content: center; padding: 80px 16px; }
