@@ -2,6 +2,7 @@
 // foto/firma, con la ubicación resuelta a dirección legible (geo.js).
 
 import { direccionDesdeCoords, mapsLink } from './geo.js';
+import { t, getLang } from './i18n.js';
 
 const pinSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
 
@@ -12,15 +13,16 @@ const diaKey = (iso) => {
 
 function fmt(iso) {
   const d = new Date(iso);
+  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
   return {
-    fecha: d.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }),
-    hora:  d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+    fecha: d.toLocaleDateString(loc, { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }),
+    hora:  d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }),
   };
 }
 
 export function renderHistorial(contenedorEl, registros) {
   if (!registros.length) {
-    contenedorEl.innerHTML = '<p class="historial-vacio">Sin registros aún.</p>';
+    contenedorEl.innerHTML = `<p class="historial-vacio">${t('Sin registros aún.')}</p>`;
     return;
   }
 
@@ -42,19 +44,19 @@ export function renderHistorial(contenedorEl, registros) {
 
       const ubic = tieneCoords
         ? `<a class="hist-ubic" id="ubic-${idx}" href="${mapsLink(r.latitud, r.longitud)}" target="_blank" rel="noopener">
-             ${pinSvg}<span class="hist-ubic__txt">Cargando ubicación…</span>
+             ${pinSvg}<span class="hist-ubic__txt">${t('Cargando ubicación…')}</span>
            </a>`
-        : `<span class="hist-ubic hist-ubic--none">${pinSvg}<span class="hist-ubic__txt">Ubicación no registrada</span></span>`;
+        : `<span class="hist-ubic hist-ubic--none">${pinSvg}<span class="hist-ubic__txt">${t('Ubicación no registrada')}</span></span>`;
 
       const medios = [];
-      if (r.foto)  medios.push(`<button class="hist-medio" data-src="${r.foto}" data-tipo="foto"><img src="${r.foto}" alt="Foto del registro"><span>Foto</span></button>`);
-      if (r.firma) medios.push(`<button class="hist-medio hist-medio--firma" data-src="${r.firma}" data-tipo="firma"><img src="${r.firma}" alt="Firma del registro"><span>Firma</span></button>`);
+      if (r.foto)  medios.push(`<button class="hist-medio" data-src="${r.foto}" data-tipo="foto"><img src="${r.foto}" alt="${t('Foto del registro')}"><span>${t('Foto')}</span></button>`);
+      if (r.firma) medios.push(`<button class="hist-medio hist-medio--firma" data-src="${r.firma}" data-tipo="firma"><img src="${r.firma}" alt="${t('Firma del registro')}"><span>${t('Firma')}</span></button>`);
       const mediosHtml = medios.length ? `<div class="hist-medios">${medios.join('')}</div>` : '';
 
       return `<article class="hist-card hist-card--${r.tipo}">
         <span class="hist-card__nodo" aria-hidden="true"></span>
         <div class="hist-card__top">
-          <span class="badge badge--${r.tipo}">${r.tipo}</span>
+          <span class="badge badge--${r.tipo}">${t(r.tipo === 'entrada' ? 'Entrada' : 'Salida')}</span>
           <span class="hist-card__fecha">${hora}</span>
         </div>
         ${ubic}
@@ -89,8 +91,8 @@ function abrirLightbox(src, esFirma) {
   const overlay = document.createElement('div');
   overlay.className = 'lightbox';
   overlay.innerHTML = `<div class="lightbox__inner${esFirma ? ' lightbox__inner--firma' : ''}">
-    <img src="${src}" alt="${esFirma ? 'Firma ampliada' : 'Foto ampliada'}">
-    <button class="lightbox__cerrar" aria-label="Cerrar">✕</button>
+    <img src="${src}" alt="${t(esFirma ? 'Firma ampliada' : 'Foto ampliada')}">
+    <button class="lightbox__cerrar" aria-label="${t('Cerrar')}">✕</button>
   </div>`;
   document.body.appendChild(overlay);
 

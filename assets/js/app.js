@@ -1,10 +1,21 @@
 import { verificarPin, limpiarSesion, obtenerTurnosPlaza, setIdEmpleado } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
 import { BASE } from './config.js';
+import { t, applyI18n, mountLangToggle } from './i18n.js';
 
 const sLogin  = document.getElementById('s-login');
 const sMenu   = document.getElementById('s-menu');
 const sTurnos = document.getElementById('s-turnos');
+
+mountLangToggle(document.querySelector('.top-actions'));
+applyI18n(document);
+window.addEventListener('langchange', () => {
+  applyI18n(document);
+  const sh = document.getElementById('saludo-hora');
+  const h = new Date().getHours();
+  if (sh && !sMenu.hidden) sh.textContent = h < 12 ? t('Buenos días') : h < 19 ? t('Buenas tardes') : t('Buenas noches');
+  if (!sTurnos.hidden) enterTurnos();
+});
 
 // ── Animate between two .pantalla screens ───────────────────────────────────
 function switchTo(from, to) {
@@ -65,7 +76,7 @@ function enterLogin() {
   // PIN: sólo 4 dígitos, no permitir más ni caracteres no numéricos.
   input.oninput = () => { input.value = input.value.replace(/\D/g, '').slice(0, 4); };
   btnPin.disabled  = false;
-  label.textContent = 'Continuar';
+  label.textContent = t('Continuar');
   spinner.hidden   = true;
   setError('error-pin', '');
 
@@ -76,7 +87,7 @@ function enterLogin() {
     input.type = shown ? 'password' : 'text';
     verBtn.classList.toggle('revealed', !shown);
     verBtn.setAttribute('aria-pressed', String(!shown));
-    verBtn.setAttribute('aria-label', shown ? 'Mostrar PIN' : 'Ocultar PIN');
+    verBtn.setAttribute('aria-label', shown ? t('Mostrar PIN') : t('Ocultar PIN'));
     input.focus();
   };
 
@@ -86,11 +97,11 @@ function enterLogin() {
   form.onsubmit = async (e) => {
     e.preventDefault();
     const pin = input.value.trim();
-    if (!pin) { setError('error-pin', 'Ingresa tu PIN.'); shakeInput('input-pin'); return; }
+    if (!pin) { setError('error-pin', t('Ingresa tu PIN.')); shakeInput('input-pin'); return; }
     setError('error-pin', '');
 
     btnPin.disabled   = true;
-    label.textContent = 'Verificando…';
+    label.textContent = t('Verificando…');
     spinner.hidden    = false;
 
     let res;
@@ -98,7 +109,7 @@ function enterLogin() {
       res = await verificarPin(pin);
     } finally {
       btnPin.disabled   = false;
-      label.textContent = 'Continuar';
+      label.textContent = t('Continuar');
       spinner.hidden    = true;
     }
 
@@ -107,7 +118,7 @@ function enterLogin() {
       setSession(perfil);
       enterMenu(perfil);
     } else {
-      setError('error-pin', res?.error || 'PIN incorrecto.');
+      setError('error-pin', res?.error || t('PIN incorrecto.'));
       shakeInput('input-pin');
     }
   };
@@ -126,7 +137,7 @@ function enterMenu(perfil) {
 
   // Time-of-day greeting
   const h = new Date().getHours();
-  const hora = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const hora = h < 12 ? t('Buenos días') : h < 19 ? t('Buenas tardes') : t('Buenas noches');
   document.getElementById('saludo-hora').textContent = hora;
 
   document.getElementById('saludo').textContent = nombre;
@@ -159,13 +170,13 @@ const DIAS_AB = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 async function enterTurnos() {
   const lista = document.getElementById('turnos-lista');
-  lista.innerHTML = '<p class="turnos-vacio">Cargando…</p>';
+  lista.innerHTML = `<p class="turnos-vacio">${t('Cargando…')}</p>`;
   document.getElementById('btn-turnos-volver').onclick = () => switchTo(sTurnos, sMenu);
-  switchTo(sMenu, sTurnos);
+  if (sTurnos.hidden) switchTo(sMenu, sTurnos);
 
   const filas = await obtenerTurnosPlaza();
   if (!filas.length) {
-    lista.innerHTML = '<p class="turnos-vacio">Aún no hay turnos asignados en tu plaza.</p>';
+    lista.innerHTML = `<p class="turnos-vacio">${t('Aún no hay turnos asignados en tu plaza.')}</p>`;
     return;
   }
 
@@ -179,8 +190,8 @@ async function enterTurnos() {
     celdas.set(`${f.empleado_id}-${f.dia_semana}`, f);
   }
 
-  const head = `<tr><th class="tg-emp">Empleado</th>${
-    [1,2,3,4,5,6,7].map(d => `<th>${DIAS_AB[d]}</th>`).join('')}</tr>`;
+  const head = `<tr><th class="tg-emp">${t('Empleado')}</th>${
+    [1,2,3,4,5,6,7].map(d => `<th>${t(DIAS_AB[d])}</th>`).join('')}</tr>`;
   const body = empleados.map(e => `
     <tr class="${e.id === _miId ? 'tg-yo' : ''}">
       <td class="tg-emp">${e.nombre}</td>
@@ -188,7 +199,7 @@ async function enterTurnos() {
         const c = celdas.get(`${e.id}-${d}`);
         return c
           ? `<td><span class="tg-turno">${c.turno_nombre}</span><span class="tg-horas">${hhmm(c.hora_entrada)}–${hhmm(c.hora_salida)}</span></td>`
-          : `<td class="tg-off">Descanso</td>`;
+          : `<td class="tg-off">${t('Descanso')}</td>`;
       }).join('')}
     </tr>`).join('');
 

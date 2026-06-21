@@ -1,24 +1,25 @@
 import * as api from './api.js';
 import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
+import { t } from '../i18n.js';
 
 export async function init(panel) {
   panel.innerHTML = `
     <div class="panel-header">
-      <h2>Puestos</h2>
+      <h2>${t('Puestos')}</h2>
       <div class="panel-header__actions">
         <button class="abtn abtn--primary" id="btn-nuevo-puesto">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nuevo puesto
+          ${t('Nuevo puesto')}
         </button>
       </div>
     </div>
-    <p class="td-muted" style="margin:-4px 0 14px">Los puestos definidos aquí son las opciones disponibles al crear o editar un empleado.</p>
+    <p class="td-muted" style="margin:-4px 0 14px">${t('Los puestos definidos aquí son las opciones disponibles al crear o editar un empleado.')}</p>
     <div class="ad-card"><div id="tbl-puestos-wrap"></div></div>`;
 
   document.getElementById('btn-nuevo-puesto').addEventListener('click', formPuesto);
 
   window._delPuesto = async (id, nombre) => {
-    if (!await confirm(`¿Eliminar el puesto “${nombre}”? Los empleados que ya lo tengan no se modifican.`, { ok: 'Eliminar' })) return;
+    if (!await confirm(`${t('¿Eliminar el puesto?')} “${nombre}” — ${t('Los empleados que ya lo tengan no se modifican.')}`, { ok: 'Eliminar' })) return;
     try {
       await api.deletePuesto(id);
       showToast('Puesto eliminado.', 'ok');
@@ -51,21 +52,21 @@ async function load() {
 function formPuesto() {
   openModal('Nuevo puesto',
     `<div class="form-group">
-      <label for="p-nombre">Nombre del puesto *</label>
-      <input id="p-nombre" class="form-input" placeholder="Cajero" autocomplete="off">
+      <label for="p-nombre">${t('Nombre del puesto')} *</label>
+      <input id="p-nombre" class="form-input" placeholder="${t('Cajero')}" autocomplete="off">
     </div>
     <p id="p-error" class="error-inline" hidden></p>`,
     async () => {
       const nombre = document.getElementById('p-nombre').value.trim();
       const errEl  = document.getElementById('p-error');
-      if (!nombre) { errEl.textContent = 'Escribe un nombre.'; errEl.hidden = false; return; }
+      if (!nombre) { errEl.textContent = t('Escribe un nombre.'); errEl.hidden = false; return; }
       try {
         await api.createPuesto(nombre);
         closeModal();
         showToast('Puesto creado.', 'ok');
         await load();
       } catch (e) {
-        errEl.textContent = /duplicate|unique/i.test(e.message) ? 'Ese puesto ya existe.' : e.message;
+        errEl.textContent = /duplicate|unique/i.test(e.message) ? t('Ese puesto ya existe.') : e.message;
         errEl.hidden = false;
       }
     },

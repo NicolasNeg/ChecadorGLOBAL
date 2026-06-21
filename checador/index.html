@@ -18,7 +18,7 @@
 
   <!-- ── APP HEADER ─────────────────────────────────────────────────────────── -->
   <header class="app-header">
-    <button class="app-header__back" id="btn-atras" aria-label="Volver">
+    <button class="app-header__back" id="btn-atras" aria-label="Volver" data-i18n-title="Volver">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"/>
       </svg>
@@ -40,14 +40,14 @@
   <!-- ── SCREEN: Loading / Permisos ────────────────────────────────────────── -->
   <div id="s-cargando" class="app-content app-content--center">
     <div class="spinner spinner--blue"></div>
-    <p style="color:var(--tinta-3);font-size:.95rem">Solicitando permisos…</p>
+    <p style="color:var(--tinta-3);font-size:.95rem" data-i18n>Solicitando permisos…</p>
   </div>
 
   <!-- ── SCREEN: Tipo ───────────────────────────────────────────────────────── -->
   <div id="s-tipo" class="app-content" hidden>
     <div class="tipo-greeting">
       <p class="tipo-greeting__nombre" id="saludo-nombre">Hola</p>
-      <p class="tipo-greeting__sub">¿Qué vas a registrar hoy?</p>
+      <p class="tipo-greeting__sub" data-i18n>¿Qué vas a registrar hoy?</p>
     </div>
 
     <button id="btn-entrada" class="tipo-card tipo-card--entrada">
@@ -59,8 +59,8 @@
         </svg>
       </div>
       <div>
-        <div class="tipo-card__label">Entrada</div>
-        <div class="tipo-card__sub">Inicio de jornada</div>
+        <div class="tipo-card__label" data-i18n>Entrada</div>
+        <div class="tipo-card__sub" data-i18n>Inicio de jornada</div>
       </div>
       <svg class="tipo-card__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"/>
@@ -76,8 +76,8 @@
         </svg>
       </div>
       <div>
-        <div class="tipo-card__label">Salida</div>
-        <div class="tipo-card__sub">Fin de jornada</div>
+        <div class="tipo-card__label" data-i18n>Salida</div>
+        <div class="tipo-card__sub" data-i18n>Fin de jornada</div>
       </div>
       <svg class="tipo-card__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"/>
@@ -88,8 +88,8 @@
   <!-- ── SCREEN: Firma ─────────────────────────────────────────────────────── -->
   <div id="s-firma" class="app-content app-content--firma" hidden>
     <div>
-      <h2 class="app-screen__title">Tu firma</h2>
-      <p class="app-screen__sub">Usa tu dedo o lápiz para firmar en el recuadro</p>
+      <h2 class="app-screen__title" data-i18n>Tu firma</h2>
+      <p class="app-screen__sub" data-i18n>Usa tu dedo o lápiz para firmar en el recuadro</p>
     </div>
     <canvas id="canvas-firma" class="canvas-firma"></canvas>
     <p id="error-firma" class="error-msg" hidden></p>
@@ -98,13 +98,13 @@
   <!-- ── SCREEN: Foto ───────────────────────────────────────────────────────── -->
   <div id="s-foto" class="app-content" hidden>
     <div id="sec-video">
-      <p class="app-screen__sub" style="margin-bottom:12px">Mira directo a la cámara</p>
+      <p class="app-screen__sub" style="margin-bottom:12px" data-i18n>Mira directo a la cámara</p>
       <div class="camara-wrap">
         <video id="video-preview" autoplay playsinline muted></video>
       </div>
     </div>
     <div id="sec-preview" hidden>
-      <p class="app-screen__sub" style="margin-bottom:12px">Confirma que tu foto es clara</p>
+      <p class="app-screen__sub" style="margin-bottom:12px" data-i18n>Confirma que tu foto es clara</p>
       <div class="camara-wrap">
         <img id="img-preview" alt="Vista previa">
       </div>
@@ -118,10 +118,10 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>
       </svg>
-      Limpiar
+      <span data-i18n>Limpiar</span>
     </button>
     <button id="btn-continuar-firma" class="btn btn--primario" style="flex:2">
-      Continuar
+      <span data-i18n>Continuar</span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"/>
       </svg>
@@ -134,17 +134,17 @@
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
         <circle cx="12" cy="13" r="4"/>
       </svg>
-      Tomar foto
+      <span data-i18n>Tomar foto</span>
     </button>
   </div>
 
   <div id="btm-confirm" class="app-bottom" hidden>
-    <button id="btn-repetir-foto" class="btn btn--secundario" style="flex:1">Repetir</button>
+    <button id="btn-repetir-foto" class="btn btn--secundario" style="flex:1" data-i18n>Repetir</button>
     <button id="btn-confirmar-foto" class="btn btn--primario" style="flex:2">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="20 6 9 17 4 12"/>
       </svg>
-      Confirmar
+      <span data-i18n>Confirmar</span>
     </button>
   </div>
 
@@ -153,7 +153,7 @@
 <!-- ── OVERLAY: Cargando ────────────────────────────────────────────────────── -->
 <div id="overlay-cargando" hidden>
   <div class="spinner"></div>
-  <p id="cargando-mensaje">Subiendo registro…</p>
+  <p id="cargando-mensaje" data-i18n>Subiendo registro…</p>
 </div>
 
 <!-- ── OVERLAY: Éxito ────────────────────────────────────────────────────────── -->
@@ -168,7 +168,7 @@
     <span id="exito-turno" class="exito-turno" hidden></span>
     <a id="exito-ubic" class="exito-ubic" target="_blank" rel="noopener" hidden>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <span id="exito-ubic-txt">Obteniendo ubicación…</span>
+      <span id="exito-ubic-txt" data-i18n>Obteniendo ubicación…</span>
     </a>
     <div id="exito-media" class="exito-media" hidden></div>
     <p id="exito-duracion" class="exito-duracion" hidden></p>

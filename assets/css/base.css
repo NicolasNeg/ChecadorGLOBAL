@@ -147,6 +147,27 @@ label {
 }
 .error-txt { color: var(--peligro); }
 
+/* ── Toggle de idioma (banderas ES | EN) — componente autocontenido ────────── */
+.lang-toggle {
+  display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px;
+  background: rgba(148,163,184,.14); border: 1px solid rgba(148,163,184,.24);
+}
+.lang-toggle__btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 34px; border: none; border-radius: 7px; background: transparent;
+  padding: 0; opacity: .5; touch-action: manipulation;
+  transition: opacity .15s, background .15s, transform .1s;
+}
+.lang-toggle__btn:hover { opacity: .85; }
+.lang-toggle__btn:active { transform: scale(.94); }
+.lang-toggle__btn.is-active { opacity: 1; background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,.18); }
+.lang-toggle__btn:focus-visible { outline: 2px solid var(--primario, #0369A1); outline-offset: 2px; }
+[data-theme="dark"] .lang-toggle__btn.is-active { background: rgba(255,255,255,.16); box-shadow: none; }
+.lang-flag {
+  width: 22px; aspect-ratio: 3 / 2; height: auto; border-radius: 3px; display: block;
+  object-fit: cover; box-shadow: 0 0 0 1px rgba(0,0,0,.10);
+}
+
 /* ── Reduced motion ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }

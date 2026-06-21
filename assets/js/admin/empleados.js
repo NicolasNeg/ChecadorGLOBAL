@@ -1,6 +1,7 @@
 import * as api from './api.js';
 import { loading, showToast, openModal, closeModal, esc } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
+import { t } from '../i18n.js';
 
 const iniciales = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -24,12 +25,12 @@ export async function init(panel) {
 
   panel.innerHTML = `
     <div class="panel-header">
-      <h2>Empleados</h2>
+      <h2>${t('Empleados')}</h2>
       <div class="panel-header__actions">
-        <input id="emp-search" class="form-input" style="height:36px;min-width:200px" placeholder="Buscar empleado…">
+        <input id="emp-search" class="form-input" style="height:36px;min-width:200px" placeholder="${t('Buscar empleado…')}">
         <button class="abtn abtn--primary" id="btn-nuevo-emp">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nuevo Empleado
+          ${t('Nuevo Empleado')}
         </button>
       </div>
     </div>
@@ -63,14 +64,14 @@ async function loadEmpleados() {
     window._toggleEmp = async (id, activo) => {
       try {
         await api.updateEmpleado(id, { activo: !activo });
-        showToast(activo ? 'Empleado desactivado.' : 'Empleado reactivado.', 'ok');
+        showToast(activo ? 'Empleado desactivado.' : 'Empleado reactivado.', 'ok'); // utils traduce
         await loadEmpleados();
       } catch (e) { showToast(e.message, 'error'); }
     };
     window._resetPin = (id, nombre) => {
-      openModal(`Resetear PIN: ${nombre}`,
+      openModal(`${t('Resetear PIN')}: ${nombre}`,
         `<div class="form-group">
-          <label for="pin-nuevo">Nuevo PIN (solo números)</label>
+          <label for="pin-nuevo">${t('Nuevo PIN (solo números)')}</label>
           <input id="pin-nuevo" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
         </div>
         <p id="pin-error" class="error-inline" hidden></p>`,
@@ -78,7 +79,7 @@ async function loadEmpleados() {
           const pin = document.getElementById('pin-nuevo').value.trim();
           const errEl = document.getElementById('pin-error');
           if (!pin || !/^\d+$/.test(pin)) {
-            errEl.textContent = 'Ingresa un PIN numérico válido.';
+            errEl.textContent = t('Ingresa un PIN numérico válido.');
             errEl.hidden = false;
             return;
           }
@@ -110,18 +111,18 @@ function tarjetaEmp(r) {
       <div class="emp-c__photo">${foto}</div>
       <div class="emp-c__body">
         <h3 class="emp-c__name" title="${esc(r.nombre)}">${esc(r.nombre)}</h3>
-        <p class="emp-c__role">${esc(r.puesto || 'Sin puesto')}</p>
+        <p class="emp-c__role">${esc(r.puesto || t('Sin puesto'))}</p>
         <div class="emp-c__stats">
-          <div class="emp-c__stat" title="Plaza">${IC.plaza}<span>${esc(r.plazas?.nombre || 'Sin plaza')}</span></div>
-          <div class="emp-c__stat" title="Estado">${IC.estado}<span class="abadge ${r.activo ? 'abadge--green' : 'abadge--gray'}">${r.activo ? 'Activo' : 'Inactivo'}</span></div>
+          <div class="emp-c__stat" title="${t('Plaza')}">${IC.plaza}<span>${esc(r.plazas?.nombre || t('Sin plaza'))}</span></div>
+          <div class="emp-c__stat" title="${t('Estado')}">${IC.estado}<span class="abadge ${r.activo ? 'abadge--green' : 'abadge--gray'}">${t(r.activo ? 'Activo' : 'Inactivo')}</span></div>
         </div>
       </div>
       <div class="emp-c__actions">
-        <button class="emp-c__act" title="Editar" aria-label="Editar" onclick="window._editEmp(${r.id})">${IC.edit}</button>
-        <button class="emp-c__act" title="Ver historial" aria-label="Ver historial" onclick="window._verHistorial(${r.id})">${IC.hist}</button>
-        <button class="emp-c__act" title="Resetear PIN" aria-label="Resetear PIN" onclick="window._resetPin(${r.id}, '${nombreJs}')">${IC.pin}</button>
+        <button class="emp-c__act" title="${t('Editar')}" aria-label="${t('Editar')}" onclick="window._editEmp(${r.id})">${IC.edit}</button>
+        <button class="emp-c__act" title="${t('Ver historial')}" aria-label="${t('Ver historial')}" onclick="window._verHistorial(${r.id})">${IC.hist}</button>
+        <button class="emp-c__act" title="${t('Resetear PIN')}" aria-label="${t('Resetear PIN')}" onclick="window._resetPin(${r.id}, '${nombreJs}')">${IC.pin}</button>
         <button class="emp-c__act ${r.activo ? 'emp-c__act--danger' : 'emp-c__act--ok'}"
-          title="${r.activo ? 'Desactivar' : 'Reactivar'}" aria-label="${r.activo ? 'Desactivar' : 'Reactivar'}"
+          title="${t(r.activo ? 'Desactivar' : 'Reactivar')}" aria-label="${t(r.activo ? 'Desactivar' : 'Reactivar')}"
           onclick="window._toggleEmp(${r.id}, ${r.activo})">${r.activo ? IC.baja : IC.alta}</button>
       </div>
     </article>`;
@@ -133,7 +134,7 @@ function renderEmpleados(empleados) {
   empleados = filterByPlaza(empleados, e => e.plaza_id);
   wrap.innerHTML = empleados.length
     ? `<div class="emp-grid">${empleados.map(tarjetaEmp).join('')}</div>`
-    : `<div class="ad-empty">No hay empleados que coincidan.</div>`;
+    : `<div class="ad-empty">${t('No hay empleados que coincidan.')}</div>`;
 }
 
 function filterTable(q) {
@@ -159,7 +160,7 @@ function openEmpForm(emp = null) {
   const v = (k) => emp?.[k] ?? '';
   const defPlaza  = emp?.plaza_id ?? getPlazaScope();
   const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${defPlaza === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
-  const puestoOpts = `<option value="">– Sin puesto –</option>` + _puestos.map(p => `<option value="${esc(p.nombre)}" ${emp?.puesto === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
+  const puestoOpts = `<option value="">– ${t('Sin puesto')} –</option>` + _puestos.map(p => `<option value="${esc(p.nombre)}" ${emp?.puesto === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
   const rolOpts   = ROLES.map(r => `<option value="${r}" ${(emp?.rol ?? 'empleado') === r ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('');
   const numero    = isEdit ? v('numero_empleado') : nextNumeroEmpleado();
 
@@ -171,45 +172,45 @@ function openEmpForm(emp = null) {
           <img id="e-foto-prev" src="${esc(v('foto_url'))}" alt="" ${v('foto_url') ? '' : 'hidden'}>
           <span id="e-foto-ph" class="emp-edit__ph" ${v('foto_url') ? 'hidden' : ''}>${esc(iniciales(v('nombre')))}</span>
         </div>
-        <label class="emp-edit__cam" for="e-foto" title="Cambiar foto" aria-label="Cambiar foto">${IC.edit}</label>
+        <label class="emp-edit__cam" for="e-foto" title="${t('Cambiar foto')}" aria-label="${t('Cambiar foto')}">${IC.edit}</label>
         <input id="e-foto" type="file" accept="image/*" hidden>
       </div>
 
       <div class="emp-edit__grid">
         <div class="form-group">
-          <label for="e-nombre">Nombre completo *</label>
+          <label for="e-nombre">${t('Nombre completo')} *</label>
           <input id="e-nombre" class="form-input" value="${esc(v('nombre'))}" placeholder="Juan Pérez García">
         </div>
         <div class="form-group">
-          <label for="e-num">N.º empleado</label>
-          <input id="e-num" class="form-input" value="${esc(numero)}" readonly title="Se asigna automáticamente">
+          <label for="e-num">${t('N.º empleado')}</label>
+          <input id="e-num" class="form-input" value="${esc(numero)}" readonly title="${t('Se asigna automáticamente')}">
         </div>
         <div class="form-group form-group--full">
-          <label for="e-puesto">Puesto</label>
+          <label for="e-puesto">${t('Puesto')}</label>
           <select id="e-puesto" class="form-input">${puestoOpts}</select>
         </div>
         <div class="form-group">
-          <label for="e-email">Correo</label>
+          <label for="e-email">${t('Correo')}</label>
           <input id="e-email" class="form-input" type="email" value="${esc(v('email'))}" placeholder="correo@empresa.com">
         </div>
         <div class="form-group">
-          <label for="e-tel">Teléfono</label>
+          <label for="e-tel">${t('Teléfono')}</label>
           <input id="e-tel" class="form-input" type="tel" value="${esc(v('telefono'))}" placeholder="55 1234 5678">
         </div>
         <div class="form-group">
-          <label for="e-ingreso">Fecha de ingreso</label>
+          <label for="e-ingreso">${t('Fecha de ingreso')}</label>
           <input id="e-ingreso" class="form-input" type="date" value="${esc(v('fecha_ingreso'))}">
         </div>
         <div class="form-group">
-          <label for="e-rol">Rol</label>
+          <label for="e-rol">${t('Rol')}</label>
           <select id="e-rol" class="form-input">${rolOpts}</select>
         </div>
         <div class="form-group">
-          <label for="e-plaza">Plaza *</label>
-          <select id="e-plaza" class="form-input"><option value="">– Selecciona –</option>${plazaOpts}</select>
+          <label for="e-plaza">${t('Plaza')} *</label>
+          <select id="e-plaza" class="form-input"><option value="">– ${t('Selecciona')} –</option>${plazaOpts}</select>
         </div>
         ${!isEdit ? `<div class="form-group form-group--full">
-          <label for="e-pin">PIN inicial (solo números) *</label>
+          <label for="e-pin">${t('PIN inicial (solo números)')} *</label>
           <input id="e-pin" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
         </div>` : ''}
       </div>
@@ -221,7 +222,7 @@ function openEmpForm(emp = null) {
       const errEl    = document.getElementById('e-error');
 
       if (!nombre || !plaza_id) {
-        errEl.textContent = 'Nombre y Plaza son obligatorios.';
+        errEl.textContent = t('Nombre y Plaza son obligatorios.');
         errEl.hidden = false;
         return;
       }
@@ -247,7 +248,7 @@ function openEmpForm(emp = null) {
         } else {
           const pin = document.getElementById('e-pin').value.trim();
           if (!pin || !/^\d+$/.test(pin)) {
-            errEl.textContent = 'El PIN debe ser numérico.';
+            errEl.textContent = t('El PIN debe ser numérico.');
             errEl.hidden = false;
             return;
           }

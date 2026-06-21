@@ -2,6 +2,7 @@ import { requireAdminSession, logoutAdmin } from './auth.js';
 import { getAuditLog, countEmpleados, getRegistros, getPlazas } from './api.js';
 import { fmtFecha, esc } from './utils.js';
 import { getPlazaScope, setPlazaScope } from './plaza-scope.js';
+import { t, applyI18n, mountLangToggle, getLang } from '../i18n.js';
 
 const sesion = requireAdminSession();
 // auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
@@ -13,7 +14,7 @@ if (!esRH) {
 }
 const _adminNombre = sesion?.nombre ?? 'Admin';
 document.getElementById('admin-nombre-foot').textContent = _adminNombre;
-document.getElementById('admin-rol-badge').textContent = esRH ? 'Recursos Humanos' : 'Jefe de Plaza';
+document.getElementById('admin-rol-badge').textContent = t(esRH ? 'Recursos Humanos' : 'Jefe de Plaza');
 document.querySelectorAll('.sidebar__avatar').forEach(a => { a.firstChild.textContent = _adminNombre.trim().charAt(0).toUpperCase() || 'A'; });
 
 // ── Sidebar nav + routing ─────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ async function showPanel(id) {
   const panel = document.getElementById(`panel-${id}`);
   if (!panel) return;
   panel.hidden = false;
-  pageTitle.textContent = panel.dataset.title ?? id;
+  pageTitle.textContent = t(panel.dataset.title ?? id);
 
   if (id === 'historial') {
     const m = await import('./historial-empleado.js');
@@ -87,6 +88,34 @@ function closeSidebar() {
   sidebar.classList.remove('open');
   overlay?.classList.remove('open');
 }
+
+// ── Colapsar sidebar (escritorio) ───────────────────────────────────────────────
+const shell = document.getElementById('admin-shell');
+const COLLAPSE_KEY = 'eqs_admin_collapsed';
+function applyCollapsed() {
+  const on = localStorage.getItem(COLLAPSE_KEY) === '1';
+  shell.classList.toggle('is-collapsed', on);
+  const btn = document.getElementById('btn-collapse');
+  if (btn) {
+    const lbl = t(on ? 'Expandir menú' : 'Colapsar menú');
+    btn.setAttribute('title', lbl);
+    btn.setAttribute('aria-label', lbl);
+  }
+}
+document.getElementById('btn-collapse')?.addEventListener('click', () => {
+  localStorage.setItem(COLLAPSE_KEY, shell.classList.contains('is-collapsed') ? '0' : '1');
+  applyCollapsed();
+});
+applyCollapsed();
+
+// ── Idioma (ES/EN) ──────────────────────────────────────────────────────────────
+mountLangToggle(document.querySelector('.admin-header__right'));
+applyI18n(document);
+window.addEventListener('langchange', () => {
+  applyI18n(document);
+  applyCollapsed();
+  reloadCurrent(); // re-renderiza el panel activo con los textos en el idioma nuevo
+});
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 document.getElementById('btn-logout')?.addEventListener('click', logoutAdmin);
@@ -191,49 +220,49 @@ initPlazaSelector();
 
 // ── Panel Ajustes ───────────────────────────────────────────────────────────────
 function loadAjustes(panel) {
-  const rolTxt = esRH ? 'Recursos Humanos' : 'Jefe de Plaza';
+  const rolTxt = t(esRH ? 'Recursos Humanos' : 'Jefe de Plaza');
   panel.innerHTML = `
-    <div class="panel-header"><h2>Ajustes</h2></div>
-    <div class="ad-card"><div class="ad-card__header"><h3>Apariencia</h3></div>
+    <div class="panel-header"><h2>${t('Ajustes')}</h2></div>
+    <div class="ad-card"><div class="ad-card__header"><h3>${t('Apariencia')}</h3></div>
       <div class="ad-card__body">
         <div class="setting-row">
           <div>
-            <div class="setting-row__label">Tema</div>
-            <div class="setting-row__hint">Elige claro, oscuro o seguir el sistema.</div>
+            <div class="setting-row__label">${t('Tema')}</div>
+            <div class="setting-row__hint">${t('Elige claro, oscuro o seguir el sistema.')}</div>
           </div>
           <div class="segmented seg-theme">
-            <button data-theme-opt="light">Claro</button>
-            <button data-theme-opt="dark">Oscuro</button>
-            <button data-theme-opt="system">Sistema</button>
+            <button data-theme-opt="light">${t('Claro')}</button>
+            <button data-theme-opt="dark">${t('Oscuro')}</button>
+            <button data-theme-opt="system">${t('Sistema')}</button>
           </div>
         </div>
         <div class="setting-row">
           <div>
-            <div class="setting-row__label">Ver KPIs fijos</div>
-            <div class="setting-row__hint">Muestra las estadísticas siempre en el historial, no solo al pulsar el icono.</div>
+            <div class="setting-row__label">${t('Ver KPIs fijos')}</div>
+            <div class="setting-row__hint">${t('Muestra las estadísticas siempre en el historial, no solo al pulsar el icono.')}</div>
           </div>
           <div class="segmented seg-kpis">
-            <button data-kpis-opt="1">Sí</button>
-            <button data-kpis-opt="0">No</button>
+            <button data-kpis-opt="1">${t('Sí')}</button>
+            <button data-kpis-opt="0">${t('No')}</button>
           </div>
         </div>
       </div>
     </div>
-    <div class="ad-card"><div class="ad-card__header"><h3>Cuenta</h3></div>
+    <div class="ad-card"><div class="ad-card__header"><h3>${t('Cuenta')}</h3></div>
       <div class="ad-card__body">
-        <div class="setting-row"><span class="setting-row__label">Nombre</span><span class="setting-row__val">${esc(sesion?.nombre ?? 'Admin')}</span></div>
-        <div class="setting-row"><span class="setting-row__label">Rol</span><span class="setting-row__val">${rolTxt}</span></div>
-        <div class="setting-row"><span class="setting-row__label">Correo</span><span class="setting-row__val">${esc(sesion?.email ?? '—')}</span></div>
+        <div class="setting-row"><span class="setting-row__label">${t('Nombre')}</span><span class="setting-row__val">${esc(sesion?.nombre ?? 'Admin')}</span></div>
+        <div class="setting-row"><span class="setting-row__label">${t('Rol')}</span><span class="setting-row__val">${rolTxt}</span></div>
+        <div class="setting-row"><span class="setting-row__label">${t('Correo')}</span><span class="setting-row__val">${esc(sesion?.email ?? '—')}</span></div>
       </div>
     </div>
-    <div class="ad-card"><div class="ad-card__header"><h3>Sesión</h3></div>
+    <div class="ad-card"><div class="ad-card__header"><h3>${t('Sesión')}</h3></div>
       <div class="ad-card__body">
         <div class="setting-row">
           <div>
-            <div class="setting-row__label">Cerrar sesión</div>
-            <div class="setting-row__hint">Saldrás del panel administrativo.</div>
+            <div class="setting-row__label">${t('Cerrar sesión')}</div>
+            <div class="setting-row__hint">${t('Saldrás del panel administrativo.')}</div>
           </div>
-          <button class="abtn abtn--danger" id="ajustes-logout">Cerrar sesión</button>
+          <button class="abtn abtn--danger" id="ajustes-logout">${t('Cerrar sesión')}</button>
         </div>
       </div>
     </div>`;
@@ -284,12 +313,13 @@ function barRow(label, value, total, tono) {
 }
 
 async function loadOverview(panel) {
-  const hoy = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
+  const hoy = new Date().toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   panel.innerHTML = `
     <div class="overview-hero">
       <div>
-        <p class="overview-hero__hi">Hola, ${esc(sesion?.nombre ?? 'Admin')} 👋</p>
-        <h2 class="overview-hero__title">Resumen del día</h2>
+        <p class="overview-hero__hi">${t('Hola')}, ${esc(sesion?.nombre ?? 'Admin')} 👋</p>
+        <h2 class="overview-hero__title">${t('Resumen del día')}</h2>
       </div>
       <span class="overview-hero__date">${hoy}</span>
     </div>
@@ -298,22 +328,22 @@ async function loadOverview(panel) {
       ${['empleados','presentes','registros','incidencias'].map(ic => statCard(
           { empleados:'blue', presentes:'green', registros:'orange', incidencias:'red' }[ic],
           ic === 'presentes' ? 'empleados' : ic,
-          { empleados:'Empleados activos', presentes:'Presentes ahora', registros:'Registros hoy', incidencias:'Incidencias hoy' }[ic],
+          t({ empleados:'Empleados activos', presentes:'Presentes ahora', registros:'Registros hoy', incidencias:'Incidencias hoy' }[ic]),
           '—')).join('')}
     </div>
 
     <div class="overview-cols">
       <div class="ad-card">
-        <div class="ad-card__header"><h3>Actividad de hoy</h3></div>
-        <div id="overview-actividad"><div class="ad-loading"><div class="ad-spinner"></div> Cargando…</div></div>
+        <div class="ad-card__header"><h3>${t('Actividad de hoy')}</h3></div>
+        <div id="overview-actividad"><div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div></div>
       </div>
       <div class="overview-aside">
         <div class="ad-card">
-          <div class="ad-card__header"><h3>Distribución de hoy</h3></div>
-          <div class="ad-card__body" id="overview-dist"><div class="ad-loading"><div class="ad-spinner"></div> Cargando…</div></div>
+          <div class="ad-card__header"><h3>${t('Distribución de hoy')}</h3></div>
+          <div class="ad-card__body" id="overview-dist"><div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div></div>
         </div>
         <div class="ad-card">
-          <div class="ad-card__header"><h3>Accesos rápidos</h3></div>
+          <div class="ad-card__header"><h3>${t('Accesos rápidos')}</h3></div>
           <div class="ad-card__body quick-links" id="overview-quick"></div>
         </div>
       </div>
@@ -337,7 +367,7 @@ async function loadOverview(panel) {
 
     setStat('presentes',   presentes);
     setStat('registros',   rows.length);
-    setStat('incidencias', incidencias, incidencias ? 'fuera de geocerca' : 'todo en orden');
+    setStat('incidencias', incidencias, t(incidencias ? 'fuera de geocerca' : 'todo en orden'));
 
     renderDistribucion({ entradas, salidas, incidencias, total: rows.length });
     renderActividad(rows.slice(0, 8));
@@ -359,26 +389,26 @@ function setStat(key, value, sub) {
   const idx = ['empleados','presentes','registros','incidencias'].indexOf(key);
   const card = grid.children[idx];
   if (!card) return;
-  card.outerHTML = statCard(STAT_TONOS[key], key === 'presentes' ? 'empleados' : key, STAT_LABELS[key], value, sub);
+  card.outerHTML = statCard(STAT_TONOS[key], key === 'presentes' ? 'empleados' : key, t(STAT_LABELS[key]), value, sub);
 }
 
 function renderDistribucion({ entradas, salidas, incidencias, total }) {
   const wrap = document.getElementById('overview-dist');
   if (!wrap) return;
-  if (!total) { wrap.innerHTML = '<div class="ad-empty">Sin registros hoy.</div>'; return; }
+  if (!total) { wrap.innerHTML = `<div class="ad-empty">${t('Sin registros hoy.')}</div>`; return; }
   wrap.innerHTML =
-    barRow('Entradas', entradas, total, 'green') +
-    barRow('Salidas', salidas, total, 'blue') +
-    barRow('Incidencias', incidencias, total, 'red');
+    barRow(t('Entradas'), entradas, total, 'green') +
+    barRow(t('Salidas'), salidas, total, 'blue') +
+    barRow(t('Incidencias'), incidencias, total, 'red');
 }
 
 function renderActividad(rows) {
   const wrap = document.getElementById('overview-actividad');
   if (!wrap) return;
-  if (!rows.length) { wrap.innerHTML = '<div class="ad-empty">Sin actividad hoy.</div>'; return; }
+  if (!rows.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin actividad hoy.')}</div>`; return; }
   wrap.innerHTML = `<ul class="activity-list">${rows.map(r => `
     <li class="activity-item">
-      <span class="abadge abadge--${r.tipo === 'entrada' ? 'entrada' : 'salida'}">${r.tipo === 'entrada' ? 'Entrada' : 'Salida'}</span>
+      <span class="abadge abadge--${r.tipo === 'entrada' ? 'entrada' : 'salida'}">${t(r.tipo === 'entrada' ? 'Entrada' : 'Salida')}</span>
       <span class="activity-item__name">${esc(r.empleados?.nombre ?? '–')}</span>
       <span class="activity-item__plaza">${esc(r.empleados?.plazas?.nombre ?? '')}</span>
       <span class="activity-item__time">${fmtFecha(r.hora)}</span>
@@ -395,7 +425,7 @@ function renderQuickLinks() {
     ...(esRH ? [['plazas', 'Plazas'], ['turnos', 'Turnos']] : [])
   ];
   wrap.innerHTML = links.map(([id, label]) =>
-    `<button class="quick-link" data-goto="${id}">${label}
+    `<button class="quick-link" data-goto="${id}">${t(label)}
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </button>`).join('');
   wrap.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
@@ -417,11 +447,12 @@ const TABLA_ENTIDAD = {
   perfiles_admin: 'un administrador',
 };
 function accionHumana(r) {
-  const entidad = TABLA_ENTIDAD[r.tabla] ?? `un registro (${r.tabla})`;
-  const verbo   = (OP_VERBO[r.operacion] ?? r.operacion).toLowerCase();
+  const entidad = t(TABLA_ENTIDAD[r.tabla] ?? `un registro (${r.tabla})`);
+  const verbo   = t(OP_VERBO[r.operacion] ?? r.operacion).toLowerCase();
   const d       = r.datos_despues ?? r.datos_antes ?? {};
-  const quien   = d.nombre ? ` de ${d.nombre}` : '';
-  return `Se ${verbo} ${entidad}${quien}`;
+  const quien   = d.nombre ? ` ${t('de')} ${d.nombre}` : '';
+  // ponytail: plantilla "Se {verbo} {entidad}"; la gramática EN es aproximada, basta para auditoría.
+  return `${t('Se')} ${verbo} ${entidad}${quien}`.replace(/\s+/g, ' ').trim();
 }
 
 // Nombres de campo en español + campos de ruido que no aportan al lector.
@@ -446,7 +477,7 @@ function cambiosHTML(r) {
   const filas = [];
   for (const k of keys) {
     if (JSON.stringify(a[k]) === JSON.stringify(b[k])) continue;
-    const lbl = esc(CAMPO_LBL[k] ?? k);
+    const lbl = esc(t(CAMPO_LBL[k] ?? k));
     if (r.operacion === 'INSERT')      filas.push(`<b>${lbl}:</b> ${esc(fmtVal(b[k]))}`);
     else if (r.operacion === 'DELETE') filas.push(`<b>${lbl}:</b> ${esc(fmtVal(a[k]))}`);
     else filas.push(`<b>${lbl}:</b> <span style="color:#DC2626;text-decoration:line-through">${esc(fmtVal(a[k]))}</span> → <span style="color:#15803D">${esc(fmtVal(b[k]))}</span>`);
@@ -456,24 +487,24 @@ function cambiosHTML(r) {
 
 async function loadAuditoria(panel) {
   panel.innerHTML = `
-    <div class="panel-header"><h2>Log de Auditoría</h2></div>
+    <div class="panel-header"><h2>${t('Log de Auditoría')}</h2></div>
     <div class="ad-card"><div id="audit-wrap">
-      <div class="ad-loading"><div class="ad-spinner"></div> Cargando…</div>
+      <div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>
     </div></div>`;
   try {
     const rows = await getAuditLog(100);
     const wrap = document.getElementById('audit-wrap');
-    if (!rows.length) { wrap.innerHTML = '<div class="ad-empty">Sin registros.</div>'; return; }
+    if (!rows.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin registros.')}</div>`; return; }
 
     wrap.innerHTML = `<div class="audit-feed">${rows.map(r => {
       const cambios = cambiosHTML(r);
       const hayCambios = cambios.includes('<b>');
       return `<div class="audit-item">
-        <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'} audit-item__op">${OP_VERBO[r.operacion] ?? r.operacion}</span>
+        <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'} audit-item__op">${t(OP_VERBO[r.operacion] ?? r.operacion)}</span>
         <div class="audit-item__main">
           <p class="audit-item__txt">${esc(accionHumana(r))}</p>
-          <span class="audit-item__meta">${esc(r.perfiles_admin?.nombre ?? 'Sistema')} · ${fmtFecha(r.created_at)}</span>
-          ${hayCambios ? `<details class="audit-item__det"><summary>Ver detalle</summary>
+          <span class="audit-item__meta">${esc(r.perfiles_admin?.nombre ?? t('Sistema'))} · ${fmtFecha(r.created_at)}</span>
+          ${hayCambios ? `<details class="audit-item__det"><summary>${t('Ver detalle')}</summary>
             <div class="audit-item__cambios">${cambios}</div>
             <span class="audit-item__ip">IP: ${esc(r.ip_address ?? '—')}</span>
           </details>` : ''}

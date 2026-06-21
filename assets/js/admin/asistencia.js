@@ -2,13 +2,13 @@ import * as api from './api.js';
 import { esc } from './utils.js';
 import { filterByPlaza } from './plaza-scope.js';
 import { tableroMes } from './historial-calc.mjs';
+import { t, getLang } from '../i18n.js';
 
 let _refreshTimer = null;
 let _mes = null;        // { y, m } mes en foco
 let _tablero = null;    // último tablero calculado (para el spotlight)
 let _sel = null;        // id del empleado seleccionado
 
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DOW_AB = ['D','L','M','M','J','V','S'];
 const CATS = [
   { cat: 'presente', label: 'Asistencia' },
@@ -28,25 +28,25 @@ export async function init(panel) {
 
   panel.innerHTML = `
     <div class="panel-header">
-      <h2>Tablero de Asistencia</h2>
+      <h2>${t('Tablero de Asistencia')}</h2>
       <button class="abtn abtn--ghost" id="btn-refrescar">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Actualizar
+        ${t('Actualizar')}
       </button>
     </div>
 
     <div class="asis-bar">
       <div class="asis-nav">
-        <button class="abtn abtn--ghost abtn--icon" id="mes-prev" aria-label="Mes anterior">
+        <button class="abtn abtn--ghost abtn--icon" id="mes-prev" aria-label="${t('Mes anterior')}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h3 class="asis-nav__title" id="mes-titulo">—</h3>
-        <button class="abtn abtn--ghost abtn--icon" id="mes-next" aria-label="Mes siguiente">
+        <button class="abtn abtn--ghost abtn--icon" id="mes-next" aria-label="${t('Mes siguiente')}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
       <div class="asis-legend" id="asis-legend">
-        ${CATS.map(c => `<button class="asis-leg asis-leg--${c.cat}" data-cat="${c.cat}" aria-pressed="false"><span class="asis-leg__dot"></span>${c.label}</button>`).join('')}
+        ${CATS.map(c => `<button class="asis-leg asis-leg--${c.cat}" data-cat="${c.cat}" aria-pressed="false"><span class="asis-leg__dot"></span>${t(c.label)}</button>`).join('')}
       </div>
     </div>
 
@@ -75,8 +75,10 @@ function stepMes(delta) {
 async function load() {
   const wrap = document.getElementById('asis-grid-wrap');
   if (!wrap) return;
-  document.getElementById('mes-titulo').textContent = `${MESES[_mes.m]} ${_mes.y}`;
-  wrap.innerHTML = `<div class="ad-loading"><div class="ad-spinner"></div> Cargando asistencia…</div>`;
+  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
+  const mesNombre = new Date(_mes.y, _mes.m, 1).toLocaleString(loc, { month: 'long' });
+  document.getElementById('mes-titulo').textContent = `${mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1)} ${_mes.y}`;
+  wrap.innerHTML = `<div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando asistencia…')}</div>`;
 
   try {
     const rango = rangoMes(_mes);
@@ -85,7 +87,7 @@ async function load() {
       api.getRegistrosRango(rango), api.getIncidenciasRango(rango),
     ]);
     const activos = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
-    if (!activos.length) { wrap.innerHTML = `<div class="ad-empty">No hay empleados activos en esta plaza.</div>`; return; }
+    if (!activos.length) { wrap.innerHTML = `<div class="ad-empty">${t('No hay empleados activos en esta plaza.')}</div>`; return; }
 
     _tablero = tableroMes(activos, registros, incidencias, horarios, turnos, rango);
     renderGrid(wrap);
@@ -102,7 +104,7 @@ function renderGrid(wrap) {
   const { dias, filas } = _tablero;
   const hoy = ymd(new Date());
   const head = `<tr>
-    <th class="hm-emp hm-emp--h">Empleado</th>
+    <th class="hm-emp hm-emp--h">${t('Empleado')}</th>
     ${dias.map(d => `<th class="hm-dh ${d.finde ? 'hm--finde' : ''} ${d.esHoy ? 'hm--hoy' : ''}">
       <span class="hm-dh__dow">${DOW_AB[d.dow]}</span><span class="hm-dh__num">${d.dia}</span>
     </th>`).join('')}
@@ -158,16 +160,16 @@ function renderSpotlight() {
       ${av}
       <div class="spot-id">
         <strong>${esc(e.nombre)}</strong>
-        <span>${esc(e.puesto || 'Sin puesto')}</span>
+        <span>${esc(e.puesto || t('Sin puesto'))}</span>
         <span class="spot-mono">${esc(e.numero_empleado || '—')}</span>
       </div>
     </div>
     <div class="spot-stats">
       ${CATS.map(c => `<div class="spot-stat spot-stat--${c.cat}">
-        <span class="spot-stat__n">${r[c.cat] ?? 0}</span><span class="spot-stat__l">${c.label}</span>
+        <span class="spot-stat__n">${r[c.cat] ?? 0}</span><span class="spot-stat__l">${t(c.label)}</span>
       </div>`).join('')}
     </div>
-    <button class="abtn abtn--primary spot-cta" id="spot-hist" type="button">Ver historial completo</button>`;
+    <button class="abtn abtn--primary spot-cta" id="spot-hist" type="button">${t('Ver historial completo')}</button>`;
   // Navega al panel de historial reusando el enlace del sidebar (no recargamos).
   aside.querySelector('#spot-hist')?.addEventListener('click', () =>
     document.querySelector('.sidebar__link[data-panel="historial"]')?.click());

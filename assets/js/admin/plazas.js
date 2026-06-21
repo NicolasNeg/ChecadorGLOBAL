@@ -1,5 +1,6 @@
 import * as api from './api.js';
 import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
+import { t } from '../i18n.js';
 
 // Leaflet desde CDN (patrón signature_pad): inyecta CSS+JS una sola vez.
 let _leafletP;
@@ -23,11 +24,11 @@ function loadLeaflet() {
 export async function init(panel) {
   panel.innerHTML = `
     <div class="panel-header">
-      <h2>Plazas</h2>
+      <h2>${t('Plazas')}</h2>
       <div class="panel-header__actions">
         <button class="abtn abtn--primary" id="btn-nueva-plaza" data-rh-only>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nueva Plaza
+          ${t('Nueva Plaza')}
         </button>
       </div>
     </div>
@@ -53,17 +54,17 @@ async function loadPlazas() {
         { key: 'longitud',     label: 'Longitud', render: r => `<span class="td-mono">${r.longitud.toFixed(6)}</span>` },
         { key: 'radio_metros', label: 'Radio',    render: r => `${r.radio_metros} m` },
         { key: 'activo',       label: 'Estado',   render: r => r.activo
-            ? '<span class="abadge abadge--green">Activa</span>'
-            : '<span class="abadge abadge--gray">Inactiva</span>' },
+            ? `<span class="abadge abadge--green">${t('Activa')}</span>`
+            : `<span class="abadge abadge--gray">${t('Inactiva')}</span>` },
         { key: 'id', label: 'Mapa', render: r =>
-          `<a href="https://www.google.com/maps?q=${r.latitud},${r.longitud}" target="_blank" rel="noopener" style="font-size:.8rem">Ver mapa</a>` }
+          `<a href="https://www.google.com/maps?q=${r.latitud},${r.longitud}" target="_blank" rel="noopener" style="font-size:.8rem">${t('Ver mapa')}</a>` }
       ],
       plazas,
       (r) => `
-        <button class="abtn abtn--ghost abtn--icon" title="Editar" onclick="window._editPlaza(${r.id})">
+        <button class="abtn abtn--ghost abtn--icon" title="${t('Editar')}" onclick="window._editPlaza(${r.id})">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="abtn abtn--danger abtn--icon" title="Eliminar" onclick="window._deletePlaza(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
+        <button class="abtn abtn--danger abtn--icon" title="${t('Eliminar')}" onclick="window._deletePlaza(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>`
     );
@@ -74,10 +75,10 @@ async function loadPlazas() {
       if (plaza) openPlazaForm(plaza);
     };
     window._deletePlaza = async (id, nombre) => {
-      if (!await confirm(`¿Eliminar plaza "${nombre}"? Esta acción no se puede deshacer.`, { ok: 'Eliminar' })) return;
+      if (!await confirm(`${t('¿Eliminar plaza?')} "${nombre}" — ${t('Esta acción no se puede deshacer.')}`, { ok: 'Eliminar' })) return;
       try {
         await api.deletePlaza(id);
-        showToast(`Plaza "${nombre}" eliminada.`, 'ok');
+        showToast(`${t('Plaza eliminada')}: "${nombre}"`, 'ok');
         await loadPlazas();
       } catch (e) {
         showToast(e.message, 'error');
@@ -91,57 +92,57 @@ async function loadPlazas() {
 function openPlazaForm(plaza = null) {
   const isEdit = !!plaza;
   openModal(
-    isEdit ? `Editar: ${plaza.nombre}` : 'Nueva Plaza',
+    isEdit ? `${t('Editar')}: ${plaza.nombre}` : 'Nueva Plaza',
     `<div class="form-group">
-      <label for="pz-nombre">Nombre de la Plaza *</label>
+      <label for="pz-nombre">${t('Nombre de la Plaza')} *</label>
       <input id="pz-nombre" class="form-input" value="${plaza?.nombre ?? ''}" placeholder="Ej: Silao GTO">
     </div>
     <div class="form-group">
-      <label for="pz-ciudad">Ciudad *</label>
+      <label for="pz-ciudad">${t('Ciudad')} *</label>
       <input id="pz-ciudad" class="form-input" value="${plaza?.ciudad ?? ''}" placeholder="Ej: Silao, Guanajuato">
     </div>
 
     <div class="form-group">
-      <label>Ubicación (mueve el pin o haz clic en el mapa) *</label>
+      <label>${t('Ubicación (mueve el pin o haz clic en el mapa)')} *</label>
       <div id="pz-map" style="height:240px;border-radius:10px;overflow:hidden;border:1px solid var(--ad-linea);z-index:0"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
-        <label for="pz-lat">Latitud *</label>
+        <label for="pz-lat">${t('Latitud')} *</label>
         <input id="pz-lat" class="form-input" type="number" step="0.000001" value="${plaza?.latitud ?? ''}" placeholder="20.934567">
       </div>
       <div class="form-group">
-        <label for="pz-lng">Longitud *</label>
+        <label for="pz-lng">${t('Longitud')} *</label>
         <input id="pz-lng" class="form-input" type="number" step="0.000001" value="${plaza?.longitud ?? ''}" placeholder="-101.445678">
       </div>
     </div>
     <div class="form-group">
-      <label for="pz-radio">Radio de tolerancia (metros) *</label>
+      <label for="pz-radio">${t('Radio de tolerancia (metros)')} *</label>
       <input id="pz-radio" class="form-input" type="number" min="10" max="5000" value="${plaza?.radio_metros ?? 100}">
     </div>
 
     <div class="form-group">
-      <label for="pz-direccion">Dirección</label>
-      <input id="pz-direccion" class="form-input" value="${plaza?.direccion ?? ''}" placeholder="Calle, número, colonia, C.P.">
+      <label for="pz-direccion">${t('Dirección')}</label>
+      <input id="pz-direccion" class="form-input" value="${plaza?.direccion ?? ''}" placeholder="${t('Calle, número, colonia, C.P.')}">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
-        <label for="pz-telefono">Teléfono</label>
+        <label for="pz-telefono">${t('Teléfono')}</label>
         <input id="pz-telefono" class="form-input" type="tel" value="${plaza?.telefono ?? ''}" placeholder="477 123 4567">
       </div>
       <div class="form-group">
-        <label for="pz-responsable">Responsable</label>
-        <input id="pz-responsable" class="form-input" value="${plaza?.responsable ?? ''}" placeholder="Nombre del encargado">
+        <label for="pz-responsable">${t('Responsable')}</label>
+        <input id="pz-responsable" class="form-input" value="${plaza?.responsable ?? ''}" placeholder="${t('Nombre del encargado')}">
       </div>
     </div>
     <div class="form-group">
-      <label for="pz-notas">Notas</label>
-      <textarea id="pz-notas" class="form-input" rows="3" placeholder="Observaciones, horarios especiales, etc.">${plaza?.notas ?? ''}</textarea>
+      <label for="pz-notas">${t('Notas')}</label>
+      <textarea id="pz-notas" class="form-input" rows="3" placeholder="${t('Observaciones, horarios especiales, etc.')}">${plaza?.notas ?? ''}</textarea>
     </div>
 
     <div class="form-group" style="flex-direction:row;align-items:center;gap:10px">
       <input id="pz-activo" type="checkbox" ${plaza?.activo !== false ? 'checked' : ''} style="width:16px;height:16px">
-      <label for="pz-activo" style="text-transform:none;font-size:.9rem;color:var(--ad-tinta)">Plaza activa</label>
+      <label for="pz-activo" style="text-transform:none;font-size:.9rem;color:var(--ad-tinta)">${t('Plaza activa')}</label>
     </div>
     <p id="pz-error" class="error-inline" hidden></p>`,
     async () => {
@@ -155,12 +156,12 @@ function openPlazaForm(plaza = null) {
       const errEl    = document.getElementById('pz-error');
 
       if (!nombre || !ciudad || isNaN(latitud) || isNaN(longitud) || isNaN(radio)) {
-        errEl.textContent = 'Completa todos los campos obligatorios.';
+        errEl.textContent = t('Completa todos los campos obligatorios.');
         errEl.hidden = false;
         return;
       }
       if (latitud < -90 || latitud > 90 || longitud < -180 || longitud > 180) {
-        errEl.textContent = 'Coordenadas fuera de rango válido.';
+        errEl.textContent = t('Coordenadas fuera de rango válido.');
         errEl.hidden = false;
         return;
       }

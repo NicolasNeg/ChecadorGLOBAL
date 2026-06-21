@@ -5,6 +5,7 @@ import { solicitarPermisos, streamCamara, coordenadas } from './permisos.js';
 import { iniciarFirma, limpiarFirma, estaVacia, obtenerFirmaPNG } from './firma.js';
 import { iniciarPreview, capturarFoto } from './camara.js';
 import { direccionDesdeCoords, mapsLink } from './geo.js';
+import { t, getLang, applyI18n, mountLangToggle } from './i18n.js';
 
 const sesion = requireSession();
 if (!sesion) throw new Error('sin sesión');
@@ -59,7 +60,7 @@ function setError(id, msg) {
 function saludo(nombre) {
   const h = new Date().getHours();
   const s = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
-  return `${s}, ${nombre}`;
+  return `${t(s)}, ${nombre}`;
 }
 
 // ── Back button ───────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ btnAtras.addEventListener('click', () => {
 function showTipo() {
   current = 'tipo';
   showOnly(sTipo);
-  headerTitle.textContent = 'Registrar asistencia';
+  headerTitle.textContent = t('Registrar asistencia');
   headerTag.hidden = true;
   setDots(1);
   document.getElementById('saludo-nombre').textContent = saludo(sesion.nombre);
@@ -86,8 +87,8 @@ document.getElementById('btn-salida').addEventListener('click',  () => { data.ti
 function showFirma() {
   current = 'firma';
   showOnly(sFirma, btmFirma);
-  headerTitle.textContent = 'Tu firma';
-  headerTag.textContent   = data.tipo === 'entrada' ? 'Entrada' : 'Salida';
+  headerTitle.textContent = t('Tu firma');
+  headerTag.textContent   = t(data.tipo === 'entrada' ? 'Entrada' : 'Salida');
   headerTag.className     = `app-header__tag app-header__tag--${data.tipo}`;
   headerTag.hidden        = false;
   setDots(2);
@@ -100,7 +101,7 @@ function showFirma() {
 
 document.getElementById('btn-limpiar-firma').addEventListener('click', limpiarFirma);
 document.getElementById('btn-continuar-firma').addEventListener('click', () => {
-  if (estaVacia()) { setError('error-firma', 'Dibuja tu firma antes de continuar.'); return; }
+  if (estaVacia()) { setError('error-firma', t('Dibuja tu firma antes de continuar.')); return; }
   setError('error-firma', '');
   data.firmaDataURL = obtenerFirmaPNG();
   showFoto();
@@ -110,7 +111,7 @@ document.getElementById('btn-continuar-firma').addEventListener('click', () => {
 function showFoto() {
   current = 'foto';
   showOnly(sFoto, btmFoto);
-  headerTitle.textContent = 'Foto de verificación';
+  headerTitle.textContent = t('Foto de verificación');
   setDots(3);
   setError('error-camara', '');
 
@@ -144,7 +145,7 @@ const btnConfirmar = document.getElementById('btn-confirmar-foto');
 btnConfirmar.addEventListener('click', async () => {
   setError('error-camara', '');
   btnConfirmar.disabled     = true;
-  btnConfirmar.textContent  = 'Guardando…';
+  btnConfirmar.textContent  = t('Guardando…');
   overlayLoad.hidden        = false;
 
   const { latitud, longitud } = coordenadas;
@@ -152,7 +153,7 @@ btnConfirmar.addEventListener('click', async () => {
   try {
     res = await guardarRegistro({ tipoChecada: data.tipo, foto: data.fotoDataURL, firma: data.firmaDataURL, latitud, longitud });
   } catch {
-    res = { ok: false, error: 'Error de red. Intenta de nuevo.' };
+    res = { ok: false, error: t('Error de red. Intenta de nuevo.') };
   }
 
   overlayLoad.hidden = true;
@@ -160,31 +161,32 @@ btnConfirmar.addEventListener('click', async () => {
   if (res.ok) {
     mostrarExito(data.tipo, data.fotoDataURL, coordenadas.latitud, coordenadas.longitud);
   } else {
-    setError('error-camara', res.error ?? 'No se pudo guardar. Intenta de nuevo.');
+    setError('error-camara', res.error ?? t('No se pudo guardar. Intenta de nuevo.'));
     btnConfirmar.disabled    = false;
-    btnConfirmar.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar`;
+    btnConfirmar.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${t('Confirmar')}`;
   }
 });
 
 function mostrarExito(tipo, fotoDataURL, lat, lon) {
   const ahora = new Date();
-  const horaFmt  = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-  const fechaFmt = ahora.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
+  const horaFmt  = ahora.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+  const fechaFmt = ahora.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
 
   overlayOk.dataset.tipo = tipo;
 
   document.getElementById('exito-svg').innerHTML = `
     <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" class="check-circle"/>
     <polyline points="28,52 44,68 72,34" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" class="check-mark"/>`;
-  document.getElementById('exito-titulo').textContent  = tipo === 'entrada' ? '¡Entrada registrada!' : '¡Salida registrada!';
+  document.getElementById('exito-titulo').textContent  = t(tipo === 'entrada' ? '¡Entrada registrada!' : '¡Salida registrada!');
   document.getElementById('exito-hora').textContent   = horaFmt;
   document.getElementById('exito-fecha').textContent  = fechaFmt;
 
   // Horario de turno asignado (si existe)
   const turnoEl = document.getElementById('exito-turno');
   if (sesion.turnoEntrada && sesion.turnoSalida) {
-    const hm = (t) => t.slice(0, 5); // "08:00:00" → "08:00"
-    turnoEl.textContent = `Turno ${hm(sesion.turnoEntrada)} – ${hm(sesion.turnoSalida)}`;
+    const hm = (s) => s.slice(0, 5); // "08:00:00" → "08:00"
+    turnoEl.textContent = `${t('Turno')} ${hm(sesion.turnoEntrada)} – ${hm(sesion.turnoSalida)}`;
     turnoEl.hidden = false;
   } else {
     turnoEl.hidden = true;
@@ -205,7 +207,7 @@ function mostrarExito(tipo, fotoDataURL, lat, lon) {
   }
 
   const fotoHtml = fotoDataURL
-    ? `<img class="exito-foto" src="${fotoDataURL}" alt="Tu foto de registro">`
+    ? `<img class="exito-foto" src="${fotoDataURL}" alt="${t('Tu foto de registro')}">`
     : '';
 
   document.getElementById('exito-media').innerHTML = fotoHtml;
@@ -224,7 +226,7 @@ function mostrarExito(tipo, fotoDataURL, lat, lon) {
       const m = Math.floor((diff % 3_600_000) / 60_000);
       const str = h > 0 ? `${h}h ${m}min` : `${m} min`;
       const el = document.getElementById('exito-duracion');
-      el.textContent = `Turno de ${str}`;
+      el.textContent = `${t('Turno de')} ${str}`;
       el.hidden = false;
     });
   }
@@ -232,6 +234,9 @@ function mostrarExito(tipo, fotoDataURL, lat, lon) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
+  mountLangToggle(document.querySelector('.app-header'));
+  applyI18n(document);
+  window.addEventListener('langchange', () => { applyI18n(document); if (current === 'tipo') showTipo(); });
   const estado = await solicitarPermisos(() => {});
   if (estado.camara === 'bloqueada' || estado.ubicacion === 'bloqueada') {
     location.replace(BASE + '/sin-permisos.html');

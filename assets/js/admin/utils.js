@@ -1,4 +1,5 @@
 // Shared utilities for admin modules
+import { t } from '../i18n.js';
 
 // Escapa texto de la DB antes de interpolarlo en innerHTML (previene XSS almacenado).
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -23,11 +24,11 @@ export function fmtDistancia(m) {
 }
 
 export function loading(container) {
-  container.innerHTML = `<div class="ad-loading"><div class="ad-spinner"></div> Cargando…</div>`;
+  container.innerHTML = `<div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>`;
 }
 
 export function empty(container, msg = 'Sin registros.') {
-  container.innerHTML = `<div class="ad-empty">${msg}</div>`;
+  container.innerHTML = `<div class="ad-empty">${t(msg)}</div>`;
 }
 
 // Generic table renderer
@@ -36,14 +37,14 @@ export function empty(container, msg = 'Sin registros.') {
 // actions: (row) => HTML string
 export function renderTable(container, cols, rows, actions) {
   if (!rows.length) { empty(container); return; }
-  const ths = cols.map(c => `<th>${c.label}</th>`).join('');
+  const ths = cols.map(c => `<th>${esc(t(c.label))}</th>`).join('');
   const trs = rows.map(row => {
     // data-label alimenta el layout apilado en móvil (ver estilos-admin.css).
-    const tds = cols.map(c => `<td data-label="${esc(c.label)}">${c.render ? c.render(row) : (row[c.key] ?? '–')}</td>`).join('');
-    const act = actions ? `<td data-label="Acciones"><div class="actions">${actions(row)}</div></td>` : '';
+    const tds = cols.map(c => `<td data-label="${esc(t(c.label))}">${c.render ? c.render(row) : (row[c.key] ?? '–')}</td>`).join('');
+    const act = actions ? `<td data-label="${esc(t('Acciones'))}"><div class="actions">${actions(row)}</div></td>` : '';
     return `<tr data-id="${row.id}">${tds}${act}</tr>`;
   }).join('');
-  const actTh = actions ? '<th style="width:100px">Acciones</th>' : '';
+  const actTh = actions ? `<th style="width:100px">${esc(t('Acciones'))}</th>` : '';
   container.innerHTML = `<div class="table-scroll">
     <table class="data-table">
       <thead><tr>${ths}${actTh}</tr></thead>
@@ -56,19 +57,19 @@ export function renderTable(container, cols, rows, actions) {
 export function showToast(message, type = 'ok') {
   const container = document.getElementById('toast-container');
   if (!container) return;
-  const t = document.createElement('div');
-  t.className = `toast toast--${type}`;
-  t.textContent = message;
-  container.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  const el = document.createElement('div');
+  el.className = `toast toast--${type}`;
+  el.textContent = t(message);
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
 }
 
 // Open/close the shared modal
 export function openModal(title, bodyHTML, onSave, saveLabel = 'Guardar') {
   const modal = document.getElementById('ad-modal');
-  modal.querySelector('#modal-title').textContent   = title;
+  modal.querySelector('#modal-title').textContent   = t(title);
   modal.querySelector('#modal-body').innerHTML      = bodyHTML;
-  modal.querySelector('#modal-save-label').textContent = saveLabel;
+  modal.querySelector('#modal-save-label').textContent = t(saveLabel);
   modal.hidden = false;
   const save = modal.querySelector('#modal-save');
   save.disabled = false; // limpia un disabled dejado por un guardado anterior
@@ -91,11 +92,11 @@ export function confirm(msg, { ok = 'Confirmar', cancel = 'Cancelar', danger = t
     ov.innerHTML = `
       <div class="ad-modal__card" style="max-width:400px">
         <div class="ad-modal__body" style="padding-top:24px">
-          <p style="font-size:.95rem;color:var(--ad-tinta);line-height:1.5">${esc(msg)}</p>
+          <p style="font-size:.95rem;color:var(--ad-tinta);line-height:1.5">${esc(t(msg))}</p>
         </div>
         <div class="ad-modal__footer">
-          <button class="abtn abtn--ghost" data-act="cancel">${esc(cancel)}</button>
-          <button class="abtn abtn--${danger ? 'danger' : 'primary'}" data-act="ok">${esc(ok)}</button>
+          <button class="abtn abtn--ghost" data-act="cancel">${esc(t(cancel))}</button>
+          <button class="abtn abtn--${danger ? 'danger' : 'primary'}" data-act="ok">${esc(t(ok))}</button>
         </div>
       </div>`;
     const done = (val) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };

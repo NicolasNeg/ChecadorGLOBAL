@@ -23,29 +23,26 @@
   </div>
 
   <div>
-    <h1 class="page-center__title">Permisos requeridos</h1>
-    <p class="page-center__body" style="margin-top:8px">
-      Para checar tu asistencia necesitamos acceso a tu <strong>cámara</strong> y <strong>ubicación</strong>.
-      Sin estos permisos no es posible continuar.
-    </p>
+    <h1 class="page-center__title" data-i18n>Permisos requeridos</h1>
+    <p class="page-center__body" style="margin-top:8px" data-i18n-html>Para checar tu asistencia necesitamos acceso a tu <strong>cámara</strong> y <strong>ubicación</strong>. Sin estos permisos no es posible continuar.</p>
   </div>
 
   <div class="sin-permisos-steps">
     <div class="sin-permisos-step">
       <div class="sin-permisos-step__num">1</div>
-      <p>Toca el ícono de candado o <strong>ⓘ</strong> junto a la URL en tu navegador</p>
+      <p data-i18n-html>Toca el ícono de candado o <strong>ⓘ</strong> junto a la URL en tu navegador</p>
     </div>
     <div class="sin-permisos-step">
       <div class="sin-permisos-step__num">2</div>
-      <p>Ve a <strong>Configuración del sitio</strong> o <strong>Permisos</strong></p>
+      <p data-i18n-html>Ve a <strong>Configuración del sitio</strong> o <strong>Permisos</strong></p>
     </div>
     <div class="sin-permisos-step">
       <div class="sin-permisos-step__num">3</div>
-      <p>Activa <strong>Cámara</strong> y <strong>Ubicación</strong> en <em>Permitir</em></p>
+      <p data-i18n-html>Activa <strong>Cámara</strong> y <strong>Ubicación</strong> en <em>Permitir</em></p>
     </div>
     <div class="sin-permisos-step">
       <div class="sin-permisos-step__num">4</div>
-      <p>Regresa aquí y toca <strong>Reintentar</strong></p>
+      <p data-i18n-html>Regresa aquí y toca <strong>Reintentar</strong></p>
     </div>
   </div>
 
@@ -54,10 +51,10 @@
       <polyline points="23 4 23 10 17 10"/>
       <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
     </svg>
-    Reintentar
+    <span data-i18n>Reintentar</span>
   </button>
 
-  <a href="./" class="btn btn--secundario" style="max-width:320px;width:100%;text-decoration:none">
+  <a href="./" class="btn btn--secundario" style="max-width:320px;width:100%;text-decoration:none" data-i18n>
     Volver al inicio
   </a>
 
@@ -65,6 +62,8 @@
 
 <script type="module">
   import { BASE } from 'assets/js/config.js';
+  import { applyI18n } from 'assets/js/i18n.js';
+  applyI18n(document);
   document.getElementById('btn-reintentar').addEventListener('click', () => { location.href = BASE + '/checador/'; });
 </script>
 </body>

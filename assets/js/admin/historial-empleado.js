@@ -5,6 +5,7 @@ import { combobox } from './combobox.js';
 import { getPlazaScope } from './plaza-scope.js';
 import { getAdminSession } from './auth.js';
 import { SUPABASE_URL } from '../config.js';
+import { t, getLang } from '../i18n.js';
 
 const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
 
@@ -28,9 +29,10 @@ const ROLES = [
 ];
 
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const horaCorta = (iso) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-const diaCorto  = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
-const diaLargo  = (ymd) => { const s = new Date(ymd + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
+const LOC = () => (getLang() === 'en' ? 'en-US' : 'es-MX');
+const horaCorta = (iso) => new Date(iso).toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' });
+const diaCorto  = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString(LOC(), { day: '2-digit', month: 'short' });
+const diaLargo  = (ymd) => { const s = new Date(ymd + 'T12:00:00').toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 const publicURL = (ruta) => ruta ? `${SUPABASE_URL}/storage/v1/object/public/${ruta}` : null;
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const haceDiasISO = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
@@ -38,7 +40,7 @@ const initials = (n) => (n || '').trim().split(/\s+/).map(w => w[0]).join('').sl
 const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const firstOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const horasDe = (d) => (d?.entrada && d?.salida) ? Math.round((new Date(d.salida.hora) - new Date(d.entrada.hora)) / 360000) / 10 : null;
-const DEFECTO = '<div class="ad-empty">Selecciona un empleado y pulsa “Ver historial”.</div>';
+const DEFECTO = () => `<div class="ad-empty">${t('Selecciona un empleado y pulsa “Ver historial”.')}</div>`;
 
 // Config: KPIs fijos (inline) vs. bajo demanda (toast). La escribe Ajustes.
 const kpisFijos = () => localStorage.getItem('eqs_admin_kpis_fijos') === '1';
@@ -66,46 +68,46 @@ export async function init(panel) {
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
       <div>
-        <h2 class="hist-head__title">Historial por empleado</h2>
-        <p class="hist-head__sub">Asistencia y notas en calendario, por persona y rango de fechas.</p>
+        <h2 class="hist-head__title">${t('Historial por empleado')}</h2>
+        <p class="hist-head__sub">${t('Asistencia y notas en calendario, por persona y rango de fechas.')}</p>
       </div>
     </div>
 
     <details class="ad-card hist-filtros" id="hf-wrap" open>
       <summary class="hist-filtros__summary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        <span>Filtros</span>
+        <span>${t('Filtros')}</span>
         <svg class="hist-filtros__chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </summary>
       <div class="hist-filtros__grid">
-        <div class="ff"><label>Plaza</label><div id="hf-plaza"></div></div>
-        <div class="ff"><label>Tipo de empleado</label><div id="hf-rol"></div></div>
-        <div class="ff ff--emp"><label>Empleado <span class="ff__req">*</span></label><div id="hf-emp"></div></div>
+        <div class="ff"><label>${t('Plaza')}</label><div id="hf-plaza"></div></div>
+        <div class="ff"><label>${t('Tipo de empleado')}</label><div id="hf-rol"></div></div>
+        <div class="ff ff--emp"><label>${t('Empleado')} <span class="ff__req">*</span></label><div id="hf-emp"></div></div>
         <div class="ff">
-          <label>Fecha inicio</label>
+          <label>${t('Fecha inicio')}</label>
           <div class="ff__date">
-            <input id="hf-desde" type="date" class="form-input" value="${haceDiasISO(30)}" aria-label="Fecha inicio">
-            <button type="button" class="abtn abtn--ghost ff__hoy" id="hf-hoy" title="Usar fecha de hoy">Hoy</button>
+            <input id="hf-desde" type="date" class="form-input" value="${haceDiasISO(30)}" aria-label="${t('Fecha inicio')}">
+            <button type="button" class="abtn abtn--ghost ff__hoy" id="hf-hoy" title="${t('Usar fecha de hoy')}">${t('Hoy')}</button>
           </div>
         </div>
-        <div class="ff"><label>Fecha final</label><input id="hf-hasta" type="date" class="form-input" value="${hoyISO()}" aria-label="Fecha final"></div>
+        <div class="ff"><label>${t('Fecha final')}</label><input id="hf-hasta" type="date" class="form-input" value="${hoyISO()}" aria-label="${t('Fecha final')}"></div>
       </div>
       <div class="hist-filtros__acts">
         <button class="abtn abtn--ghost" id="hf-reset">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
-          Resetear
+          ${t('Resetear')}
         </button>
-        <button class="abtn abtn--primary" id="hf-ver">Ver historial</button>
+        <button class="abtn abtn--primary" id="hf-ver">${t('Ver historial')}</button>
       </div>
     </details>
 
-    <div id="hist-resultado">${DEFECTO}</div>`;
+    <div id="hist-resultado">${DEFECTO()}</div>`;
 
   // ── Comboboxes ──────────────────────────────────────────────────────────
-  const plazaOpts = [{ value: '', label: 'Seleccionar (todas)' }, ...plazas.map(p => ({ value: p.id, label: p.nombre }))];
-  _cbPlaza = combobox({ placeholder: 'Todas las plazas', options: plazaOpts, value: getPlazaScope() ?? '', onChange: rebuildEmp });
-  _cbRol   = combobox({ placeholder: 'Todos', options: ROLES, value: '', searchable: false, onChange: rebuildEmp });
-  _cbEmp   = combobox({ placeholder: 'Selecciona empleado…', options: empOpts(), value: '' });
+  const plazaOpts = [{ value: '', label: t('Seleccionar (todas)') }, ...plazas.map(p => ({ value: p.id, label: p.nombre }))];
+  _cbPlaza = combobox({ placeholder: t('Todas las plazas'), options: plazaOpts, value: getPlazaScope() ?? '', onChange: rebuildEmp });
+  _cbRol   = combobox({ placeholder: t('Todos'), options: ROLES.map(r => ({ ...r, label: t(r.label) })), value: '', searchable: false, onChange: rebuildEmp });
+  _cbEmp   = combobox({ placeholder: t('Selecciona empleado…'), options: empOpts(), value: '' });
   panel.querySelector('#hf-plaza').appendChild(_cbPlaza.el);
   panel.querySelector('#hf-rol').appendChild(_cbRol.el);
   panel.querySelector('#hf-emp').appendChild(_cbEmp.el);
@@ -133,7 +135,7 @@ export async function init(panel) {
     panel.querySelector('#hf-desde').value = haceDiasISO(30);
     panel.querySelector('#hf-hasta').value = hoyISO();
     panel.querySelector('#hf-wrap').open = true;
-    panel.querySelector('#hist-resultado').innerHTML = DEFECTO;
+    panel.querySelector('#hist-resultado').innerHTML = DEFECTO();
   };
   panel.querySelector('#hf-ver').onclick = () => {
     const id = parseInt(_cbEmp.getValue());
@@ -215,10 +217,10 @@ function statsCardsHTML() {
   const sinTurno = !_ctx.turno;
   return `
     <div class="stat-grid hist-stats">
-      <div class="stat-card stat-card--blue"><div class="stat-card__label">Checadas</div><div class="stat-card__value">${r.totalChecadas}</div></div>
-      <div class="stat-card stat-card--red"><div class="stat-card__label">Retardos</div><div class="stat-card__value">${sinTurno ? '–' : r.retardos}</div></div>
-      <div class="stat-card stat-card--green"><div class="stat-card__label">Horas trabajadas</div><div class="stat-card__value">${r.horasTotales}</div></div>
-      <div class="stat-card stat-card--orange"><div class="stat-card__label">Notas</div><div class="stat-card__value">${r.incidencias}</div></div>
+      <div class="stat-card stat-card--blue"><div class="stat-card__label">${t('Checadas')}</div><div class="stat-card__value">${r.totalChecadas}</div></div>
+      <div class="stat-card stat-card--red"><div class="stat-card__label">${t('Retardos')}</div><div class="stat-card__value">${sinTurno ? '–' : r.retardos}</div></div>
+      <div class="stat-card stat-card--green"><div class="stat-card__label">${t('Horas trabajadas')}</div><div class="stat-card__value">${r.horasTotales}</div></div>
+      <div class="stat-card stat-card--orange"><div class="stat-card__label">${t('Notas')}</div><div class="stat-card__value">${r.incidencias}</div></div>
     </div>`;
 }
 
@@ -229,8 +231,8 @@ function showStatsPop() {
   pop.className = 'hist-statspop';
   pop.innerHTML = `
     <div class="hist-statspop__card">
-      <div class="hist-statspop__head"><span>Estadísticas del rango</span>
-        <button class="hist-statspop__x" aria-label="Cerrar">✕</button>
+      <div class="hist-statspop__head"><span>${t('Estadísticas del rango')}</span>
+        <button class="hist-statspop__x" aria-label="${t('Cerrar')}">✕</button>
       </div>
       ${statsCardsHTML()}
     </div>`;
@@ -255,18 +257,18 @@ function pintar() {
     <div class="hist-subj">
       ${foto}
       <div class="hist-subj__info">
-        <h3 class="hist-subj__name">${esc(emp?.nombre ?? 'Empleado')}</h3>
+        <h3 class="hist-subj__name">${esc(emp?.nombre ?? t('Empleado'))}</h3>
         ${meta ? `<span class="hist-subj__meta">${esc(meta)}</span>` : ''}
       </div>
       <span class="hist-subj__range">${diaCorto(_ctx.desde)} – ${diaCorto(_ctx.hasta)}</span>
-      <button id="hist-stats-btn" class="abtn abtn--ghost abtn--icon" title="Estadísticas" aria-label="Ver estadísticas">
+      <button id="hist-stats-btn" class="abtn abtn--ghost abtn--icon" title="${t('Estadísticas')}" aria-label="${t('Ver estadísticas')}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </button>
-      <button id="hist-nueva-nota" class="abtn abtn--primary">+ Nota</button>
+      <button id="hist-nueva-nota" class="abtn abtn--primary">+ ${t('Nota')}</button>
     </div>`;
 
   const avisoTurno = !_ctx.turno
-    ? `<p class="td-muted" style="margin:0 0 12px">Sin turno asignado — no se evalúan retardos.</p>` : '';
+    ? `<p class="td-muted" style="margin:0 0 12px">${t('Sin turno asignado — no se evalúan retardos.')}</p>` : '';
 
   wrap.innerHTML = `
     ${subject}
@@ -313,7 +315,7 @@ function mesHTML() {
   const desde = _ctx.desde, hasta = _ctx.hasta, hoyKey = hoyISO();
   const min = firstOfMonth(new Date(desde + 'T12:00:00'));
   const max = firstOfMonth(new Date(hasta + 'T12:00:00'));
-  const titulo = _mes.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  const titulo = _mes.toLocaleDateString(LOC(), { month: 'long', year: 'numeric' });
 
   const startDow = new Date(y, m, 1).getDay();
   const nDias = new Date(y, m + 1, 0).getDate();
@@ -330,13 +332,13 @@ function mesHTML() {
     const e = ESTADO[estado] ?? ESTADO.falta;
     const esInicio = key === _ctx.emp?.fecha_ingreso;
     const marks =
-      (esInicio ? '<span class="cal-cell__tag cal-cell__tag--inicio">⭐ DÍA DE INICIO</span>' : '') +
+      (esInicio ? `<span class="cal-cell__tag cal-cell__tag--inicio">⭐ ${t('DÍA DE INICIO')}</span>` : '') +
       (estado === 'presente'
-        ? `<span class="cal-cell__tag cal-cell__tag--green">${horas != null ? horas + ' h' : 'Presente'}</span>`
-        : (estado !== 'futuro' ? `<span class="cal-cell__tag cal-cell__tag--${e.cls}">${e.txt}</span>` : '')) +
-      (tarde ? '<span class="cal-cell__tag cal-cell__tag--red">Retardo</span>' : '') +
+        ? `<span class="cal-cell__tag cal-cell__tag--green">${horas != null ? horas + ' h' : t('Presente')}</span>`
+        : (estado !== 'futuro' ? `<span class="cal-cell__tag cal-cell__tag--${e.cls}">${t(e.txt)}</span>` : '')) +
+      (tarde ? `<span class="cal-cell__tag cal-cell__tag--red">${t('Retardo')}</span>` : '') +
       (notas.length ? `<span class="cal-cell__notas">📝 ${notas.length}</span>` : '');
-    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}${esInicio ? ' cal-cell--inicio' : ''}" data-day="${key}" role="button" tabindex="0" title="Abrir día · click derecho: alternar asistencia/falta">
+    celdas += `<div class="cal-cell cal-cell--${estado}${key === hoyKey ? ' cal-cell--hoy' : ''}${esInicio ? ' cal-cell--inicio' : ''}" data-day="${key}" role="button" tabindex="0" title="${t('Abrir día · click derecho: alternar asistencia/falta')}">
       <span class="cal-cell__num">${d}</span>
       <div class="cal-cell__marks">${marks}</div>
     </div>`;
@@ -344,16 +346,16 @@ function mesHTML() {
 
   return `
     <div class="cal-month__head">
-      <button class="abtn abtn--ghost abtn--icon" id="cal-prev" ${_mes <= min ? 'disabled' : ''} aria-label="Mes anterior">
+      <button class="abtn abtn--ghost abtn--icon" id="cal-prev" ${_mes <= min ? 'disabled' : ''} aria-label="${t('Mes anterior')}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h4 class="cal-month__title">${titulo.charAt(0).toUpperCase() + titulo.slice(1)}</h4>
-      <button class="abtn abtn--ghost abtn--icon" id="cal-next" ${_mes >= max ? 'disabled' : ''} aria-label="Mes siguiente">
+      <button class="abtn abtn--ghost abtn--icon" id="cal-next" ${_mes >= max ? 'disabled' : ''} aria-label="${t('Mes siguiente')}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
     <div class="cal-grid">
-      ${DOW.map((d) => `<div class="cal-dow">${d}</div>`).join('')}
+      ${DOW.map((d) => `<div class="cal-dow">${t(d)}</div>`).join('')}
       ${celdas}
     </div>`;
 }
@@ -367,41 +369,41 @@ function abrirDia(key) {
   const thumbs = (r) => {
     if (!r) return '';
     const f = publicURL(r.ruta_foto), s = publicURL(r.ruta_firma);
-    return `${f ? `<img src="${f}" class="hist-thumb" data-full="${f}" alt="Foto">` : ''}${s ? `<img src="${s}" class="hist-thumb hist-thumb--firma" data-full="${s}" alt="Firma">` : ''}`;
+    return `${f ? `<img src="${f}" class="hist-thumb" data-full="${f}" alt="${t('Foto')}">` : ''}${s ? `<img src="${s}" class="hist-thumb hist-thumb--firma" data-full="${s}" alt="${t('Firma')}">` : ''}`;
   };
   const punto = (r, lbl) => r
-    ? `<div class="cordon__pt"><span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span><span class="cordon__t">${horaCorta(r.hora)}</span><span class="cordon__lbl">${lbl}${r.geocerca_valida === false ? ' <span class="abadge abadge--red">Fuera</span>' : ''}</span></div>`
-    : `<div class="cordon__pt cordon__pt--miss"><span class="cordon__dot cordon__dot--miss"></span><span class="cordon__lbl">Sin ${lbl.toLowerCase()}</span></div>`;
+    ? `<div class="cordon__pt"><span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span><span class="cordon__t">${horaCorta(r.hora)}</span><span class="cordon__lbl">${t(lbl)}${r.geocerca_valida === false ? ` <span class="abadge abadge--red">${t('Fuera')}</span>` : ''}</span></div>`
+    : `<div class="cordon__pt cordon__pt--miss"><span class="cordon__dot cordon__dot--miss"></span><span class="cordon__lbl">${t(lbl === 'Entrada' ? 'Sin entrada' : 'Sin salida')}</span></div>`;
   const horas = horasDe(reg);
   const tarde = reg.entrada && esRetardo(reg.entrada, _ctx.turno);
   const asistencia = (reg.entrada || reg.salida)
     ? `<div class="cordon">
-        ${punto(reg.entrada, 'Entrada')}${tarde ? '<span class="abadge abadge--red">Retardo</span>' : ''}
+        ${punto(reg.entrada, 'Entrada')}${tarde ? `<span class="abadge abadge--red">${t('Retardo')}</span>` : ''}
         <div class="cordon__line">${horas != null ? `<span class="cordon__dur">${horas} h</span>` : ''}</div>
         ${punto(reg.salida, 'Salida')}
       </div>
       <div class="hist-fotos">
-        ${reg.entrada && thumbs(reg.entrada) ? `<div class="hist-fotos__grupo"><span class="hist-fotos__lbl hist-fotos__lbl--in">Entrada</span><div class="cal-thumbs">${thumbs(reg.entrada)}</div></div>` : ''}
-        ${reg.salida && thumbs(reg.salida) ? `<div class="hist-fotos__grupo"><span class="hist-fotos__lbl hist-fotos__lbl--out">Salida</span><div class="cal-thumbs">${thumbs(reg.salida)}</div></div>` : ''}
+        ${reg.entrada && thumbs(reg.entrada) ? `<div class="hist-fotos__grupo"><span class="hist-fotos__lbl hist-fotos__lbl--in">${t('Entrada')}</span><div class="cal-thumbs">${thumbs(reg.entrada)}</div></div>` : ''}
+        ${reg.salida && thumbs(reg.salida) ? `<div class="hist-fotos__grupo"><span class="hist-fotos__lbl hist-fotos__lbl--out">${t('Salida')}</span><div class="cal-thumbs">${thumbs(reg.salida)}</div></div>` : ''}
       </div>`
-    : `<p class="td-muted" style="margin:0">Sin checadas este día.</p>`;
+    : `<p class="td-muted" style="margin:0">${t('Sin checadas este día.')}</p>`;
 
   const notasHTML = notas.length ? notas.map((n) => {
     const e = ESTADO[n.tipo] ?? ESTADO.falta;
-    const edit = n.actualizado_en ? `Editada por ${esc(n.editor_nombre || '—')} · ${new Date(n.actualizado_en).toLocaleDateString('es-MX')}` : `Por ${esc(n.autor_nombre || '—')}`;
+    const edit = n.actualizado_en ? `${t('Editada por')} ${esc(n.editor_nombre || '—')} · ${new Date(n.actualizado_en).toLocaleDateString(LOC())}` : `${t('Por')} ${esc(n.autor_nombre || '—')}`;
     return `<div class="nota-item">
       <div class="nota-item__top">
-        <span class="abadge abadge--${e.cls}">${esc(n.tipo)}</span>
+        <span class="abadge abadge--${e.cls}">${esc(t(n.tipo))}</span>
         <div class="nota-item__acts">
-          <button class="abtn abtn--ghost abtn--icon" title="Editar" data-edit-nota="${n.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-          <button class="abtn abtn--danger abtn--icon" title="Eliminar" data-del-nota="${n.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+          <button class="abtn abtn--ghost abtn--icon" title="${t('Editar')}" data-edit-nota="${n.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+          <button class="abtn abtn--danger abtn--icon" title="${t('Eliminar')}" data-del-nota="${n.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
         </div>
       </div>
       ${n.nota ? `<p class="nota-item__txt">${esc(n.nota)}</p>` : ''}
-      ${n.imagen_url ? `<img src="${esc(n.imagen_url)}" class="hist-thumb nota-item__img" data-full="${esc(n.imagen_url)}" alt="Adjunto">` : ''}
+      ${n.imagen_url ? `<img src="${esc(n.imagen_url)}" class="hist-thumb nota-item__img" data-full="${esc(n.imagen_url)}" alt="${t('Adjunto')}">` : ''}
       <span class="nota-item__meta">${edit}</span>
     </div>`;
-  }).join('') : '<p class="td-muted" style="margin:0">Sin notas este día.</p>';
+  }).join('') : `<p class="td-muted" style="margin:0">${t('Sin notas este día.')}</p>`;
 
   const ov = document.createElement('div');
   ov.id = 'hist-day';
@@ -410,18 +412,18 @@ function abrirDia(key) {
     <div class="ad-modal__card hist-day__card">
       <div class="ad-modal__header">
         <h3 style="margin:0;font-size:1rem">${diaLargo(key)}</h3>
-        <button class="ad-modal__close" data-close aria-label="Cerrar">✕</button>
+        <button class="ad-modal__close" data-close aria-label="${t('Cerrar')}">✕</button>
       </div>
       <div class="ad-modal__body hist-day__body">
-        <h4 class="hist-day__sec">Asistencia</h4>
+        <h4 class="hist-day__sec">${t('Asistencia')}</h4>
         ${asistencia}
         <div class="hist-day__notas-head">
-          <h4 class="hist-day__sec" style="margin:0">Notas</h4>
-          <button class="abtn abtn--primary abtn--sm" data-add-nota>+ Nota</button>
+          <h4 class="hist-day__sec" style="margin:0">${t('Notas')}</h4>
+          <button class="abtn abtn--primary abtn--sm" data-add-nota>+ ${t('Nota')}</button>
         </div>
         ${notasHTML}
       </div>
-      <div id="hist-lightbox" class="hist-lightbox" hidden><img alt="Vista ampliada"></div>
+      <div id="hist-lightbox" class="hist-lightbox" hidden><img alt="${t('Vista ampliada')}"></div>
     </div>`;
 
   const cerrar = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
@@ -453,24 +455,24 @@ function abrirDia(key) {
 
 // ── Crear / editar nota ─────────────────────────────────────────────────────
 function formNota(fecha, existing = null) {
-  const tipoOpts = TIPOS.map((t) => `<option value="${t}" ${existing?.tipo === t ? 'selected' : ''}>${t}</option>`).join('');
+  const tipoOpts = TIPOS.map((tp) => `<option value="${tp}" ${existing?.tipo === tp ? 'selected' : ''}>${t(tp)}</option>`).join('');
   openModal(existing ? 'Editar nota' : 'Nueva nota',
     `<div class="form-group">
-      <label for="nota-fecha">Fecha *</label>
+      <label for="nota-fecha">${t('Fecha')} *</label>
       <input id="nota-fecha" class="form-input" type="date" value="${existing?.fecha ?? fecha}">
     </div>
     <div class="form-group">
-      <label for="nota-tipo">Tipo *</label>
+      <label for="nota-tipo">${t('Tipo')} *</label>
       <select id="nota-tipo" class="form-input">${tipoOpts}</select>
     </div>
     <div class="form-group">
-      <label for="nota-texto">Nota</label>
-      <textarea id="nota-texto" class="form-input" rows="3" placeholder="Detalle (opcional)">${esc(existing?.nota ?? '')}</textarea>
+      <label for="nota-texto">${t('Nota')}</label>
+      <textarea id="nota-texto" class="form-input" rows="3" placeholder="${t('Detalle (opcional)')}">${esc(existing?.nota ?? '')}</textarea>
     </div>
     <div class="form-group">
-      <label for="nota-img">Imagen adjunta</label>
+      <label for="nota-img">${t('Imagen adjunta')}</label>
       <input id="nota-img" class="form-input" type="file" accept="image/*">
-      ${existing?.imagen_url ? `<img src="${esc(existing.imagen_url)}" class="hist-thumb" style="margin-top:8px" alt="Actual">` : ''}
+      ${existing?.imagen_url ? `<img src="${esc(existing.imagen_url)}" class="hist-thumb" style="margin-top:8px" alt="${t('Actual')}">` : ''}
     </div>
     <p id="nota-error" class="error-inline" hidden></p>`,
     async () => {
@@ -479,7 +481,7 @@ function formNota(fecha, existing = null) {
       const nota = document.getElementById('nota-texto').value.trim() || null;
       const file = document.getElementById('nota-img').files[0];
       const errEl = document.getElementById('nota-error');
-      if (!f || !tipo) { errEl.textContent = 'Fecha y tipo son obligatorios.'; errEl.hidden = false; return; }
+      if (!f || !tipo) { errEl.textContent = t('Fecha y tipo son obligatorios.'); errEl.hidden = false; return; }
       const saveBtn = document.getElementById('modal-save');
       saveBtn.disabled = true;
       try {
