@@ -192,6 +192,7 @@ async function checkProximaSemana() {
 }
 
 async function enterTurnos() {
+  _semanaT = lunesDe(new Date()); // reabre siempre en la semana actual (sobrevive al cruce de medianoche)
   document.getElementById('btn-turnos-volver').onclick = () => switchTo(sTurnos, sMenu);
   if (sTurnos.hidden) switchTo(sMenu, sTurnos);
   await renderTurnos();
