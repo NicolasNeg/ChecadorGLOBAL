@@ -1361,3 +1361,18 @@ tr.is-inactive { opacity: .55; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
 .setting-row__input { max-width: 220px; width: 100%; }
+
+/* ── Historial: filtros por encima del desglose + apertura animada ───────────── */
+/* La tarjeta de filtros forma su propio contexto de apilado por encima de los
+   resultados, para que el popup del combobox quede sobrepuesto y sea clickeable. */
+.hist-filtros { position: relative; z-index: 30; }
+
+/* Animación suave de abrir/cerrar del <details> de filtros.
+   ponytail: usa ::details-content + interpolate-size (navegadores modernos);
+   en los viejos abre/cierra sin animar, sin romperse. */
+:root { interpolate-size: allow-keywords; }
+.hist-filtros::details-content {
+  block-size: 0; opacity: 0; overflow: clip;
+  transition: block-size .28s ease, opacity .2s ease, content-visibility .28s allow-discrete;
+}
+.hist-filtros[open]::details-content { block-size: auto; opacity: 1; overflow: visible; }
