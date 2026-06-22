@@ -231,6 +231,9 @@ export const EN = {
   'Foto del registro': 'Record photo', 'Firma del registro': 'Record signature',
   'Firma ampliada': 'Enlarged signature', 'Foto ampliada': 'Enlarged photo',
   'Error al cargar el historial.': 'Could not load the history.',
+  'Todo': 'All', 'Semana': 'Week', 'Mes': 'Month', 'Elegir día': 'Pick a day',
+  'registro': 'record', 'registros': 'records',
+  'Sin registros en este periodo.': 'No records in this period.',
 
   // —— Login admin ——
   'Panel Administrativo': 'Admin Panel',
