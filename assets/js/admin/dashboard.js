@@ -7,10 +7,14 @@ import { t, applyI18n, mountLangToggle, getLang } from '../i18n.js';
 const sesion = requireAdminSession();
 // auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
 const esRH   = sesion?.rol === 'rh';
+const esAdminGlobal = sesion?.es_admin_global === true; // 3er concepto: super-admin
 
 // ── Role-based UI ─────────────────────────────────────────────────────────────
 if (!esRH) {
   document.querySelectorAll('[data-rh-only]').forEach(el => el.remove());
+}
+if (!esAdminGlobal) {
+  document.querySelectorAll('[data-admin-global]').forEach(el => el.remove());
 }
 const _adminNombre = sesion?.nombre ?? 'Admin';
 document.getElementById('admin-nombre-foot').textContent = _adminNombre;
@@ -18,6 +22,10 @@ document.getElementById('admin-rol-badge').textContent = t(esRH ? 'Recursos Huma
 document.querySelectorAll('.sidebar__avatar').forEach(a => { a.firstChild.textContent = _adminNombre.trim().charAt(0).toUpperCase() || 'A'; });
 
 // ── Sidebar nav + routing ─────────────────────────────────────────────────────
+// El <base> de cada página (para GitHub Pages) hace que un href/pushState con solo
+// "#id" se resuelva contra la BASE y pierda /admin/dashboard/. Anclamos el hash a
+// la ruta actual para que recargar conserve la ruta.
+const hashURL = (id) => location.pathname + location.search + '#' + id;
 const panels = document.querySelectorAll('.admin-panel');
 const navLinks = document.querySelectorAll('.sidebar__link[data-panel]');
 const pageTitle = document.getElementById('page-title');
@@ -57,6 +65,8 @@ async function showPanel(id) {
       break;
     }
     case 'auditoria':  await loadAuditoria(panel); break;
+    case 'usuarios':       { const m = await import('./usuarios.js');       await m.init(panel); break; }
+    case 'administracion': { const m = await import('./administracion.js'); await m.init(panel); break; }
   }
 }
 
@@ -64,7 +74,7 @@ navLinks.forEach(link => {
   link.addEventListener('click', (e) => {
     e.preventDefault();
     const id = link.dataset.panel;
-    history.pushState(null, '', `#${id}`);
+    history.pushState(null, '', hashURL(id));
     showPanel(id);
     closeSidebar();
   });
@@ -430,7 +440,7 @@ function renderQuickLinks() {
     </button>`).join('');
   wrap.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.goto;
-    history.pushState(null, '', `#${id}`);
+    history.pushState(null, '', hashURL(id));
     showPanel(id);
   }));
 }

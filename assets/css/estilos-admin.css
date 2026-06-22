@@ -1346,3 +1346,18 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .ctx-menu__item--permiso    .ctx-menu__dot { background: #3B82F6; }
 .ctx-menu__item--festivo    .ctx-menu__dot { background: #8B5CF6; }
 .ctx-menu__item--vacaciones .ctx-menu__dot { background: #14B8A6; }
+
+/* ── Usuarios (ADMIN_GLOBAL) ─────────────────────────────────────────────── */
+.u-cell { display: flex; align-items: center; gap: 10px; }
+.u-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; }
+.u-avatar--ph { display: grid; place-items: center; background: var(--ad-surf2); color: var(--ad-tinta2); font-weight: 700; font-size: .9rem; }
+.u-name { font-weight: 600; color: var(--ad-tinta); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.u-name + .abadge, .u-cell .abadge + .abadge { margin-top: 3px; margin-right: 4px; }
+tr.is-inactive { opacity: .55; }
+.abadge--violet { background: #EDE9FE; color: #6D28D9; }
+[data-theme="dark"] .abadge--violet { background: rgba(139,92,246,.18); color: #C4B5FD; }
+.u-check { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--ad-tinta); margin-top: 10px; cursor: pointer; }
+.u-check input { width: 17px; height: 17px; accent-color: var(--ad-primary); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+.setting-row__input { max-width: 220px; width: 100%; }

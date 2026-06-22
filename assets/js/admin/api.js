@@ -146,6 +146,53 @@ export async function subirImagenNota(file) {
   return `${SUPABASE_URL}/storage/v1/object/public/fotos/${path}`;
 }
 
+// ── Usuarios admin (sección ADMIN_GLOBAL) ───────────────────────────────────
+export const getPerfilesAdmin = () =>
+  apiFetch('perfiles_admin?select=*,plazas(nombre)&order=nombre.asc');
+
+export const updatePerfilAdmin = (id, d) =>
+  apiFetch(`perfiles_admin?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
+
+// Envía el correo de restablecimiento de contraseña vía GoTrue (endpoint anon).
+export async function enviarResetPassword(email) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  if (!res.ok) throw new Error('No se pudo enviar el correo de restablecimiento.');
+}
+
+// Crea la cuenta de acceso (auth.users) vía signup anon y devuelve su id, luego
+// el caller inserta el perfil_admin y dispara el correo de contraseña.
+// ponytail: usa signup público; si el proyecto lo desactiva, crea el usuario con
+// service_role en el panel de Supabase y solo configura el perfil aquí.
+export async function crearCuentaAuth(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.msg || body.error_description || 'No se pudo crear la cuenta de acceso.');
+  const id = body.id ?? body.user?.id;
+  if (!id) throw new Error('La cuenta requiere confirmación manual en Supabase Auth.');
+  return id;
+}
+
+export const createPerfilAdmin = (d) =>
+  apiFetch('perfiles_admin', { method: 'POST', body: JSON.stringify(d) });
+
+// ── Configuración global (sección ADMINISTRACION) ───────────────────────────
+export const getConfigGlobal = () => apiFetch('config_global?select=clave,valor');
+
+export const setConfigGlobal = (clave, valor) =>
+  apiFetch('config_global?on_conflict=clave', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ clave, valor: String(valor), actualizado_en: new Date().toISOString() })
+  });
+
 // ── Audit log ─────────────────────────────────────────────────────────────
 export const getAuditLog = (limit = 50) =>
   apiFetch(`audit_log?select=*,perfiles_admin(nombre)&order=created_at.desc&limit=${limit}`);

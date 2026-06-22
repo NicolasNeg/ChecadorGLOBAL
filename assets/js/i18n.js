@@ -64,6 +64,31 @@ export const EN = {
   'Seleccionar Plaza': 'Select Location', 'Todas las plazas': 'All locations',
   'Recursos Humanos': 'Human Resources', 'Jefe de Plaza': 'Location Manager',
   'Abrir menú': 'Open menu', 'Colapsar menú': 'Collapse menu', 'Expandir menú': 'Expand menu',
+  'Usuarios': 'Users', 'Administración': 'Administration',
+
+  // —— Admin: Usuarios (ADMIN_GLOBAL) ——
+  'Nuevo administrador': 'New administrator', 'Editar administrador': 'Edit administrator',
+  'Crear administrador': 'Create administrator', 'Sin administradores.': 'No administrators.',
+  'Administra quién puede acceder al panel: rol, plaza, foto y contraseña.':
+    'Manage who can access the panel: role, location, photo and password.',
+  'Tú': 'You', 'También usa el checador': 'Also uses the time clock',
+  'Enviar correo de contraseña': 'Send password email', 'Enviar': 'Send',
+  'Enviar correo de restablecimiento a': 'Send a reset email to', 'Correo enviado.': 'Email sent.',
+  'Se enviará un correo para que defina su contraseña.': 'An email will be sent so they can set their password.',
+  'Administrador global (acceso a Usuarios y Administración)':
+    'Global administrator (access to Users and Administration)',
+  'Cuenta activa': 'Active account', 'Escribe un correo.': 'Enter an email.',
+  'Un jefe de plaza necesita una plaza asignada.': 'A location manager needs an assigned location.',
+  'Administrador actualizado.': 'Administrator updated.',
+  'Administrador creado. Se envió el correo de contraseña.': 'Administrator created. Password email sent.',
+
+  // —— Admin: Administración ——
+  'Ajustes que aplican a todo el trabajo.': 'Settings that apply to the whole workplace.',
+  'Nombre de la empresa': 'Company name', 'Aparece en el panel y los reportes.': 'Shown in the panel and reports.',
+  'Tolerancia de retardo (min)': 'Late tolerance (min)',
+  'Minutos de gracia antes de marcar retardo.': 'Grace minutes before marking a late arrival.',
+  'Jornada estándar (horas)': 'Standard shift (hours)', 'Horas esperadas por turno completo.': 'Expected hours per full shift.',
+  'Ajustes guardados.': 'Settings saved.', 'Sin cambios.': 'No changes.',
 
   // —— Admin: común ——
   'Nuevo Turno': 'New Shift', 'Nuevo': 'New', 'Nueva Plaza': 'New Location',
