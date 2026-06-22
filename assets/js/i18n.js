@@ -153,6 +153,15 @@ export const EN = {
   'Ingresa un PIN numérico válido.': 'Enter a valid numeric PIN.',
   'PIN actualizado correctamente.': 'PIN updated successfully.', 'Guardar PIN': 'Save PIN',
   'Sin puesto': 'No position', 'Sin plaza': 'No location', '– Sin puesto –': '– No position –',
+  // —— Admin: puestos (desglose) ——
+  'Puesto y rol son el mismo conjunto. Cada puesto muestra los empleados que lo tienen.':
+    'Position and role are the same set. Each position lists the employees who hold it.',
+  'Puesto agregado al catálogo.': 'Position added to the catalog.',
+  'Sin puestos.': 'No positions.',
+  'Existe en empleados pero no en el catálogo': 'Exists on employees but not in the catalog',
+  'Fuera de catálogo': 'Off-catalog', 'empleado': 'employee', 'empleados': 'employees',
+  'activos': 'active', 'Agregar al catálogo': 'Add to catalog',
+  'Sin empleados con este puesto.': 'No employees with this position.',
   'Reactivar': 'Reactivate', 'Ver historial': 'View history',
   'No hay empleados que coincidan.': 'No matching employees.',
   'Editar perfil de empleado': 'Edit employee profile', 'Cambiar foto': 'Change photo',

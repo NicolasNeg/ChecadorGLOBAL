@@ -1376,3 +1376,35 @@ tr.is-inactive { opacity: .55; }
   transition: block-size .28s ease, opacity .2s ease, content-visibility .28s allow-discrete;
 }
 .hist-filtros[open]::details-content { block-size: auto; opacity: 1; overflow: visible; }
+
+/* ── Puestos: desglose por empleado (acordeón) ───────────────────────────────── */
+.puesto-acc { display: flex; flex-direction: column; gap: 10px; }
+.puesto-row { padding: 0; overflow: hidden; }
+.puesto-row__sum {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+  padding: 14px 16px; font-weight: 600; color: var(--ad-tinta);
+}
+.puesto-row__sum::-webkit-details-marker { display: none; }
+.puesto-row__chev { color: var(--ad-tinta3); flex-shrink: 0; transition: transform .2s ease; }
+.puesto-row[open] .puesto-row__chev { transform: rotate(180deg); }
+.puesto-row__name { font-size: .95rem; }
+.puesto-row__count { font-variant-numeric: tabular-nums; }
+.puesto-row__acts { margin-left: auto; display: flex; gap: 6px; }
+.puesto-row__body { padding: 0 16px 16px 41px; }
+.puesto-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.puesto-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 99px;
+  background: var(--ad-surf2); border: 1px solid var(--ad-linea); font-size: .82rem; color: var(--ad-tinta2);
+}
+.puesto-chip.is-inactive { opacity: .5; text-decoration: line-through; }
+.puesto-chip__num { font-size: .72rem; color: var(--ad-tinta3); font-variant-numeric: tabular-nums; }
+/* Apertura/cierre animado (reutiliza interpolate-size de :root). */
+.puesto-row::details-content {
+  block-size: 0; opacity: 0; overflow: clip;
+  transition: block-size .26s ease, opacity .2s ease, content-visibility .26s allow-discrete;
+}
+.puesto-row[open]::details-content { block-size: auto; opacity: 1; }
+@media (max-width: 480px) {
+  .puesto-row__name { flex: 1 1 100%; order: -1; }
+  .puesto-row__body { padding-left: 16px; }
+}
