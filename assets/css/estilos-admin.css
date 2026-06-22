@@ -1324,3 +1324,25 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   #hist-resultado > *, .hist-filtros[open] .hist-filtros__grid,
   .hist-filtros[open] .hist-filtros__acts { animation: none; }
 }
+
+/* ── Menú contextual (click derecho / mantener pulsado en el tablero) ───────── */
+.ctx-menu {
+  position: fixed; z-index: 300; min-width: 168px; padding: 6px;
+  background: var(--ad-tarjeta); border: 1px solid var(--ad-linea);
+  border-radius: 12px; box-shadow: 0 12px 32px rgba(15,23,42,.18);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.ctx-menu[hidden] { display: none; }
+.ctx-menu__item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; min-height: 40px; width: 100%;
+  border: none; background: none; border-radius: 8px; cursor: pointer;
+  font-size: .9rem; font-weight: 500; color: var(--ad-tinta); text-align: left;
+}
+.ctx-menu__item:hover, .ctx-menu__item:focus-visible { background: var(--ad-surf2); }
+.ctx-menu__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ctx-menu__item--asistencia .ctx-menu__dot { background: #22C55E; }
+.ctx-menu__item--falta      .ctx-menu__dot { background: #EF4444; }
+.ctx-menu__item--permiso    .ctx-menu__dot { background: #3B82F6; }
+.ctx-menu__item--festivo    .ctx-menu__dot { background: #8B5CF6; }
+.ctx-menu__item--vacaciones .ctx-menu__dot { background: #14B8A6; }

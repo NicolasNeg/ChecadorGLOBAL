@@ -112,7 +112,7 @@ export function resumen(registros, turno, incidencias = []) {
 // ── Tablero mensual (heatmap empleado × día) ──────────────────────────────────
 // Categoría de color a partir del estado granular (la leyenda tiene 5 colores).
 export const CATEGORIA = {
-  presente: 'presente', retardo: 'retardo', falta: 'falta',
+  presente: 'presente', asistencia: 'presente', retardo: 'retardo', falta: 'falta',
   permiso: 'permiso', justificacion: 'permiso', vacaciones: 'permiso', festivo: 'permiso',
   descanso: 'descanso', futuro: 'futuro',
 };

@@ -78,11 +78,11 @@ export async function init(panel) {
         <div class="ff">
           <label>${t('Fecha inicio')}</label>
           <div class="ff__date">
-            <input id="hf-desde" type="date" class="form-input" value="${haceDiasISO(30)}" aria-label="${t('Fecha inicio')}">
-            <button type="button" class="abtn abtn--ghost ff__hoy" id="hf-hoy" title="${t('Usar fecha de hoy')}">${t('Hoy')}</button>
+            <input id="hf-desde" type="date" class="form-input" value="${haceDiasISO(30)}" max="${hoyISO()}" aria-label="${t('Fecha inicio')}">
+            <button type="button" class="abtn abtn--ghost ff__hoy" id="hf-semana" title="${t('Últimos 7 días')}">${t('Semana')}</button>
           </div>
         </div>
-        <div class="ff"><label>${t('Fecha final')}</label><input id="hf-hasta" type="date" class="form-input" value="${hoyISO()}" aria-label="${t('Fecha final')}"></div>
+        <div class="ff"><label>${t('Fecha final')}</label><input id="hf-hasta" type="date" class="form-input" value="${hoyISO()}" max="${hoyISO()}" aria-label="${t('Fecha final')}"></div>
       </div>
       <div class="hist-filtros__acts">
         <button class="abtn abtn--ghost" id="hf-reset">
@@ -123,7 +123,11 @@ export async function init(panel) {
   function rebuildEmp() { _cbEmp.setOptions(empOpts()); }
 
   // ── Atajos ──────────────────────────────────────────────────────────────
-  panel.querySelector('#hf-hoy').onclick = () => { panel.querySelector('#hf-desde').value = hoyISO(); };
+  // "Semana": rango = hoy y los 7 días previos.
+  panel.querySelector('#hf-semana').onclick = () => {
+    panel.querySelector('#hf-desde').value = haceDiasISO(7);
+    panel.querySelector('#hf-hasta').value = hoyISO();
+  };
   panel.querySelector('#hf-reset').onclick = () => {
     _cbPlaza.setValue(getPlazaScope() ?? '');
     _cbPuesto.setValue('');
@@ -148,9 +152,12 @@ export async function init(panel) {
 }
 
 function rangoDe(panel) {
+  const hoy = hoyISO();
+  // El max del input bloquea el picker; el clamp cubre fechas tecleadas a mano.
+  const cap = (v) => (v && v <= hoy ? v : hoy);
   return {
-    desde: panel.querySelector('#hf-desde').value || haceDiasISO(30),
-    hasta: panel.querySelector('#hf-hasta').value || hoyISO(),
+    desde: cap(panel.querySelector('#hf-desde').value || haceDiasISO(30)),
+    hasta: cap(panel.querySelector('#hf-hasta').value || hoy),
   };
 }
 

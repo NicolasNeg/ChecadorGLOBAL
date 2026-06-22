@@ -219,6 +219,8 @@ export const EN = {
   'Tienes un turno abierto': 'You have an open shift',
   'En turno': 'On shift', 'Para terminar': 'To finish',
   'Sin turno asignado': 'No shift assigned', 'Turno cumplido': 'Shift complete',
+  'Últimos 7 días': 'Last 7 days',
+  'Registro actualizado.': 'Record updated.', 'No se pudo actualizar.': 'Could not update.',
   'Usa tu dedo o lápiz para firmar en el recuadro': 'Use your finger or stylus to sign in the box',
   'Mira directo a la cámara': 'Look straight at the camera',
   'Confirma que tu foto es clara': 'Confirm your photo is clear',

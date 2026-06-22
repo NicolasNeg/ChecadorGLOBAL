@@ -1,13 +1,25 @@
 import * as api from './api.js';
-import { esc } from './utils.js';
+import { esc, showToast } from './utils.js';
 import { filterByPlaza } from './plaza-scope.js';
 import { tableroMes } from './historial-calc.mjs';
+import { getAdminSession } from './auth.js';
 import { t, getLang } from '../i18n.js';
 
 let _refreshTimer = null;
 let _mes = null;        // { y, m } mes en foco
 let _tablero = null;    // último tablero calculado (para el spotlight)
 let _sel = null;        // id del empleado seleccionado
+let _menu = null;       // menú contextual (click derecho / mantener pulsado)
+let _menuTarget = null; // { emp, ymd } de la celda apuntada
+
+// Opciones del menú contextual → tipo de incidencia.
+const MENU = [
+  ['asistencia', 'Asistencia'],
+  ['falta',      'Falta'],
+  ['permiso',    'Permiso'],
+  ['festivo',    'Festivo'],
+  ['vacaciones', 'Vacaciones'],
+];
 
 const DOW_AB = ['D','L','M','M','J','V','S'];
 const CATS = [
@@ -60,11 +72,64 @@ export async function init(panel) {
   document.getElementById('mes-next').addEventListener('click', () => stepMes(1));
   document.getElementById('asis-legend').addEventListener('click', onLegend);
 
+  buildMenu();
   await load();
   _refreshTimer = setInterval(load, 60_000);
 }
 
-export function destroy() { clearInterval(_refreshTimer); }
+export function destroy() {
+  clearInterval(_refreshTimer);
+  document.removeEventListener('click', onDocClick, true);
+  document.removeEventListener('keydown', onEsc);
+  window.removeEventListener('scroll', hideMenu, true);
+  _menu?.remove();
+  _menu = null;
+}
+
+// ── Menú contextual: marca una incidencia para una celda (empleado + día) ─────
+function buildMenu() {
+  if (_menu) return;
+  _menu = document.createElement('div');
+  _menu.className = 'ctx-menu';
+  _menu.hidden = true;
+  _menu.setAttribute('role', 'menu');
+  _menu.innerHTML = MENU.map(([tipo, label]) =>
+    `<button type="button" class="ctx-menu__item ctx-menu__item--${tipo}" data-tipo="${tipo}" role="menuitem"><span class="ctx-menu__dot"></span>${t(label)}</button>`).join('');
+  _menu.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tipo]');
+    if (!b || !_menuTarget) return;
+    const { emp, ymd } = _menuTarget;
+    hideMenu();
+    setIncidencia(emp, ymd, b.dataset.tipo);
+  });
+  document.body.appendChild(_menu);
+  document.addEventListener('click', onDocClick, true);
+  document.addEventListener('keydown', onEsc);
+  window.addEventListener('scroll', hideMenu, true);
+}
+
+function showMenu(x, y, emp, ymd) {
+  _menuTarget = { emp: parseInt(emp), ymd };
+  _menu.hidden = false; // mostrar para medir tamaño
+  const w = _menu.offsetWidth, h = _menu.offsetHeight;
+  _menu.style.left = Math.min(x, window.innerWidth - w - 8) + 'px';
+  _menu.style.top  = Math.min(y, window.innerHeight - h - 8) + 'px';
+}
+function hideMenu() { if (_menu) _menu.hidden = true; }
+function onDocClick(e) { if (_menu && !_menu.hidden && !_menu.contains(e.target)) hideMenu(); }
+function onEsc(e) { if (e.key === 'Escape') hideMenu(); }
+
+async function setIncidencia(empId, fecha, tipo) {
+  try {
+    const prev = await api.getIncidencias(empId, { desde: fecha, hasta: fecha });
+    for (const i of prev) await api.deleteIncidencia(i.id);
+    await api.createIncidencia({ id_empleado: empId, fecha, tipo, autor_nombre: getAdminSession()?.nombre || 'Admin' });
+    showToast(t('Registro actualizado.'), 'ok');
+    await load();
+  } catch (e) {
+    showToast(e.message || t('No se pudo actualizar.'), 'error');
+  }
+}
 
 function stepMes(delta) {
   const d = new Date(_mes.y, _mes.m + delta, 1); // Date normaliza el desbordamiento de año
@@ -132,6 +197,23 @@ function renderGrid(wrap) {
 
   wrap.querySelectorAll('[data-emp]').forEach(el => {
     el.addEventListener('click', () => { _sel = parseInt(el.dataset.emp); markSel(); renderSpotlight(); });
+  });
+
+  // Menú por celda: click derecho (escritorio) o mantener pulsado (móvil).
+  wrap.querySelectorAll('.hm-cell[data-emp][data-ymd]').forEach(c => {
+    c.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showMenu(e.clientX, e.clientY, c.dataset.emp, c.dataset.ymd);
+    });
+    let lp = null;
+    c.addEventListener('touchstart', (e) => {
+      const tp = e.touches[0];
+      lp = setTimeout(() => { lp = null; showMenu(tp.clientX, tp.clientY, c.dataset.emp, c.dataset.ymd); }, 500);
+    }, { passive: true });
+    const cancel = () => { if (lp) { clearTimeout(lp); lp = null; } };
+    c.addEventListener('touchend', cancel);
+    c.addEventListener('touchmove', cancel);
+    c.addEventListener('touchcancel', cancel);
   });
 }
 
