@@ -456,8 +456,13 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .stat-card__icon  {
   width: 36px; height: 36px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 4px;
+  margin-bottom: 4px; flex-shrink: 0;
 }
+/* KPIs del historial: tile horizontal (icono | etiqueta+valor) */
+.hist-stats .stat-card { flex-direction: row; align-items: center; gap: 13px; padding: 15px 16px; }
+.hist-stats .stat-card__icon { margin-bottom: 0; }
+.hist-stats .stat-card__body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.hist-stats .stat-card__value { font-size: 1.7rem; }
 .stat-card--blue   .stat-card__icon { background: #DBEAFE; color: #1D4ED8; }
 .stat-card--green  .stat-card__icon { background: #DCFCE7; color: #16A34A; }
 .stat-card--orange .stat-card__icon { background: #FEF3C7; color: #D97706; }
@@ -601,25 +606,33 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .filters-bar .form-group { flex: 1; min-width: 150px; }
 
 /* ── Toast ────────────────────────────────────────────────────────────── */
-.toast-container {
+/* El contenedor es #toast-container (id, no clase) — ver admin/dashboard. */
+#toast-container {
   position: fixed; bottom: 20px; right: 20px;
-  display: flex; flex-direction: column; gap: 8px; z-index: 200;
-  pointer-events: none;
+  display: flex; flex-direction: column; gap: 10px; z-index: 200;
+  pointer-events: none; max-width: min(360px, calc(100vw - 32px));
 }
 .toast {
   background: var(--ad-toast); color: var(--ad-toast-tx);
-  padding: 12px 16px; border-radius: 10px;
-  font-size: .875rem; font-weight: 500;
-  box-shadow: 0 4px 20px rgba(0,0,0,.3);
-  display: flex; align-items: center; gap: 10px;
-  animation: toast-in .2s ease;
-  pointer-events: all;
-  max-width: 320px;
+  padding: 12px 14px; border-radius: 12px;
+  font-size: .875rem; font-weight: 500; line-height: 1.35;
+  box-shadow: 0 8px 28px rgba(15,23,42,.28);
+  display: flex; align-items: flex-start; gap: 10px;
+  animation: toast-in .22s cubic-bezier(.21,1.02,.73,1);
+  pointer-events: all; cursor: pointer;
+  border-left: 4px solid var(--tw, #22C55E);
 }
-.toast--ok     { border-left: 3px solid #22C55E; }
-.toast--error  { border-left: 3px solid #EF4444; }
-.toast--warn   { border-left: 3px solid #F59E0B; }
-@keyframes toast-in { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+.toast__ico { flex-shrink: 0; width: 18px; height: 18px; color: var(--tw, #22C55E); margin-top: 1px; }
+.toast__msg { min-width: 0; word-break: break-word; }
+.toast--ok    { --tw: #22C55E; }
+.toast--error { --tw: #EF4444; }
+.toast--warn  { --tw: #F59E0B; }
+.toast--out { animation: toast-out .2s ease forwards; }
+@keyframes toast-in  { from { opacity:0; transform: translateY(12px) scale(.98); } to { opacity:1; transform: none; } }
+@keyframes toast-out { to   { opacity:0; transform: translateY(6px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast, .toast--out { animation: none; }
+}
 
 /* ── Modal ────────────────────────────────────────────────────────────── */
 .ad-modal {

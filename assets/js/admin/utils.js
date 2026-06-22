@@ -54,14 +54,23 @@ export function renderTable(container, cols, rows, actions) {
 }
 
 // Toast notifications
+const TOAST_ICO = {
+  ok:    '<path d="M20 6 9 17l-5-5"/>',
+  error: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6m0-6 6 6"/>',
+  warn:  '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4m0 4h.01"/>',
+};
 export function showToast(message, type = 'ok') {
   const container = document.getElementById('toast-container');
   if (!container) return;
   const el = document.createElement('div');
   el.className = `toast toast--${type}`;
-  el.textContent = t(message);
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status'); // a11y: lo anuncia el lector
+  el.innerHTML = `<svg class="toast__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TOAST_ICO[type] ?? TOAST_ICO.ok}</svg><span class="toast__msg"></span>`;
+  el.querySelector('.toast__msg').textContent = t(message); // textContent: a prueba de XSS
+  const dismiss = () => { el.classList.add('toast--out'); setTimeout(() => el.remove(), 200); };
+  el.addEventListener('click', dismiss);
   container.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  setTimeout(dismiss, 3500);
 }
 
 // Open/close the shared modal

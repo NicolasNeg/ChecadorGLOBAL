@@ -216,15 +216,27 @@ function clampMes() {
 }
 
 // ── KPIs ─────────────────────────────────────────────────────────────────
+const KPI_ICO = {
+  checadas: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  retardos: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  horas:    '<path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12 7.6 16.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"/>',
+  notas:    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+};
+const kpiCard = (variant, ico, label, value) =>
+  `<div class="stat-card stat-card--${variant}">
+    <div class="stat-card__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${KPI_ICO[ico]}</svg></div>
+    <div class="stat-card__body"><div class="stat-card__label">${label}</div><div class="stat-card__value">${value}</div></div>
+  </div>`;
+
 function statsCardsHTML() {
   const r = resumen(_ctx.registros, _ctx.turno, _ctx.incidencias);
   const sinTurno = !_ctx.turno;
   return `
     <div class="stat-grid hist-stats">
-      <div class="stat-card stat-card--blue"><div class="stat-card__label">${t('Checadas')}</div><div class="stat-card__value">${r.totalChecadas}</div></div>
-      <div class="stat-card stat-card--red"><div class="stat-card__label">${t('Retardos')}</div><div class="stat-card__value">${sinTurno ? '–' : r.retardos}</div></div>
-      <div class="stat-card stat-card--green"><div class="stat-card__label">${t('Horas trabajadas')}</div><div class="stat-card__value">${r.horasTotales}</div></div>
-      <div class="stat-card stat-card--orange"><div class="stat-card__label">${t('Notas')}</div><div class="stat-card__value">${r.incidencias}</div></div>
+      ${kpiCard('blue',   'checadas', t('Checadas'),         r.totalChecadas)}
+      ${kpiCard('red',    'retardos', t('Retardos'),         sinTurno ? '–' : r.retardos)}
+      ${kpiCard('green',  'horas',    t('Horas trabajadas'), r.horasTotales)}
+      ${kpiCard('orange', 'notas',    t('Notas'),            r.incidencias)}
     </div>`;
 }
 
