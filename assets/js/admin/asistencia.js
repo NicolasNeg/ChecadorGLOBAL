@@ -41,10 +41,16 @@ export async function init(panel) {
   panel.innerHTML = `
     <div class="panel-header">
       <h2>${t('Tablero de Asistencia')}</h2>
-      <button class="abtn abtn--ghost" id="btn-refrescar">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        ${t('Actualizar')}
-      </button>
+      <div class="panel-header__actions">
+        <button class="abtn abtn--ghost" id="btn-exportar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ${t('Exportar CSV')}
+        </button>
+        <button class="abtn abtn--ghost" id="btn-refrescar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          ${t('Actualizar')}
+        </button>
+      </div>
     </div>
 
     <div class="asis-bar">
@@ -68,6 +74,7 @@ export async function init(panel) {
     </div>`;
 
   document.getElementById('btn-refrescar').addEventListener('click', load);
+  document.getElementById('btn-exportar').addEventListener('click', exportarCSV);
   document.getElementById('mes-prev').addEventListener('click', () => stepMes(-1));
   document.getElementById('mes-next').addEventListener('click', () => stepMes(1));
   document.getElementById('asis-legend').addEventListener('click', onLegend);
@@ -257,6 +264,34 @@ function renderSpotlight() {
     document.querySelector('.sidebar__link[data-panel="historial"]')?.click());
   // ponytail: "Enviar notificación" / "Generar justificante" del diseño quedan
   // fuera — requieren backend (envío de avisos, generación de PDF) inexistente.
+}
+
+// ── Exportar el tablero mensual a CSV (Excel-friendly, sin libs) ─────────────
+const csvCell = (v) => {
+  const s = String(v ?? '');
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+function descargar(texto, nombre) {
+  const url = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportarCSV() {
+  if (!_tablero) return;
+  const { dias, filas } = _tablero;
+  const head = [t('Empleado'), t('Núm.'), ...dias.map(d => `${d.dia} ${DOW_AB[d.dow]}`)];
+  const rows = filas.map(f => [
+    f.empleado.nombre,
+    f.empleado.numero_empleado || '',
+    ...f.celdas.map(c => c.cat === 'futuro' ? '' : (c.estado || '')),
+  ]);
+  const csv = [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+  const mm = String(_mes.m + 1).padStart(2, '0');
+  descargar('﻿' + csv, `asistencia-${_mes.y}-${mm}.csv`);
 }
 
 // Leyenda como filtro: chips activos = categorías visibles; ninguno = todas.
