@@ -68,7 +68,9 @@ checador/ (checador.js)
 - **Admin** (`asistencia.js` / `historial`): badge ⚠ cuando `rostro_verificado = false`.
 - **i18n**: claves nuevas (ES/EN) para todos los textos del chip y botones.
 
-## Datos — Migración `0023_reconocimiento_facial.sql` (idempotente)
+## Datos — Migración `0024_reconocimiento_facial.sql` (idempotente)
+
+> **Orden:** va **después** de `0023_sync_turno_dia.sql` (arreglo de turnos del día).
 
 ```sql
 alter table empleados add column if not exists face_descriptor jsonb;
@@ -78,10 +80,15 @@ alter table registros add column if not exists viveza numeric;
 alter table registros add column if not exists similitud numeric;
 
 -- verificar_pin: devolver face_descriptor + foto_url (drop+create de la función)
--- registrar_descriptor_facial(p_id_empleado uuid, p_descriptor jsonb): SECURITY DEFINER,
+-- registrar_descriptor_facial(p_id_empleado bigint, p_descriptor jsonb): SECURITY DEFINER,
 --   grant a anon; UPDATE empleados SET face_descriptor = p_descriptor WHERE id = p_id_empleado
 --   (queda auditado por el trigger fn_audit_log existente).
 ```
+
+**ACOPLAMIENTO CRÍTICO:** `0024` redefine `verificar_pin` para añadir `face_descriptor`
++ `foto_url`. DEBE partir del cuerpo de `0023` (resolución de turno híbrida por fecha)
+y solo añadir esas columnas — **no** volver al join estático `e.turno_id`, o se regresa
+el arreglo de turnos. Ver `2026-06-22-sync-turnos-checador-design.md`.
 
 - `face_descriptor` = vector de embedding (~1024 floats), **nunca la imagen**.
 - `verificar_pin` (SECURITY DEFINER) es el único camino que expone el descriptor.
@@ -144,7 +151,7 @@ consentimiento del empleado al auto-registrar. No se almacena imagen, solo el ve
 - `node --check` en `checador.js`, `api.js`.
 - Manual en HTTPS: match propio habilita botón; foto de pantalla → liveness baja
   mantiene bloqueado; 15s → escape funciona.
-- `supabase db push` para `0023` (pendiente de autorización del usuario).
+- `supabase db push` para `0024` (pendiente de autorización del usuario).
 
 ## Fuera de alcance (YAGNI)
 
