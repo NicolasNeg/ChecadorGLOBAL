@@ -1,7 +1,7 @@
 import * as api from './api.js';
-import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
+import { renderTable, loading, showToast, openModal, closeModal, confirm, esc } from './utils.js';
 import { t } from '../i18n.js';
-import { direccionDesdeCoords, buscarDireccion } from '../geo.js';
+import { direccionDesdeCoords, buscarDirecciones } from '../geo.js';
 
 // Leaflet desde CDN (patrón signature_pad): inyecta CSS+JS una sola vez.
 let _leafletP;
@@ -286,20 +286,48 @@ async function initMapaPicker(plaza) {
   marker.on('dragend', (e) => aDireccion(e.target.getLatLng()));
   map.on('click', (e) => { marker.setLatLng(e.latlng); set(e.latlng); });
 
-  // Dirección → mapa: al pulsar Enter o salir del campo, busca y centra.
-  const buscar = async () => {
-    const q = elDir().value.trim();
-    if (!q) return;
-    spin(true);
-    const r = await buscarDireccion(q);
-    spin(false);
-    if (!r) { showToast('No se encontró esa dirección.', 'warn'); return; }
-    const ll = L.latLng(r.lat, r.lon);
+  // Dirección → mapa: autocompletado estilo Google Maps. El usuario teclea,
+  // mostramos hasta 5 coincidencias en un desplegable y él elige cuál.
+  const box = elDir().closest('.plaza-search');
+  let dd = null, deb = null, sugs = [], idx = -1;
+  const cerrar = () => { dd?.remove(); dd = null; idx = -1; };
+  const elegir = (s) => {
+    const ll = L.latLng(s.lat, s.lon);
     marker.setLatLng(ll); circle.setLatLng(ll); map.setView(ll, 16);
-    elLat().value = r.lat.toFixed(6); elLng().value = r.lon.toFixed(6);
+    elLat().value = s.lat.toFixed(6); elLng().value = s.lon.toFixed(6);
+    elDir().value = s.texto;
+    cerrar();
   };
-  elDir().addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buscar(); } });
-  elDir().addEventListener('change', buscar);
+  const pintar = () => {
+    cerrar();
+    if (!sugs.length) return;
+    dd = document.createElement('ul');
+    dd.className = 'geo-suggest';
+    dd.innerHTML = sugs.map((s, i) => `<li class="geo-suggest__item${i === idx ? ' is-active' : ''}" data-i="${i}">${esc(s.texto)}</li>`).join('');
+    // mousedown (no click): se dispara antes del blur del input.
+    dd.addEventListener('mousedown', (e) => {
+      const li = e.target.closest('[data-i]');
+      if (li) { e.preventDefault(); elegir(sugs[+li.dataset.i]); }
+    });
+    box.appendChild(dd);
+  };
+  elDir().addEventListener('input', () => {
+    clearTimeout(deb);
+    const q = elDir().value.trim();
+    if (q.length < 3) { sugs = []; cerrar(); return; }
+    deb = setTimeout(async () => {           // debounce: respeta el ~1 req/s de Nominatim
+      spin(true); sugs = await buscarDirecciones(q); spin(false);
+      idx = -1; pintar();
+    }, 400);
+  });
+  elDir().addEventListener('keydown', (e) => {
+    if (!dd) { if (e.key === 'Enter') e.preventDefault(); return; }
+    if (e.key === 'ArrowDown')      { e.preventDefault(); idx = Math.min(idx + 1, sugs.length - 1); pintar(); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); idx = Math.max(idx - 1, 0); pintar(); }
+    else if (e.key === 'Enter')     { e.preventDefault(); elegir(sugs[idx >= 0 ? idx : 0]); }
+    else if (e.key === 'Escape')    cerrar();
+  });
+  elDir().addEventListener('blur', () => setTimeout(cerrar, 150));
 
   const fromInputs = () => {
     const la = parseFloat(elLat().value), ln = parseFloat(elLng().value);

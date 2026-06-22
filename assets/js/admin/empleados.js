@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { loading, showToast, openModal, closeModal, esc } from './utils.js';
+import { loading, showToast, openModal, closeModal, esc, pinFieldHTML, wirePin } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { t } from '../i18n.js';
 
@@ -70,10 +70,7 @@ async function loadEmpleados() {
     };
     window._resetPin = (id, nombre) => {
       openModal(`${t('Resetear PIN')}: ${nombre}`,
-        `<div class="form-group">
-          <label for="pin-nuevo">${t('Nuevo PIN (solo números)')}</label>
-          <input id="pin-nuevo" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
-        </div>
+        `${pinFieldHTML('pin-nuevo', 'Nuevo PIN (solo números)', { full: true })}
         <p id="pin-error" class="error-inline" hidden></p>`,
         async () => {
           const pin = document.getElementById('pin-nuevo').value.trim();
@@ -94,6 +91,7 @@ async function loadEmpleados() {
         },
         'Guardar PIN'
       );
+      wirePin('pin-nuevo');
     };
   } catch (e) {
     document.getElementById('emp-grid-wrap').innerHTML =
@@ -199,13 +197,34 @@ function openEmpForm(emp = null) {
           <input id="e-ingreso" class="form-input" type="date" value="${esc(v('fecha_ingreso'))}">
         </div>
         <div class="form-group">
+          <label for="e-nac">${t('Fecha de nacimiento')}</label>
+          <input id="e-nac" class="form-input" type="date" value="${esc(v('fecha_nacimiento'))}">
+        </div>
+        <div class="form-group">
+          <label for="e-curp">CURP</label>
+          <input id="e-curp" class="form-input" value="${esc(v('curp'))}" maxlength="18" style="text-transform:uppercase" placeholder="GOMC900101HDFXXX01">
+        </div>
+        <div class="form-group">
+          <label for="e-rfc">RFC</label>
+          <input id="e-rfc" class="form-input" value="${esc(v('rfc'))}" maxlength="13" style="text-transform:uppercase" placeholder="GOMC900101XX1">
+        </div>
+        <div class="form-group">
+          <label for="e-nss">${t('NSS (Seguro Social)')}</label>
+          <input id="e-nss" class="form-input" inputmode="numeric" value="${esc(v('nss'))}" maxlength="11" placeholder="12345678901">
+        </div>
+        <div class="form-group">
+          <label for="e-emerg">${t('Contacto de emergencia')}</label>
+          <input id="e-emerg" class="form-input" value="${esc(v('contacto_emergencia'))}" placeholder="${t('Nombre y parentesco')}">
+        </div>
+        <div class="form-group">
+          <label for="e-emerg-tel">${t('Tel. de emergencia')}</label>
+          <input id="e-emerg-tel" class="form-input" type="tel" value="${esc(v('telefono_emergencia'))}" placeholder="55 1234 5678">
+        </div>
+        <div class="form-group">
           <label for="e-plaza">${t('Plaza')} *</label>
           <select id="e-plaza" class="form-input"><option value="">– ${t('Selecciona')} –</option>${plazaOpts}</select>
         </div>
-        ${!isEdit ? `<div class="form-group form-group--full">
-          <label for="e-pin">${t('PIN inicial (solo números)')} *</label>
-          <input id="e-pin" class="form-input" type="password" inputmode="numeric" pattern="\\d*" maxlength="10" placeholder="••••">
-        </div>` : ''}
+        ${!isEdit ? pinFieldHTML('e-pin', 'PIN inicial (solo números) *', { full: true }) : ''}
       </div>
     </div>
     <p id="e-error" class="error-inline" hidden></p>`,
@@ -227,7 +246,13 @@ function openEmpForm(emp = null) {
         puesto:          document.getElementById('e-puesto').value        || null,
         email:           document.getElementById('e-email').value.trim()  || null,
         telefono:        document.getElementById('e-tel').value.trim()     || null,
-        fecha_ingreso:   document.getElementById('e-ingreso').value        || null
+        fecha_ingreso:   document.getElementById('e-ingreso').value        || null,
+        fecha_nacimiento: document.getElementById('e-nac').value           || null,
+        curp:            document.getElementById('e-curp').value.trim().toUpperCase() || null,
+        rfc:             document.getElementById('e-rfc').value.trim().toUpperCase()  || null,
+        nss:             document.getElementById('e-nss').value.replace(/\D/g, '')    || null,
+        contacto_emergencia:  document.getElementById('e-emerg').value.trim()     || null,
+        telefono_emergencia:  document.getElementById('e-emerg-tel').value.trim() || null
       };
 
       errEl.hidden = true;
@@ -260,6 +285,8 @@ function openEmpForm(emp = null) {
     },
     isEdit ? 'Guardar cambios' : 'Crear empleado'
   );
+
+  if (!isEdit) wirePin('e-pin'); // dígitos, máx 4, botón ojo
 
   // preview de la foto al elegir archivo
   document.getElementById('e-foto')?.addEventListener('change', (ev) => {

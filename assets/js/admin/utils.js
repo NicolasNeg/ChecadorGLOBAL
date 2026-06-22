@@ -73,6 +73,31 @@ export function showToast(message, type = 'ok') {
   setTimeout(dismiss, 3500);
 }
 
+// Campo de PIN: solo dígitos, máx 4, con botón "ojo" para mostrar/ocultar.
+// Úsalo en formularios de empleado; engancha con wirePin(id) tras abrir el modal.
+const EYE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+export function pinFieldHTML(id, label, { full = false } = {}) {
+  return `<div class="form-group${full ? ' form-group--full' : ''}">
+    <label for="${id}">${esc(t(label))}</label>
+    <div class="pin-field">
+      <input id="${id}" class="form-input" type="password" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="••••">
+      <button type="button" class="pin-eye" id="${id}-eye" tabindex="-1" aria-label="${esc(t('Mostrar/ocultar PIN'))}">${EYE_SVG}</button>
+    </div>
+  </div>`;
+}
+export function wirePin(id) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    const limpio = inp.value.replace(/\D/g, '').slice(0, 4); // solo dígitos, máx 4
+    if (limpio !== inp.value) inp.value = limpio;
+  });
+  document.getElementById(`${id}-eye`)?.addEventListener('click', (e) => {
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    e.currentTarget.classList.toggle('pin-eye--on', inp.type === 'text');
+  });
+}
+
 // Open/close the shared modal
 export function openModal(title, bodyHTML, onSave, saveLabel = 'Guardar') {
   const modal = document.getElementById('ad-modal');

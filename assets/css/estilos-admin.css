@@ -1495,6 +1495,54 @@ tr.is-inactive { opacity: .55; }
   border-radius: 50%; animation: pz-spin .7s linear infinite;
 }
 @keyframes pz-spin { to { transform: rotate(360deg); } }
+
+/* ── Autocompletado de dirección (estilo Google Maps) ────────────────────── */
+.geo-suggest {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+  margin: 0; padding: 4px; list-style: none; max-height: 240px; overflow-y: auto;
+  background: var(--ad-tarjeta); border: 1px solid var(--ad-linea); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15,23,42,.18);
+}
+.geo-suggest__item {
+  padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: .85rem;
+  color: var(--ad-tinta); line-height: 1.35;
+}
+.geo-suggest__item:hover, .geo-suggest__item.is-active { background: var(--ad-surf2); }
+
+/* ── Campo PIN con botón "ojo" ───────────────────────────────────────────── */
+.pin-field { position: relative; }
+.pin-field .form-input { padding-right: 42px; letter-spacing: .3em; }
+.pin-eye {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: flex; padding: 6px; border: 0; background: none; cursor: pointer;
+  color: var(--ad-tinta3);
+}
+.pin-eye svg { width: 18px; height: 18px; }
+.pin-eye:hover { color: var(--ad-tinta); }
+.pin-eye--on { color: var(--ad-primary); }
+
+/* ── Historial de cambios (feed operativo) ───────────────────────────────── */
+.cambios-feed { display: flex; flex-direction: column; }
+.cambio {
+  display: flex; align-items: center; gap: 12px; padding: 13px 18px;
+  border-bottom: 1px solid var(--ad-linea);
+}
+.cambio:last-child { border-bottom: 0; }
+.cambio__dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.cambio__dot--green  { background: #16A34A; }
+.cambio__dot--blue   { background: #2563EB; }
+.cambio__dot--orange { background: #EA580C; }
+.cambio__dot--red    { background: #DC2626; }
+.cambio__dot--violet { background: #7C3AED; }
+.cambio__dot--gray   { background: #94A3B8; }
+.cambio__body { flex: 1; min-width: 0; }
+.cambio__title { font-size: .92rem; font-weight: 600; color: var(--ad-tinta); }
+.cambio__sub { font-size: .8rem; color: var(--ad-tinta2); margin-top: 2px; }
+.cambio__meta { font-size: .75rem; color: var(--ad-tinta3); white-space: nowrap; text-align: right; }
+@media (max-width: 560px) {
+  .cambio { flex-wrap: wrap; }
+  .cambio__meta { width: 100%; text-align: left; padding-left: 22px; }
+}
 .plaza-activo { display: flex; align-items: center; gap: 10px; font-size: .9rem; color: var(--ad-tinta); cursor: pointer; }
 .plaza-activo input { width: 16px; height: 16px; }
 @media (max-width: 760px) {

@@ -46,24 +46,21 @@ export function direccionDesdeCoords(lat, lon) {
   return p;
 }
 
-// Dirección escrita → coordenadas (forward geocoding, Nominatim search).
-// ponytail: 1 resultado, sin caché — se llama al pulsar Enter/buscar, no por
-// tecla, así que respeta el límite de ~1 req/s. Upgrade path: autocompletado
-// con debounce + lista de sugerencias si hace falta.
-export async function buscarDireccion(texto) {
+// Dirección escrita → lista de coincidencias (forward geocoding, Nominatim).
+// Devuelve hasta `limit` opciones para un autocompletado estilo Google Maps;
+// quien llama hace el debounce (ver plazas.js) para respetar el ~1 req/s.
+export async function buscarDirecciones(texto, limit = 5) {
   const q = (texto || '').trim();
-  if (!q) return null;
+  if (q.length < 3) return [];
   try {
     const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`,
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=${limit}&addressdetails=1&countrycodes=mx&q=${encodeURIComponent(q)}`,
       { headers: { Accept: 'application/json' } }
     );
-    if (!r.ok) return null;
+    if (!r.ok) return [];
     const arr = await r.json();
-    if (!arr.length) return null;
-    const d = arr[0];
-    return { lat: parseFloat(d.lat), lon: parseFloat(d.lon), texto: d.display_name };
+    return arr.map((d) => ({ lat: parseFloat(d.lat), lon: parseFloat(d.lon), texto: d.display_name }));
   } catch {
-    return null;
+    return [];
   }
 }

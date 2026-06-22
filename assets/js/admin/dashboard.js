@@ -1,6 +1,6 @@
 import { requireAdminSession, logoutAdmin } from './auth.js';
-import { getAuditLog, countEmpleados, getRegistros, getPlazas } from './api.js';
-import { fmtFecha, esc } from './utils.js';
+import { getAuditLog, countEmpleados, getRegistros, getPlazas, getEmpleados } from './api.js';
+import { fmtFecha, esc, showToast } from './utils.js';
 import { getPlazaScope, setPlazaScope } from './plaza-scope.js';
 import { t, applyI18n, mountLangToggle, getLang } from '../i18n.js';
 
@@ -64,6 +64,7 @@ async function showPanel(id) {
       await m.init(panel, sesion);
       break;
     }
+    case 'cambios':    await loadCambios(panel); break;
     case 'auditoria':  await loadAuditoria(panel); break;
     case 'usuarios':       { const m = await import('./usuarios.js');       await m.init(panel); break; }
     case 'administracion': { const m = await import('./administracion.js'); await m.init(panel); break; }
@@ -156,6 +157,10 @@ function reloadCurrent() {
   delete _loaded[_current];
   showPanel(_current);
 }
+// _plazaOpciones a nivel de módulo para que los listeners (enganchados una sola
+// vez) lean siempre la lista fresca tras un refresh por polling (ver watchPlazas).
+let _plazaOpciones = [];
+let _plazaWired = false;
 async function initPlazaSelector() {
   const box = document.getElementById('header-plaza');
   if (!box) return;
@@ -173,18 +178,21 @@ async function initPlazaSelector() {
     return;
   }
 
-  const opciones = [{ id: null, nombre: 'Todas las plazas' }, ...plazas];
-  const nombreDe = (id) => opciones.find(o => o.id === id)?.nombre ?? 'Seleccionar Plaza';
+  _plazaOpciones = [{ id: null, nombre: 'Todas las plazas' }, ...plazas];
+  const nombreDe = (id) => _plazaOpciones.find(o => o.id === id)?.nombre ?? 'Seleccionar Plaza';
   const setLabel = (id) => { labelEl.textContent = id == null ? 'Todas las plazas' : nombreDe(id); };
   setLabel(getPlazaScope());
 
-  menu.innerHTML = opciones.map(o => {
+  menu.innerHTML = _plazaOpciones.map(o => {
     const sel = (getPlazaScope() ?? null) === o.id;
     return `<li role="option" class="hplaza__opt${sel ? ' is-sel' : ''}" data-id="${o.id ?? ''}" aria-selected="${sel}">
       <span>${esc(o.nombre)}</span>
       <svg class="hplaza__check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </li>`;
   }).join('');
+
+  if (_plazaWired) return; // los listeners ya están; este fue solo un refresh de datos
+  _plazaWired = true;
 
   const close = () => {
     if (menu.hidden) return;
@@ -227,6 +235,26 @@ async function initPlazaSelector() {
   });
 }
 initPlazaSelector();
+
+// ── "Tiempo real" para plazas (cambio global que todos deben sentir) ────────────
+// ponytail: sin supabase-js, hacemos polling cada 30 s + refresco al volver a la
+// pestaña. Si las plazas cambiaron, refrescamos el selector y el panel activo y
+// avisamos. Upgrade path: Supabase Realtime (websocket) cuando se integre supabase-js.
+let _plazasSnap = null;
+async function watchPlazas() {
+  let ps;
+  try { ps = await getPlazas(); } catch { return; }
+  const snap = JSON.stringify(ps.map(p => [p.id, p.nombre, p.activo, p.latitud, p.longitud, p.radio_metros]));
+  if (_plazasSnap !== null && snap !== _plazasSnap) {
+    await initPlazaSelector();        // re-renderiza el menú (sin re-enganchar listeners)
+    reloadCurrent();
+    showToast('Las plazas se actualizaron.', 'ok');
+  }
+  _plazasSnap = snap;
+}
+watchPlazas();                                    // primer snapshot
+setInterval(watchPlazas, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) watchPlazas(); });
 
 // ── Panel Ajustes ───────────────────────────────────────────────────────────────
 function loadAjustes(panel) {
@@ -472,6 +500,8 @@ const CAMPO_LBL = {
   telefono: 'Teléfono', plaza_id: 'Plaza', turno: 'Turno', activo: 'Activo', rol: 'Rol',
   radio_metros: 'Radio (m)', latitud: 'Latitud', longitud: 'Longitud', direccion: 'Dirección',
   tipo: 'Tipo', descripcion: 'Descripción', fecha: 'Fecha', fecha_ingreso: 'Ingreso',
+  fecha_nacimiento: 'Nacimiento', curp: 'CURP', rfc: 'RFC', nss: 'NSS',
+  contacto_emergencia: 'Contacto emerg.', telefono_emergencia: 'Tel. emerg.',
 };
 const CAMPO_IGNORAR = new Set([
   'id', 'created_at', 'updated_at', 'actualizado_en', 'pin_hash',
@@ -493,6 +523,62 @@ function cambiosHTML(r) {
     else filas.push(`<b>${lbl}:</b> <span style="color:#DC2626;text-decoration:line-through">${esc(fmtVal(a[k]))}</span> → <span style="color:#15803D">${esc(fmtVal(b[k]))}</span>`);
   }
   return filas.length ? filas.join('<br>') : '<span style="color:var(--ad-tinta-3)">—</span>';
+}
+
+// ── Historial de cambios (versión operativa del log, para RH) ───────────────────
+// Filtra el audit_log a lo que le importa a coordinación (horarios, descansos,
+// incidencias), resuelve a quién afecta y lo muestra sin diffs ni IPs.
+const CAMBIO_OPERATIVO = new Set(['turnos_dia', 'horarios_semana', 'incidencias']);
+const INCIDENCIA_TITULO = {
+  vacaciones: 'Vacaciones', permiso: 'Permiso', falta: 'Falta', festivo: 'Día festivo',
+  descanso: 'Descanso asignado', justificacion: 'Justificación', asistencia: 'Asistencia registrada',
+};
+const CAMBIO_TONO = {
+  'Vacaciones': 'blue', 'Permiso': 'orange', 'Falta': 'red', 'Día festivo': 'violet',
+  'Descanso asignado': 'gray', 'Justificación': 'blue', 'Asistencia registrada': 'green',
+  'Turno asignado': 'green', 'Cambio de horario': 'blue', 'Cambio de horario semanal': 'blue',
+};
+function tituloCambio(r, d) {
+  if (r.tabla === 'incidencias') return INCIDENCIA_TITULO[d.tipo] ?? 'Incidencia';
+  if (r.tabla === 'turnos_dia') {
+    if (r.operacion === 'DELETE' || d.turno_id == null) return 'Descanso asignado';
+    return r.operacion === 'INSERT' ? 'Turno asignado' : 'Cambio de horario';
+  }
+  return 'Cambio de horario semanal'; // horarios_semana
+}
+
+async function loadCambios(panel) {
+  panel.innerHTML = `
+    <div class="panel-header"><h2>${t('Historial de cambios')}</h2></div>
+    <div class="ad-card"><div id="cambios-wrap">
+      <div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>
+    </div></div>`;
+  try {
+    const [rows, empleados] = await Promise.all([getAuditLog(150), getEmpleados().catch(() => [])]);
+    const nombreEmp = new Map(empleados.map(e => [e.id, e.nombre]));
+    const wrap = document.getElementById('cambios-wrap');
+    const items = rows.filter(r => CAMBIO_OPERATIVO.has(r.tabla));
+    if (!items.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin cambios recientes.')}</div>`; return; }
+
+    wrap.innerHTML = `<div class="cambios-feed">${items.map(r => {
+      const d = r.datos_despues ?? r.datos_antes ?? {};
+      const titulo = tituloCambio(r, d);
+      const emp = nombreEmp.get(d.id_empleado);
+      const sub = [emp, d.fecha].filter(Boolean).join(' · ');
+      const quien = r.perfiles_admin?.nombre ?? t('Sistema');
+      return `<article class="cambio">
+        <span class="cambio__dot cambio__dot--${CAMBIO_TONO[titulo] ?? 'gray'}"></span>
+        <div class="cambio__body">
+          <p class="cambio__title">${esc(t(titulo))}</p>
+          ${sub ? `<p class="cambio__sub">${esc(sub)}</p>` : ''}
+        </div>
+        <span class="cambio__meta">${esc(quien)} · ${fmtFecha(r.created_at)}</span>
+      </article>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    document.getElementById('cambios-wrap').innerHTML =
+      `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
+  }
 }
 
 async function loadAuditoria(panel) {
