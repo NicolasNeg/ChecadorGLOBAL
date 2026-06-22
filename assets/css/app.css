@@ -237,6 +237,17 @@
 [data-theme="dark"] .input-pin:focus { background: var(--tarjeta); }
 
 /* ── Turnos de la plaza (cuadrícula: empleado × día) ──────────────────────── */
+/* Punto rojo de aviso en "Mi turno" (horario de la próxima semana sin ver) */
+#btn-turnos { position: relative; }
+.btn-dot {
+  position: absolute; top: 10px; right: 12px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #EF4444; box-shadow: 0 0 0 3px var(--tarjeta);
+  animation: dot-pulse 1.8s ease-in-out infinite;
+}
+@keyframes dot-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { .btn-dot { animation: none; } }
+
 .turnos-vacio { font-size: .9rem; color: var(--tinta-2); text-align: center; padding: 8px 0; }
 .turnos-grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
 .turnos-grid { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 540px; font-size: .82rem; }

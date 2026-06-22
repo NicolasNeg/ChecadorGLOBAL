@@ -155,6 +155,7 @@ function enterMenu(perfil) {
   document.getElementById('btn-checar').onclick    = () => { location.href = BASE + '/checador/'; };
   document.getElementById('btn-historial').onclick = () => { location.href = BASE + '/historial/'; };
   document.getElementById('btn-turnos').onclick    = () => enterTurnos();
+  checkProximaSemana(); // fire-and-forget: pinta el punto rojo si ya hay horario nuevo
   document.getElementById('btn-cerrar-sesion').onclick = () => {
     clearSession();
     limpiarSesion();
@@ -172,6 +173,24 @@ const ymdT    = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2
 const addDiasT = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 let _semanaT = lunesDe(new Date()); // lunes de la semana visible en el checador
 
+const proxLunes = () => addDiasT(lunesDe(new Date()), 7); // lunes de la PRÓXIMA semana
+const vistoKey  = () => `eqs_turnos_visto_${_miId}`;
+
+// Punto rojo en "Mi turno": hay horario de la próxima semana y aún no lo abriste.
+// ponytail: "nuevo" = no has visto la próxima semana; NO reaparece si RH la
+// re-edita después (turnos_dia no tiene updated_at). Añade updated_at + comparar
+// si se necesita avisar de cambios posteriores.
+async function checkProximaSemana() {
+  const dot = document.getElementById('turnos-dot');
+  if (!dot || !_miId) return;
+  const pl = proxLunes();
+  const filas = await obtenerTurnosPlazaSemana(ymdT(pl), ymdT(addDiasT(pl, 6)));
+  const tengo = filas.some(f => f.empleado_id === _miId);
+  const visto = localStorage.getItem(vistoKey()) === ymdT(pl);
+  dot.hidden = !(tengo && !visto);
+  if (!dot.hidden) dot.setAttribute('aria-label', t('Ya hay horario de la próxima semana'));
+}
+
 async function enterTurnos() {
   document.getElementById('btn-turnos-volver').onclick = () => switchTo(sTurnos, sMenu);
   if (sTurnos.hidden) switchTo(sMenu, sTurnos);
@@ -183,6 +202,13 @@ async function renderTurnos() {
   lista.innerHTML = `<p class="turnos-vacio">${t('Cargando…')}</p>`;
 
   const fechas = [0, 1, 2, 3, 4, 5, 6].map(i => addDiasT(_semanaT, i));
+
+  // Viste la próxima semana (o más adelante) → marca como visto y apaga el punto.
+  if (_miId && ymdT(_semanaT) >= ymdT(proxLunes())) {
+    localStorage.setItem(vistoKey(), ymdT(proxLunes()));
+    const dot = document.getElementById('turnos-dot'); if (dot) dot.hidden = true;
+  }
+
   const filas = await obtenerTurnosPlazaSemana(ymdT(_semanaT), ymdT(fechas[6]));
 
   const fechaLabel = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });

@@ -103,6 +103,7 @@ export const EN = {
   'Total semana': 'Week total', 'Turno actualizado.': 'Shift updated.',
   'Modo solo lectura — esta semana ya pasó.': 'Read-only — this week has passed.',
   'Sin turnos asignados esta semana.': 'No shifts assigned this week.',
+  'Ya hay horario de la próxima semana': 'Next week\'s schedule is ready',
   'Empleado': 'Employee', 'Descanso': 'Day off', 'Horario actualizado.': 'Schedule updated.',
   'Nombre': 'Name', 'Nombre completo': 'Full name', 'Correo': 'Email', 'Teléfono': 'Phone',
   'Puesto': 'Position', 'Plaza': 'Location', 'Estado': 'Status', 'Acciones': 'Actions',
