@@ -107,6 +107,23 @@ export const setTurnoDia = (id_empleado, fecha, turno_id) =>
         method: 'DELETE', headers: { Prefer: '' }
       });
 
+// Reemplazo de semana: borra el rango de estos empleados…
+export const deleteTurnosDiaRango = (empIds, desde, hasta) =>
+  empIds.length
+    ? apiFetch(`turnos_dia?id_empleado=in.(${empIds.join(',')})&fecha=gte.${desde}&fecha=lte.${hasta}`,
+        { method: 'DELETE', headers: { Prefer: '' } })
+    : null;
+
+// …y luego inserta en bloque (upsert por (empleado, fecha)).
+export const setTurnosDiaBulk = (rows) =>
+  rows.length
+    ? apiFetch('turnos_dia?on_conflict=id_empleado,fecha', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(rows)
+      })
+    : null;
+
 // ── Asistencia ────────────────────────────────────────────────────────────
 export function getRegistros({ fecha, plaza_id, limit = 100 } = {}) {
   const q = new URLSearchParams({ order: 'hora.desc', limit: limit.toString() });

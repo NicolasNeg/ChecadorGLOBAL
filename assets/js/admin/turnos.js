@@ -13,6 +13,7 @@ const addDias = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); r
 const minutos = (t) => { const [h, m] = (t || '0:0').split(':'); return (+h) * 60 + (+m); };
 const horasTurno = (t) => t ? Math.max(0, minutos(t.hora_salida) - minutos(t.hora_entrada) - (t.pausa_min || 0)) : 0;
 let _semana = lunesDe(new Date()); // lunes de la semana visible
+let _gridActivos = [];             // empleados activos de la plaza en foco (para copiar semana)
 
 export async function init(panel) {
   _plazas = await api.getPlazas().catch(() => []);
@@ -56,6 +57,7 @@ async function loadGrid() {
     // Solo turnos de la plaza en foco: no asignar un turno de otra plaza.
     const turnos  = filterByPlaza(allTurnos, t => t.plaza_id);
     const activos = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
+    _gridActivos = activos;
     const turnoDe = new Map(turnos.map(t => [t.id, t]));
     const asignado = new Map(dias.map(d => [`${d.id_empleado}-${d.fecha}`, d.turno_id]));
 
@@ -73,6 +75,7 @@ async function loadGrid() {
         <div class="sem-nav__label">${rango}</div>
         <button class="sem-nav__btn" id="sem-next" aria-label="${tr('Semana siguiente')}">›</button>
         <button class="sem-nav__hoy" id="sem-hoy">${tr('Hoy')}</button>
+        <button class="sem-nav__hoy" id="sem-copiar" ${readonly ? 'hidden' : ''}>${tr('Copiar semana anterior')}</button>
         <span class="sem-total">${tr('Total semana')}: <strong id="sem-total-h">0 h</strong></span>
       </div>
       ${readonly ? `<div class="sem-ro" role="status">${tr('Modo solo lectura — esta semana ya pasó.')}</div>` : ''}`;
@@ -98,6 +101,7 @@ async function loadGrid() {
 
     wrap.innerHTML = nav + `<div class="grid-scroll"><table class="grid-horarios"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
     bindNav(wrap);
+    wrap.querySelector('#sem-copiar')?.addEventListener('click', () => copiarSemanaAnterior());
 
     const recalcTotal = () => {
       let min = 0;
@@ -130,6 +134,32 @@ function bindNav(wrap) {
   wrap.querySelector('#sem-prev')?.addEventListener('click', () => go(addDias(_semana, -7)));
   wrap.querySelector('#sem-next')?.addEventListener('click', () => go(addDias(_semana, 7)));
   wrap.querySelector('#sem-hoy') ?.addEventListener('click', () => go(lunesDe(new Date())));
+}
+
+// "Copiar semana anterior": la semana visible queda idéntica a la previa.
+async function copiarSemanaAnterior() {
+  const activos = _gridActivos;
+  if (!activos.length) return;
+  if (!await confirm(tr('¿Copiar la semana anterior? Se reemplazará la semana actual.'), { ok: tr('Copiar') })) return;
+
+  const srcLunes = addDias(_semana, -7);
+  const src = await api.getTurnosDia({ desde: ymd(srcLunes), hasta: ymd(addDias(srcLunes, 6)) });
+  const empSet = new Set(activos.map(e => e.id));
+  // Cada fila origen → misma posición +7 días (conserva el día de la semana).
+  const rows = src.filter(d => empSet.has(d.id_empleado)).map(d => ({
+    id_empleado: d.id_empleado,
+    fecha: ymd(addDias(new Date(d.fecha + 'T12:00:00'), 7)),
+    turno_id: d.turno_id,
+  }));
+  if (!rows.length) { showToast(tr('La semana anterior no tiene turnos.'), 'error'); return; }
+
+  try {
+    // "Copiar" = limpia y reescribe el rango visible para estos empleados.
+    await api.deleteTurnosDiaRango(activos.map(e => e.id), ymd(_semana), ymd(addDias(_semana, 6)));
+    await api.setTurnosDiaBulk(rows);
+    showToast(tr('Semana copiada.'), 'ok');
+    await loadGrid();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 let _allTurnos = [];
