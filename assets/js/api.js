@@ -219,6 +219,25 @@ export async function obtenerTurnosPlaza() {
   } catch { return []; }
 }
 
+// Distribución de la plaza por semana (fechas reales). Igual que turnos_plaza
+// pero con historial: el checador navega semana a semana.
+export async function obtenerTurnosPlazaSemana(desde, hasta) {
+  if (!_idEmpleado) return [];
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/turnos_plaza_rango`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado, p_desde: desde, p_hasta: hasta })
+    });
+    if (!r.ok) return [];
+    return await r.json(); // [{empleado_id, empleado, fecha, turno_nombre, hora_entrada, hora_salida, pausa_min}]
+  } catch { return []; }
+}
+
 // ── SET ID DESDE SESIÓN (para páginas que cargan con sessionStorage) ────────
 export function setIdEmpleado(id) { _idEmpleado = id; }
 

@@ -6,6 +6,14 @@ import { t as tr } from '../i18n.js'; // alias: 't' ya se usa para objetos turno
 let _plazas = [];
 const DIAS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+// ── Helpers de semana (lunes–domingo, sin libs de fechas) ──────────────────
+const lunesDe = (d) => { const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); x.setHours(0, 0, 0, 0); return x; };
+const ymd     = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const addDias = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const minutos = (t) => { const [h, m] = (t || '0:0').split(':'); return (+h) * 60 + (+m); };
+const horasTurno = (t) => t ? Math.max(0, minutos(t.hora_salida) - minutos(t.hora_entrada) - (t.pausa_min || 0)) : 0;
+let _semana = lunesDe(new Date()); // lunes de la semana visible
+
 export async function init(panel) {
   _plazas = await api.getPlazas().catch(() => []);
 
@@ -22,8 +30,8 @@ export async function init(panel) {
     <div id="tbl-turnos-wrap"></div>
 
     <div class="panel-header" style="margin-top:28px">
-      <h2>${tr('Asignación semanal')}</h2>
-      <span class="td-muted" style="font-size:.85rem">${tr('Elige el turno de cada empleado por día. Se guarda al instante.')}</span>
+      <h2>${tr('Distribución de turnos')}</h2>
+      <span class="td-muted" style="font-size:.85rem">${tr('Asigna el turno de cada empleado por fecha. Las semanas pasadas son solo lectura.')}</span>
     </div>
     <div class="ad-card"><div id="grid-horarios-wrap"></div></div>`;
 
@@ -40,43 +48,74 @@ async function loadGrid() {
   const wrap = document.getElementById('grid-horarios-wrap');
   loading(wrap);
   try {
-    const [empleados, allTurnos, horarios] = await Promise.all([
-      api.getEmpleados(), api.getTurnos(), api.getHorarios()
+    const fechas = [0, 1, 2, 3, 4, 5, 6].map(i => addDias(_semana, i));
+    const desde = ymd(_semana), hasta = ymd(fechas[6]);
+    const [empleados, allTurnos, dias] = await Promise.all([
+      api.getEmpleados(), api.getTurnos(), api.getTurnosDia({ desde, hasta })
     ]);
     // Solo turnos de la plaza en foco: no asignar un turno de otra plaza.
-    const turnos = filterByPlaza(allTurnos, t => t.plaza_id);
+    const turnos  = filterByPlaza(allTurnos, t => t.plaza_id);
     const activos = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
-    if (!activos.length) { wrap.innerHTML = `<div class="ad-empty">${tr('No hay empleados activos.')}</div>`; return; }
+    const turnoDe = new Map(turnos.map(t => [t.id, t]));
+    const asignado = new Map(dias.map(d => [`${d.id_empleado}-${d.fecha}`, d.turno_id]));
 
-    // key "empleado-dia" → turno_id
-    const asignado = new Map(horarios.map(h => [`${h.id_empleado}-${h.dia_semana}`, h.turno_id]));
+    const readonly = ymd(_semana) < ymd(lunesDe(new Date())); // semana ya pasada → inmutable
+    const fechaLabel = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+    const rango = `${fechaLabel(_semana)} – ${fechaLabel(fechas[6])} ${fechas[6].getFullYear()}`;
+
     const optsFor = (sel) => `<option value="">${tr('Descanso')}</option>` + turnos.map(t =>
       `<option value="${t.id}" ${sel === t.id ? 'selected' : ''}>${t.nombre} (${(t.hora_entrada||'').slice(0,5)}-${(t.hora_salida||'').slice(0,5)})</option>`
     ).join('');
 
-    const head = `<tr><th class="grid-emp">${tr('Empleado')}</th>${[1,2,3,4,5,6,7].map(d => `<th>${tr(DIAS[d])}</th>`).join('')}</tr>`;
+    const nav = `
+      <div class="sem-nav">
+        <button class="sem-nav__btn" id="sem-prev" aria-label="${tr('Semana anterior')}">‹</button>
+        <div class="sem-nav__label">${rango}</div>
+        <button class="sem-nav__btn" id="sem-next" aria-label="${tr('Semana siguiente')}">›</button>
+        <button class="sem-nav__hoy" id="sem-hoy">${tr('Hoy')}</button>
+        <span class="sem-total">${tr('Total semana')}: <strong id="sem-total-h">0 h</strong></span>
+      </div>
+      ${readonly ? `<div class="sem-ro" role="status">${tr('Modo solo lectura — esta semana ya pasó.')}</div>` : ''}`;
+
+    if (!activos.length) {
+      wrap.innerHTML = nav + `<div class="ad-empty">${tr('No hay empleados activos.')}</div>`;
+      bindNav(wrap);
+      return;
+    }
+
+    const head = `<tr><th class="grid-emp">${tr('Empleado')}</th>${fechas.map(d =>
+      `<th>${tr(DIAS[((d.getDay() + 6) % 7) + 1])}<span class="grid-fecha">${fechaLabel(d)}</span></th>`).join('')}</tr>`;
     const rows = activos.map(e => `
       <tr>
         <td class="grid-emp">${e.nombre}</td>
-        ${[1,2,3,4,5,6,7].map(d => {
-          const sel = asignado.get(`${e.id}-${d}`) ?? '';
-          const t = turnos.find(t => t.id === sel);
-          return `<td><select class="grid-sel ${t ? 'sel--' + turnoColor(t) : ''}" data-emp="${e.id}" data-dia="${d}">${optsFor(sel)}</select></td>`;
+        ${fechas.map(d => {
+          const f = ymd(d);
+          const sel = asignado.get(`${e.id}-${f}`) ?? '';
+          const t = turnoDe.get(sel);
+          return `<td><select class="grid-sel ${t ? 'sel--' + turnoColor(t) : ''}" data-emp="${e.id}" data-fecha="${f}" ${readonly ? 'disabled' : ''}>${optsFor(sel)}</select></td>`;
         }).join('')}
       </tr>`).join('');
 
-    wrap.innerHTML = `<div class="grid-scroll"><table class="grid-horarios"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+    wrap.innerHTML = nav + `<div class="grid-scroll"><table class="grid-horarios"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+    bindNav(wrap);
 
-    wrap.querySelectorAll('.grid-sel').forEach(sel => {
+    const recalcTotal = () => {
+      let min = 0;
+      wrap.querySelectorAll('.grid-sel').forEach(s => { min += horasTurno(turnoDe.get(parseInt(s.value) || 0)); });
+      wrap.querySelector('#sem-total-h').textContent = `${(min / 60).toFixed(1)} h`;
+    };
+    recalcTotal();
+
+    if (!readonly) wrap.querySelectorAll('.grid-sel').forEach(sel => {
       sel.addEventListener('change', async () => {
-        const emp = parseInt(sel.dataset.emp), dia = parseInt(sel.dataset.dia);
+        const emp = parseInt(sel.dataset.emp), fecha = sel.dataset.fecha;
         const turnoId = parseInt(sel.value) || null;
         sel.disabled = true;
         try {
-          await api.setHorario(emp, dia, turnoId);
-          const t = turnos.find(t => t.id === turnoId);
-          sel.className = `grid-sel ${t ? 'sel--' + turnoColor(t) : ''}`;
-          showToast('Horario actualizado.', 'ok');
+          await api.setTurnoDia(emp, fecha, turnoId);
+          sel.className = `grid-sel ${turnoId ? 'sel--' + turnoColor(turnoDe.get(turnoId)) : ''}`;
+          recalcTotal();
+          showToast('Turno actualizado.', 'ok');
         } catch (err) { showToast(err.message, 'error'); }
         finally { sel.disabled = false; }
       });
@@ -84,6 +123,13 @@ async function loadGrid() {
   } catch (e) {
     wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
   }
+}
+
+function bindNav(wrap) {
+  const go = (n) => { _semana = n; loadGrid(); };
+  wrap.querySelector('#sem-prev')?.addEventListener('click', () => go(addDias(_semana, -7)));
+  wrap.querySelector('#sem-next')?.addEventListener('click', () => go(addDias(_semana, 7)));
+  wrap.querySelector('#sem-hoy') ?.addEventListener('click', () => go(lunesDe(new Date())));
 }
 
 let _allTurnos = [];

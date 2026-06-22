@@ -96,6 +96,13 @@ export const EN = {
   'Asignación semanal': 'Weekly assignment',
   'Elige el turno de cada empleado por día. Se guarda al instante.':
     'Choose each employee\'s shift per day. Saved instantly.',
+  'Distribución de turnos': 'Shift distribution',
+  'Asigna el turno de cada empleado por fecha. Las semanas pasadas son solo lectura.':
+    'Assign each employee\'s shift by date. Past weeks are read-only.',
+  'Semana anterior': 'Previous week', 'Semana siguiente': 'Next week', 'Hoy': 'Today',
+  'Total semana': 'Week total', 'Turno actualizado.': 'Shift updated.',
+  'Modo solo lectura — esta semana ya pasó.': 'Read-only — this week has passed.',
+  'Sin turnos asignados esta semana.': 'No shifts assigned this week.',
   'Empleado': 'Employee', 'Descanso': 'Day off', 'Horario actualizado.': 'Schedule updated.',
   'Nombre': 'Name', 'Nombre completo': 'Full name', 'Correo': 'Email', 'Teléfono': 'Phone',
   'Puesto': 'Position', 'Plaza': 'Location', 'Estado': 'Status', 'Acciones': 'Actions',

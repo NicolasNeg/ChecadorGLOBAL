@@ -801,6 +801,40 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   white-space: nowrap; position: sticky; left: 0; background: var(--ad-tarjeta); z-index: 1;
 }
 .grid-horarios th.grid-emp { background: var(--ad-fondo); z-index: 2; }
+.grid-horarios th .grid-fecha {
+  display: block; font-size: .68rem; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--ad-tinta2); margin-top: 2px; font-variant-numeric: tabular-nums;
+}
+
+/* ── Navegación de semana (distribución de turnos) ─────────────────────────── */
+.sem-nav {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sem-nav__btn {
+  width: 34px; height: 34px; flex: none; border-radius: 9px;
+  border: 1px solid var(--ad-linea); background: var(--ad-tarjeta); color: var(--ad-tinta);
+  font-size: 1.2rem; line-height: 1; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.sem-nav__btn:hover { background: var(--ad-fondo); border-color: var(--ad-tinta3); }
+.sem-nav__label {
+  min-width: 200px; text-align: center; font-weight: 700; font-size: 1.05rem;
+  color: var(--ad-tinta); font-variant-numeric: tabular-nums; text-transform: capitalize;
+}
+.sem-nav__hoy {
+  padding: 7px 14px; border-radius: 9px; border: 1px solid var(--ad-linea);
+  background: var(--ad-tarjeta); color: var(--ad-tinta); font-weight: 600; font-size: .85rem; cursor: pointer;
+}
+.sem-nav__hoy:hover { background: var(--ad-fondo); }
+.sem-total { margin-left: auto; font-size: .88rem; color: var(--ad-tinta2); }
+.sem-total strong { color: var(--ad-tinta); font-variant-numeric: tabular-nums; }
+.sem-ro {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  padding: 9px 14px; border-radius: 10px; font-size: .85rem; font-weight: 600;
+  background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D;
+}
+[data-theme="dark"] .sem-ro { background: rgba(245,158,11,.14); color: #FCD34D; border-color: rgba(245,158,11,.4); }
+@media (max-width: 560px) { .sem-total { margin-left: 0; width: 100%; } }
 .grid-sel {
   width: 100%; min-width: 104px; height: 44px; padding: 0 26px 0 10px;
   font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums;

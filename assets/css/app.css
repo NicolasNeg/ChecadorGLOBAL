@@ -257,3 +257,27 @@
 .tg-horas { display: block; font-size: .72rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
 .tg-off { color: var(--tinta-3); }
 .turnos-grid .tg-yo td, .turnos-grid .tg-yo .tg-emp { background: rgba(2,132,199,.12); }
+.turnos-grid th .tg-fecha {
+  display: block; font-size: .66rem; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--tinta-2); margin-top: 2px; font-variant-numeric: tabular-nums;
+}
+
+/* Navegación de semana en "Mi turno" */
+.sem-nav {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px; justify-content: center;
+}
+.sem-nav__btn {
+  width: 36px; height: 36px; flex: none; border-radius: 10px;
+  border: 1px solid var(--linea); background: var(--tarjeta); color: var(--tinta);
+  font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.sem-nav__btn:active { background: var(--fondo); }
+.sem-nav__label {
+  min-width: 170px; text-align: center; font-weight: 700; font-size: .98rem;
+  color: var(--tinta); font-variant-numeric: tabular-nums; text-transform: capitalize;
+}
+.sem-nav__hoy {
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--linea);
+  background: var(--tarjeta); color: var(--tinta); font-weight: 600; font-size: .85rem; cursor: pointer;
+}

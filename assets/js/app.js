@@ -1,4 +1,4 @@
-import { verificarPin, limpiarSesion, obtenerTurnosPlaza, setIdEmpleado } from './api.js';
+import { verificarPin, limpiarSesion, obtenerTurnosPlazaSemana, setIdEmpleado } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
 import { BASE } from './config.js';
 import { t, applyI18n, mountLangToggle } from './i18n.js';
@@ -164,44 +164,71 @@ function enterMenu(perfil) {
   switchTo(sLogin, sMenu);
 }
 
-// ── Turnos de la plaza ───────────────────────────────────────────────────────
+// ── Turnos de la plaza (distribución semanal por fecha) ──────────────────────
 const hhmm = (t) => t ? t.slice(0, 5) : '';
 const DIAS_AB = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const lunesDe = (d) => { const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); x.setHours(0, 0, 0, 0); return x; };
+const ymdT    = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const addDiasT = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+let _semanaT = lunesDe(new Date()); // lunes de la semana visible en el checador
 
 async function enterTurnos() {
-  const lista = document.getElementById('turnos-lista');
-  lista.innerHTML = `<p class="turnos-vacio">${t('Cargando…')}</p>`;
   document.getElementById('btn-turnos-volver').onclick = () => switchTo(sTurnos, sMenu);
   if (sTurnos.hidden) switchTo(sMenu, sTurnos);
+  await renderTurnos();
+}
 
-  const filas = await obtenerTurnosPlaza();
+async function renderTurnos() {
+  const lista = document.getElementById('turnos-lista');
+  lista.innerHTML = `<p class="turnos-vacio">${t('Cargando…')}</p>`;
+
+  const fechas = [0, 1, 2, 3, 4, 5, 6].map(i => addDiasT(_semanaT, i));
+  const filas = await obtenerTurnosPlazaSemana(ymdT(_semanaT), ymdT(fechas[6]));
+
+  const fechaLabel = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+  const rango = `${fechaLabel(_semanaT)} – ${fechaLabel(fechas[6])} ${fechas[6].getFullYear()}`;
+  const nav = `
+    <div class="sem-nav">
+      <button class="sem-nav__btn" id="t-prev" aria-label="${t('Semana anterior')}">‹</button>
+      <div class="sem-nav__label">${rango}</div>
+      <button class="sem-nav__btn" id="t-next" aria-label="${t('Semana siguiente')}">›</button>
+      <button class="sem-nav__hoy" id="t-hoy">${t('Hoy')}</button>
+    </div>`;
+
+  const bindNav = () => {
+    const go = (n) => { _semanaT = n; renderTurnos(); };
+    lista.querySelector('#t-prev').onclick = () => go(addDiasT(_semanaT, -7));
+    lista.querySelector('#t-next').onclick = () => go(addDiasT(_semanaT, 7));
+    lista.querySelector('#t-hoy').onclick  = () => go(lunesDe(new Date()));
+  };
+
   if (!filas.length) {
-    lista.innerHTML = `<p class="turnos-vacio">${t('Aún no hay turnos asignados en tu plaza.')}</p>`;
+    lista.innerHTML = nav + `<p class="turnos-vacio">${t('Sin turnos asignados esta semana.')}</p>`;
+    bindNav();
     return;
   }
 
-  // Empleados en orden de aparición (el RPC ordena por nombre) + celdas por día.
+  // Empleados en orden de aparición (el RPC ordena por nombre) + celdas por fecha.
   const empleados = [];
-  const celdas = new Map(); // `${id}-${dia}` → fila
+  const celdas = new Map(); // `${id}-${fecha}` → fila
   for (const f of filas) {
-    if (!empleados.some(e => e.id === f.empleado_id)) {
-      empleados.push({ id: f.empleado_id, nombre: f.empleado });
-    }
-    celdas.set(`${f.empleado_id}-${f.dia_semana}`, f);
+    if (!empleados.some(e => e.id === f.empleado_id)) empleados.push({ id: f.empleado_id, nombre: f.empleado });
+    celdas.set(`${f.empleado_id}-${f.fecha}`, f);
   }
 
-  const head = `<tr><th class="tg-emp">${t('Empleado')}</th>${
-    [1,2,3,4,5,6,7].map(d => `<th>${t(DIAS_AB[d])}</th>`).join('')}</tr>`;
+  const head = `<tr><th class="tg-emp">${t('Empleado')}</th>${fechas.map(d =>
+    `<th>${t(DIAS_AB[((d.getDay() + 6) % 7) + 1])}<span class="tg-fecha">${fechaLabel(d)}</span></th>`).join('')}</tr>`;
   const body = empleados.map(e => `
     <tr class="${e.id === _miId ? 'tg-yo' : ''}">
       <td class="tg-emp">${e.nombre}</td>
-      ${[1,2,3,4,5,6,7].map(d => {
-        const c = celdas.get(`${e.id}-${d}`);
+      ${fechas.map(d => {
+        const c = celdas.get(`${e.id}-${ymdT(d)}`);
         return c
           ? `<td><span class="tg-turno">${c.turno_nombre}</span><span class="tg-horas">${hhmm(c.hora_entrada)}–${hhmm(c.hora_salida)}</span></td>`
           : `<td class="tg-off">${t('Descanso')}</td>`;
       }).join('')}
     </tr>`).join('');
 
-  lista.innerHTML = `<div class="turnos-grid-scroll"><table class="turnos-grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  lista.innerHTML = nav + `<div class="turnos-grid-scroll"><table class="turnos-grid"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  bindNav();
 }

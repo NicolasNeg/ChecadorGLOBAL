@@ -91,6 +91,22 @@ export const setHorario = (id_empleado, dia_semana, turno_id) =>
         method: 'DELETE', headers: { Prefer: '' }
       });
 
+// ── Turnos por fecha (distribución semanal con historial) ──────────────────
+export const getTurnosDia = ({ desde, hasta }) =>
+  apiFetch(`turnos_dia?select=id_empleado,fecha,turno_id&fecha=gte.${desde}&fecha=lte.${hasta}`);
+
+// turno_id null → descanso: borra la fila. Si no, upsert por (empleado, fecha).
+export const setTurnoDia = (id_empleado, fecha, turno_id) =>
+  turno_id
+    ? apiFetch('turnos_dia?on_conflict=id_empleado,fecha', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ id_empleado, fecha, turno_id })
+      })
+    : apiFetch(`turnos_dia?id_empleado=eq.${id_empleado}&fecha=eq.${fecha}`, {
+        method: 'DELETE', headers: { Prefer: '' }
+      });
+
 // ── Asistencia ────────────────────────────────────────────────────────────
 export function getRegistros({ fecha, plaza_id, limit = 100 } = {}) {
   const q = new URLSearchParams({ order: 'hora.desc', limit: limit.toString() });
