@@ -1,5 +1,5 @@
 import { requireSession } from './auth.js';
-import { setIdEmpleado, guardarRegistro, obtenerUltimaEntrada } from './api.js';
+import { setIdEmpleado, guardarRegistro, obtenerUltimaEntrada, obtenerEstadoJornada } from './api.js';
 import { BASE } from './config.js';
 import { solicitarPermisos, streamCamara, coordenadas } from './permisos.js';
 import { iniciarFirma, limpiarFirma, estaVacia, obtenerFirmaPNG } from './firma.js';
@@ -34,7 +34,12 @@ const overlayOk   = document.getElementById('overlay-exito');
 
 let firmaCleanup = null;
 let current = 'cargando';
+let estado = { dentro: false, horaEntrada: null }; // estado de jornada (fresco del servidor)
+let timerId = null;
 const data = { tipo: null, firmaDataURL: null, fotoDataURL: null };
+
+const ICON_ENTRADA = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
+const ICON_SALIDA  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function showOnly(...els) {
@@ -70,7 +75,7 @@ btnAtras.addEventListener('click', () => {
   else if (current === 'foto')  showFirma();
 });
 
-// ── TIPO SCREEN ───────────────────────────────────────────────────────────────
+// ── TIPO SCREEN (auto: entrada si está fuera, salida si tiene jornada abierta) ─
 function showTipo() {
   current = 'tipo';
   showOnly(sTipo);
@@ -78,10 +83,74 @@ function showTipo() {
   headerTag.hidden = true;
   setDots(1);
   document.getElementById('saludo-nombre').textContent = saludo(sesion.nombre);
+
+  const card = document.getElementById('btn-checar');
+  const jc   = document.getElementById('jornada-card');
+
+  if (estado.dentro) {
+    data.tipo = 'salida';
+    card.className = 'tipo-card tipo-card--salida';
+    document.getElementById('checar-icon').innerHTML = ICON_SALIDA;
+    document.getElementById('checar-label').textContent = t('Registrar salida');
+    document.getElementById('checar-sub').textContent   = t('Fin de jornada');
+    document.getElementById('tipo-sub').textContent     = t('Tienes un turno abierto');
+    jc.hidden = false;
+    pintarTurno();
+    startTimer();
+  } else {
+    data.tipo = 'entrada';
+    card.className = 'tipo-card tipo-card--entrada';
+    document.getElementById('checar-icon').innerHTML = ICON_ENTRADA;
+    document.getElementById('checar-label').textContent = t('Registrar entrada');
+    document.getElementById('checar-sub').textContent   = t('Inicio de jornada');
+    document.getElementById('tipo-sub').textContent     = t('¿Listo para iniciar tu jornada?');
+    jc.hidden = true;
+    stopTimer();
+  }
 }
 
-document.getElementById('btn-entrada').addEventListener('click', () => { data.tipo = 'entrada'; showFirma(); });
-document.getElementById('btn-salida').addEventListener('click',  () => { data.tipo = 'salida';  showFirma(); });
+document.getElementById('btn-checar').addEventListener('click', () => { stopTimer(); showFirma(); });
+
+// ── Temporizador de jornada (modo salida) ──────────────────────────────────────
+const hm = (s) => s.slice(0, 5); // "08:00:00" → "08:00"
+
+function pintarTurno() {
+  const el = document.getElementById('jornada-turno');
+  if (sesion.turnoEntrada && sesion.turnoSalida) {
+    const nombre = sesion.turnoNombre ? `${sesion.turnoNombre} · ` : '';
+    el.textContent = `${nombre}${hm(sesion.turnoEntrada)}–${hm(sesion.turnoSalida)}`;
+  } else {
+    el.textContent = t('Sin turno asignado');
+  }
+}
+
+function fmtDur(ms) {
+  if (ms < 0) ms = 0;
+  const min = Math.floor(ms / 60000);
+  const h = Math.floor(min / 60), m = min % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+}
+
+function tick() {
+  const now = new Date();
+  const ent = estado.horaEntrada ? new Date(estado.horaEntrada) : null;
+  document.getElementById('timer-elapsed').textContent = ent ? fmtDur(now - ent) : '--';
+
+  const rem = document.getElementById('timer-remaining');
+  if (sesion.turnoSalida) {
+    // ponytail: fin = hora de salida del turno HOY; turnos que cruzan medianoche
+    // mostrarían "cumplido" antes de tiempo — añadir +1 día si turnoSalida<turnoEntrada.
+    const [h, m, s] = sesion.turnoSalida.split(':').map(Number);
+    const fin = new Date(now); fin.setHours(h, m, s || 0, 0);
+    const d = fin - now;
+    rem.textContent = d > 0 ? fmtDur(d) : t('Turno cumplido');
+  } else {
+    rem.textContent = '--';
+  }
+}
+
+function startTimer() { tick(); stopTimer(); timerId = setInterval(tick, 1000); }
+function stopTimer()  { if (timerId) { clearInterval(timerId); timerId = null; } }
 
 // ── FIRMA SCREEN ──────────────────────────────────────────────────────────────
 function showFirma() {
@@ -237,11 +306,13 @@ async function init() {
   mountLangToggle(document.querySelector('.app-header'));
   applyI18n(document);
   window.addEventListener('langchange', () => { applyI18n(document); if (current === 'tipo') showTipo(); });
-  const estado = await solicitarPermisos(() => {});
-  if (estado.camara === 'bloqueada' || estado.ubicacion === 'bloqueada') {
+  const permisos = await solicitarPermisos(() => {});
+  if (permisos.camara === 'bloqueada' || permisos.ubicacion === 'bloqueada') {
     location.replace(BASE + '/sin-permisos.html');
     return;
   }
+  // Estado fresco del servidor: la sesión puede estar obsoleta al re-entrar desde el menú.
+  estado = await obtenerEstadoJornada();
   showTipo();
 }
 

@@ -20,14 +20,6 @@ const ESTADO = {
   futuro:        { txt: '',                  cls: 'gray'   },
 };
 
-// 'SELECCIONAR' ('') = todos. El rol arranca en todos; el empleado es obligatorio.
-const ROLES = [
-  { value: '',           label: 'Seleccionar (todos)' },
-  { value: 'empleado',   label: 'Empleado' },
-  { value: 'supervisor', label: 'Supervisor' },
-  { value: 'gerente',    label: 'Gerente' },
-];
-
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const LOC = () => (getLang() === 'en' ? 'en-US' : 'es-MX');
 const horaCorta = (iso) => new Date(iso).toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit' });
@@ -50,7 +42,7 @@ let _preId = null;
 export function preseleccionar(id) { _preId = id; }
 
 let _empleados = [];
-let _cbPlaza, _cbRol, _cbEmp;
+let _cbPlaza, _cbPuesto, _cbEmp;
 let _ctx = null;   // { panel, idEmpleado, rango, emp, turno, registros, incidencias, desde, hasta, mapDia, notasMap }
 let _mes = null;   // Date: primer día del mes mostrado
 
@@ -81,7 +73,7 @@ export async function init(panel) {
       </summary>
       <div class="hist-filtros__grid">
         <div class="ff"><label>${t('Plaza')}</label><div id="hf-plaza"></div></div>
-        <div class="ff"><label>${t('Tipo de empleado')}</label><div id="hf-rol"></div></div>
+        <div class="ff"><label>${t('Puesto')}</label><div id="hf-puesto"></div></div>
         <div class="ff ff--emp"><label>${t('Empleado')} <span class="ff__req">*</span></label><div id="hf-emp"></div></div>
         <div class="ff">
           <label>${t('Fecha inicio')}</label>
@@ -106,17 +98,22 @@ export async function init(panel) {
   // ── Comboboxes ──────────────────────────────────────────────────────────
   const plazaOpts = [{ value: '', label: t('Seleccionar (todas)') }, ...plazas.map(p => ({ value: p.id, label: p.nombre }))];
   _cbPlaza = combobox({ placeholder: t('Todas las plazas'), options: plazaOpts, value: getPlazaScope() ?? '', onChange: rebuildEmp });
-  _cbRol   = combobox({ placeholder: t('Todos'), options: ROLES.map(r => ({ ...r, label: t(r.label) })), value: '', searchable: false, onChange: rebuildEmp });
+  _cbPuesto = combobox({ placeholder: t('Todos'), options: puestoOpts(), value: '', searchable: false, onChange: rebuildEmp });
   _cbEmp   = combobox({ placeholder: t('Selecciona empleado…'), options: empOpts(), value: '' });
   panel.querySelector('#hf-plaza').appendChild(_cbPlaza.el);
-  panel.querySelector('#hf-rol').appendChild(_cbRol.el);
+  panel.querySelector('#hf-puesto').appendChild(_cbPuesto.el);
   panel.querySelector('#hf-emp').appendChild(_cbEmp.el);
 
+  // Puestos distintos presentes en la lista de empleados (filtro dinámico).
+  function puestoOpts() {
+    const set = [...new Set(_empleados.map(e => e.puesto).filter(Boolean))].sort();
+    return [{ value: '', label: t('Seleccionar (todos)') }, ...set.map(p => ({ value: p, label: p }))];
+  }
   function empOpts() {
-    const plaza = parseInt(_cbPlaza?.getValue?.() ?? '') || null;
-    const rol   = _cbRol?.getValue?.() ?? '';
+    const plaza  = parseInt(_cbPlaza?.getValue?.() ?? '') || null;
+    const puesto = _cbPuesto?.getValue?.() ?? '';
     return _empleados
-      .filter(e => (!plaza || e.plaza_id === plaza) && (!rol || e.rol === rol))
+      .filter(e => (!plaza || e.plaza_id === plaza) && (!puesto || e.puesto === puesto))
       .map(e => ({
         value: e.id, label: e.nombre,
         img: e.foto_url || null, ph: e.foto_url ? null : initials(e.nombre),
@@ -129,7 +126,7 @@ export async function init(panel) {
   panel.querySelector('#hf-hoy').onclick = () => { panel.querySelector('#hf-desde').value = hoyISO(); };
   panel.querySelector('#hf-reset').onclick = () => {
     _cbPlaza.setValue(getPlazaScope() ?? '');
-    _cbRol.setValue('');
+    _cbPuesto.setValue('');
     rebuildEmp();
     _cbEmp.setValue('');
     panel.querySelector('#hf-desde').value = haceDiasISO(30);

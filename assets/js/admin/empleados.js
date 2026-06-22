@@ -144,8 +144,6 @@ function filterTable(q) {
   renderEmpleados(filtered);
 }
 
-const ROLES = ['empleado', 'supervisor', 'gerente'];
-
 // Siguiente N.º empleado: max sufijo numérico existente + 1, formato EQS-00N.
 function nextNumeroEmpleado() {
   const max = _allEmpleados.reduce((m, e) => {
@@ -161,7 +159,6 @@ function openEmpForm(emp = null) {
   const defPlaza  = emp?.plaza_id ?? getPlazaScope();
   const plazaOpts = _plazas.map(p => `<option value="${p.id}" ${defPlaza === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('');
   const puestoOpts = `<option value="">– ${t('Sin puesto')} –</option>` + _puestos.map(p => `<option value="${esc(p.nombre)}" ${emp?.puesto === p.nombre ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
-  const rolOpts   = ROLES.map(r => `<option value="${r}" ${(emp?.rol ?? 'empleado') === r ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('');
   const numero    = isEdit ? v('numero_empleado') : nextNumeroEmpleado();
 
   openModal(
@@ -202,10 +199,6 @@ function openEmpForm(emp = null) {
           <input id="e-ingreso" class="form-input" type="date" value="${esc(v('fecha_ingreso'))}">
         </div>
         <div class="form-group">
-          <label for="e-rol">${t('Rol')}</label>
-          <select id="e-rol" class="form-input">${rolOpts}</select>
-        </div>
-        <div class="form-group">
           <label for="e-plaza">${t('Plaza')} *</label>
           <select id="e-plaza" class="form-input"><option value="">– ${t('Selecciona')} –</option>${plazaOpts}</select>
         </div>
@@ -234,8 +227,7 @@ function openEmpForm(emp = null) {
         puesto:          document.getElementById('e-puesto').value        || null,
         email:           document.getElementById('e-email').value.trim()  || null,
         telefono:        document.getElementById('e-tel').value.trim()     || null,
-        fecha_ingreso:   document.getElementById('e-ingreso').value        || null,
-        rol:             document.getElementById('e-rol').value
+        fecha_ingreso:   document.getElementById('e-ingreso').value        || null
       };
 
       errEl.hidden = true;

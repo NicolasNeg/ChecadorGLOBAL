@@ -92,6 +92,30 @@
 .tipo-card__sub   { font-size: .82rem; color: var(--tinta-3); margin-top: 2px; }
 .tipo-card__arrow { margin-left: auto; flex-shrink: 0; color: var(--tinta-3); }
 
+/* Jornada en curso (temporizador, modo salida) */
+.jornada-card {
+  background: var(--tarjeta); border: 1.5px solid #FED7AA;
+  border-radius: 16px; padding: 16px; box-shadow: var(--sombra-sm);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.jornada-card__turno {
+  font-size: .85rem; font-weight: 600; color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+.jornada-card__timers { display: flex; gap: 12px; }
+.jornada-timer {
+  flex: 1; display: flex; flex-direction: column; gap: 3px;
+  padding: 12px; border-radius: 12px; background: var(--fondo); text-align: center;
+}
+.jornada-timer__val {
+  font-family: 'Lexend', sans-serif; font-size: 1.5rem; font-weight: 700;
+  color: var(--tinta); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.jornada-timer__lbl {
+  font-size: .7rem; font-weight: 600; color: var(--tinta-3);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+
 /* Screen typography */
 .app-screen__title {
   font-family: 'Lexend', sans-serif; font-size: 1.1rem; font-weight: 600;

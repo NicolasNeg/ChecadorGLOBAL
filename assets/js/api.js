@@ -96,6 +96,10 @@ export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longi
           errMsg = msg.split('FUERA_GEOCERCA: ')[1] || 'Ubicación fuera del rango permitido.';
         } else if (msg.includes('UBICACION_REQUERIDA')) {
           errMsg = 'Se requiere ubicación GPS para registrar asistencia.';
+        } else if (msg.includes('YA_TIENE_ENTRADA')) {
+          errMsg = msg.split('YA_TIENE_ENTRADA: ')[1] || 'Ya registraste tu entrada.';
+        } else if (msg.includes('SIN_ENTRADA')) {
+          errMsg = msg.split('SIN_ENTRADA: ')[1] || 'No tienes una entrada abierta.';
         } else if (msg) {
           errMsg = msg;
         }
@@ -157,6 +161,26 @@ export async function obtenerUltimaEntrada() {
     if (!r.ok) return null;
     return await r.json(); // timestamptz o null
   } catch { return null; }
+}
+
+// ── ESTADO DE JORNADA (RPC: ¿está dentro? + hora de la entrada abierta) ─────
+export async function obtenerEstadoJornada() {
+  if (!_idEmpleado) return { dentro: false, horaEntrada: null };
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/estado_jornada`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado })
+    });
+    if (!r.ok) return { dentro: false, horaEntrada: null };
+    const d = await r.json();
+    const row = Array.isArray(d) ? d[0] : d;
+    return { dentro: !!row?.dentro, horaEntrada: row?.hora_entrada ?? null };
+  } catch { return { dentro: false, horaEntrada: null }; }
 }
 
 // ── MIS TURNOS (RPC: horario semanal asignado por el admin) ─────────────────
