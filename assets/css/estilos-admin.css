@@ -1179,6 +1179,9 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 
 .asis-board { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; align-items: start; }
 .asis-board__grid { padding: 0; overflow: hidden; }
+/* Modo "solo tabla": oculta el panel lateral y la tabla ocupa todo el ancho. */
+.asis-board--solo { grid-template-columns: 1fr; }
+.asis-board--solo .asis-spotlight { display: none; }
 
 .heatmap-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .heatmap { border-collapse: separate; border-spacing: 0; width: 100%; }

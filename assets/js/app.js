@@ -243,16 +243,19 @@ async function renderTurnos() {
     celdas.set(`${f.empleado_id}-${f.fecha}`, f);
   }
 
+  // Guía visual: día de hoy resaltado, días ya pasados atenuados.
+  const hoyT = ymdT(new Date());
+  const colCls = (d) => { const k = ymdT(d); return k === hoyT ? 'tg-col--hoy' : k < hoyT ? 'tg-col--pasado' : ''; };
   const head = `<tr><th class="tg-emp">${t('Empleado')}</th>${fechas.map(d =>
-    `<th>${t(DIAS_AB[((d.getDay() + 6) % 7) + 1])}<span class="tg-fecha">${fechaLabel(d)}</span></th>`).join('')}</tr>`;
+    `<th class="${colCls(d)}">${t(DIAS_AB[((d.getDay() + 6) % 7) + 1])}<span class="tg-fecha">${fechaLabel(d)}</span></th>`).join('')}</tr>`;
   const body = empleados.map(e => `
     <tr class="${e.id === _miId ? 'tg-yo' : ''}">
       <td class="tg-emp">${e.nombre}</td>
       ${fechas.map(d => {
         const c = celdas.get(`${e.id}-${ymdT(d)}`);
         return c
-          ? `<td><span class="tg-turno">${c.turno_nombre}</span><span class="tg-horas">${hhmm(c.hora_entrada)}–${hhmm(c.hora_salida)}</span></td>`
-          : `<td class="tg-off">${t('Descanso')}</td>`;
+          ? `<td class="${colCls(d)}"><span class="tg-turno">${c.turno_nombre}</span><span class="tg-horas">${hhmm(c.hora_entrada)}–${hhmm(c.hora_salida)}</span></td>`
+          : `<td class="tg-off ${colCls(d)}">${t('Descanso')}</td>`;
       }).join('')}
     </tr>`).join('');
 

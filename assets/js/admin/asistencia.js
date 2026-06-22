@@ -42,9 +42,13 @@ export async function init(panel) {
     <div class="panel-header">
       <h2>${t('Tablero de Asistencia')}</h2>
       <div class="panel-header__actions">
+        <button class="abtn abtn--ghost" id="btn-spotlight" title="${t('Mostrar u ocultar el panel lateral')}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+          ${t('Panel')}
+        </button>
         <button class="abtn abtn--ghost" id="btn-exportar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          ${t('Exportar CSV')}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
+          ${t('Exportar PDF')}
         </button>
         <button class="abtn abtn--ghost" id="btn-refrescar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -74,7 +78,12 @@ export async function init(panel) {
     </div>`;
 
   document.getElementById('btn-refrescar').addEventListener('click', load);
-  document.getElementById('btn-exportar').addEventListener('click', exportarCSV);
+  document.getElementById('btn-exportar').addEventListener('click', exportarPDF);
+  document.getElementById('btn-spotlight').addEventListener('click', () => {
+    localStorage.setItem('eqs_asis_spotlight_fijo', spotFijo() ? '0' : '1');
+    applySpot();
+  });
+  applySpot();
   document.getElementById('mes-prev').addEventListener('click', () => stepMes(-1));
   document.getElementById('mes-next').addEventListener('click', () => stepMes(1));
   document.getElementById('asis-legend').addEventListener('click', onLegend);
@@ -203,7 +212,7 @@ function renderGrid(wrap) {
   wrap.innerHTML = `<div class="heatmap-scroll"><table class="heatmap"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 
   wrap.querySelectorAll('[data-emp]').forEach(el => {
-    el.addEventListener('click', () => { _sel = parseInt(el.dataset.emp); markSel(); renderSpotlight(); });
+    el.addEventListener('click', () => { _sel = parseInt(el.dataset.emp); markSel(); if (spotFijo()) renderSpotlight(); else toastResumen(); });
   });
 
   // Menú por celda: click derecho (escritorio) o mantener pulsado (móvil).
@@ -266,32 +275,50 @@ function renderSpotlight() {
   // fuera — requieren backend (envío de avisos, generación de PDF) inexistente.
 }
 
-// ── Exportar el tablero mensual a CSV (Excel-friendly, sin libs) ─────────────
-const csvCell = (v) => {
-  const s = String(v ?? '');
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
-function descargar(texto, nombre) {
-  const url = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8;' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = nombre;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+// ── Panel lateral: fijo (junto a la tabla) o bajo demanda (toast) ────────────
+const spotFijo = () => localStorage.getItem('eqs_asis_spotlight_fijo') !== '0'; // default: fijo
+function applySpot() {
+  const board = document.querySelector('.asis-board');
+  if (board) board.classList.toggle('asis-board--solo', !spotFijo());
+  document.getElementById('btn-spotlight')?.classList.toggle('active', spotFijo());
+}
+function toastResumen() {
+  const fila = _tablero?.filas.find(f => f.empleado.id === _sel);
+  if (!fila) return;
+  const r = fila.resumen;
+  showToast(`${fila.empleado.nombre} — ${CATS.map(c => `${t(c.label)} ${r[c.cat] ?? 0}`).join(' · ')}`, 'ok');
 }
 
-function exportarCSV() {
+// ── Exportar el tablero mensual a PDF (impresión nativa del navegador, sin libs) ─
+// ponytail: abrimos una ventana imprimible y disparamos print(); el usuario guarda
+// como PDF (no editable). Una lib de PDF (jsPDF) sería una dependencia nueva por gusto.
+function exportarPDF() {
   if (!_tablero) return;
   const { dias, filas } = _tablero;
-  const head = [t('Empleado'), t('Núm.'), ...dias.map(d => `${d.dia} ${DOW_AB[d.dow]}`)];
-  const rows = filas.map(f => [
-    f.empleado.nombre,
-    f.empleado.numero_empleado || '',
-    ...f.celdas.map(c => c.cat === 'futuro' ? '' : (c.estado || '')),
-  ]);
-  const csv = [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
-  const mm = String(_mes.m + 1).padStart(2, '0');
-  descargar('﻿' + csv, `asistencia-${_mes.y}-${mm}.csv`);
+  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
+  const titulo = `${t('Asistencia')} — ${new Date(_mes.y, _mes.m, 1).toLocaleString(loc, { month: 'long', year: 'numeric' })}`;
+  const head = `<th class="emp">${t('Empleado')}</th><th>${t('Núm.')}</th>` +
+    dias.map(d => `<th${d.finde ? ' class="we"' : ''}>${d.dia}<br><small>${DOW_AB[d.dow]}</small></th>`).join('');
+  const body = filas.map(f =>
+    `<tr><td class="emp">${esc(f.empleado.nombre)}</td><td>${esc(f.empleado.numero_empleado || '')}</td>` +
+    f.celdas.map(c => `<td>${c.cat === 'futuro' ? '' : esc(c.estado || '')}</td>`).join('') + '</tr>').join('');
+
+  const w = window.open('', '_blank');
+  if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+    body{font:12px system-ui,-apple-system,sans-serif;margin:24px;color:#111}
+    h1{font-size:16px;margin:0 0 12px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #cbd5e1;padding:4px 6px;text-align:center}
+    th{background:#f1f5f9;font-size:10px}
+    td.emp,th.emp{text-align:left;white-space:nowrap}
+    .we{background:#e2e8f0}
+    @page{size:landscape;margin:12mm}
+  </style></head><body><h1>${esc(titulo)}</h1>
+    <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+    <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
+  </body></html>`);
+  w.document.close();
 }
 
 // Leyenda como filtro: chips activos = categorías visibles; ninguno = todas.
