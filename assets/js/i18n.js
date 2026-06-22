@@ -188,6 +188,8 @@ export const EN = {
   'Responsable': 'Manager', 'Nombre del encargado': "Manager's name", 'Notas': 'Notes',
   'Observaciones, horarios especiales, etc.': 'Notes, special hours, etc.',
   'Plaza activa': 'Active location', 'Coordenadas fuera de rango válido.': 'Coordinates out of valid range.',
+  'Métricas': 'Metrics', 'Sin checadas (7 días)': 'No check-ins (7 days)',
+  'checadas (7 días)': 'check-ins (7 days)',
   'Información general': 'General information',
   'Dirección (busca en el mapa)': 'Address (search on the map)',
   'Ej. Av. Paseo de la Reforma 123': 'e.g. 123 Reforma Ave.',

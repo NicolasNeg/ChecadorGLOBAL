@@ -24,17 +24,17 @@ function loadLeaflet() {
 
 export async function init(panel) {
   panel.innerHTML = `
-    <div class="panel-header">
+    <div class="panel-header panel-header--hero">
       <h2>${t('Plazas')}</h2>
       <div class="panel-header__actions">
-        <button class="abtn abtn--primary" id="btn-nueva-plaza" data-rh-only>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <button class="abtn abtn--success" id="btn-nueva-plaza" data-rh-only>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           ${t('Nueva Plaza')}
         </button>
       </div>
     </div>
     <div class="ad-card">
-      <div id="tbl-plazas-wrap"></div>
+      <div id="tbl-plazas-wrap" class="plazas-tbl"></div>
     </div>`;
 
   document.getElementById('btn-nueva-plaza')?.addEventListener('click', () => openPlazaForm());
@@ -45,28 +45,30 @@ async function loadPlazas() {
   const wrap = document.getElementById('tbl-plazas-wrap');
   loading(wrap);
   try {
-    const plazas = await api.getPlazas();
+    const [plazas, series] = await Promise.all([api.getPlazas(), serie7d()]);
     renderTable(
       wrap,
       [
-        { key: 'nombre',       label: 'Nombre' },
-        { key: 'ciudad',       label: 'Ciudad' },
-        { key: 'latitud',      label: 'Latitud',  render: r => `<span class="td-mono">${r.latitud.toFixed(6)}</span>` },
-        { key: 'longitud',     label: 'Longitud', render: r => `<span class="td-mono">${r.longitud.toFixed(6)}</span>` },
-        { key: 'radio_metros', label: 'Radio',    render: r => `${r.radio_metros} m` },
-        { key: 'activo',       label: 'Estado',   render: r => r.activo
+        { key: 'nombre',   label: 'Nombre' },
+        { key: 'ciudad',   label: 'Ciudad' },
+        { key: 'metricas', label: 'Métricas', render: r => sparkline(series.get(r.id)) },
+        { key: 'activo',   label: 'Estado',   render: r => r.activo
             ? `<span class="abadge abadge--green">${t('Activa')}</span>`
             : `<span class="abadge abadge--gray">${t('Inactiva')}</span>` },
-        { key: 'id', label: 'Mapa', render: r =>
-          `<a href="https://www.google.com/maps?q=${r.latitud},${r.longitud}" target="_blank" rel="noopener" style="font-size:.8rem">${t('Ver mapa')}</a>` }
       ],
       plazas,
       (r) => `
-        <button class="abtn abtn--ghost abtn--icon" title="${t('Editar')}" onclick="window._editPlaza(${r.id})">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <a class="plaza-act" href="https://www.google.com/maps?q=${r.latitud},${r.longitud}" target="_blank" rel="noopener" title="${t('Ver mapa')}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span>${t('Ver mapa')}</span>
+        </a>
+        <button class="plaza-act" title="${t('Editar')}" onclick="window._editPlaza(${r.id})">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span>${t('Editar')}</span>
         </button>
-        <button class="abtn abtn--danger abtn--icon" title="${t('Eliminar')}" onclick="window._deletePlaza(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        <button class="plaza-act plaza-act--danger" title="${t('Eliminar')}" onclick="window._deletePlaza(${r.id}, '${r.nombre.replace(/'/g, "\\'")}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          <span>${t('Eliminar')}</span>
         </button>`
     );
 
@@ -88,6 +90,46 @@ async function loadPlazas() {
   } catch (e) {
     wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
   }
+}
+
+// Checadas por plaza en los últimos 7 días → [c0..c6] por plaza_id.
+// ponytail: agrega en cliente uniendo registros con empleados.plaza_id (2
+// queries). Upgrade path: una RPC `checadas_por_plaza_7d` si crece el volumen.
+async function serie7d() {
+  const map = new Map(); // plaza_id → number[7]
+  try {
+    const hoy = new Date();
+    const desde = new Date(hoy); desde.setHours(0, 0, 0, 0); desde.setDate(desde.getDate() - 6);
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const [emps, regs] = await Promise.all([
+      api.getEmpleados(),
+      api.getRegistrosRango({ desde: iso(desde), hasta: iso(hoy) }),
+    ]);
+    const plazaDe = new Map(emps.map((e) => [e.id, e.plaza_id]));
+    for (const r of regs) {
+      const pid = plazaDe.get(r.id_empleado);
+      if (pid == null) continue;
+      const i = Math.floor((new Date(r.hora) - desde) / 86400000);
+      if (i < 0 || i > 6) continue;
+      let arr = map.get(pid); if (!arr) { arr = [0, 0, 0, 0, 0, 0, 0]; map.set(pid, arr); }
+      arr[i]++;
+    }
+  } catch { /* sin permiso/datos: sparkline vacío */ }
+  return map;
+}
+
+// Mini-gráfico SVG (línea + área) de un arreglo de conteos.
+function sparkline(vals) {
+  const v = vals ?? [0, 0, 0, 0, 0, 0, 0];
+  const total = v.reduce((a, b) => a + b, 0);
+  if (!total) return `<span class="spark spark--empty" title="${t('Sin checadas (7 días)')}">—</span>`;
+  const W = 76, H = 26, pad = 3, max = Math.max(...v);
+  const xy = v.map((n, i) => [pad + (i * (W - 2 * pad)) / (v.length - 1), H - pad - (n / max) * (H - 2 * pad)]);
+  const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const area = `${pad},${H - pad} ${line} ${W - pad},${H - pad}`;
+  const label = `${total} ${t('checadas (7 días)')}`;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}"><title>${label}</title>` +
+    `<polygon class="spark__fill" points="${area}"/><polyline class="spark__line" points="${line}"/></svg>`;
 }
 
 function openPlazaForm(plaza = null) {
