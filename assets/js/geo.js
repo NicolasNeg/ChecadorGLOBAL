@@ -45,3 +45,25 @@ export function direccionDesdeCoords(lat, lon) {
   cache.set(k, p);
   return p;
 }
+
+// Dirección escrita → coordenadas (forward geocoding, Nominatim search).
+// ponytail: 1 resultado, sin caché — se llama al pulsar Enter/buscar, no por
+// tecla, así que respeta el límite de ~1 req/s. Upgrade path: autocompletado
+// con debounce + lista de sugerencias si hace falta.
+export async function buscarDireccion(texto) {
+  const q = (texto || '').trim();
+  if (!q) return null;
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!r.ok) return null;
+    const arr = await r.json();
+    if (!arr.length) return null;
+    const d = arr[0];
+    return { lat: parseFloat(d.lat), lon: parseFloat(d.lon), texto: d.display_name };
+  } catch {
+    return null;
+  }
+}

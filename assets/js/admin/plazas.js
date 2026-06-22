@@ -1,6 +1,7 @@
 import * as api from './api.js';
 import { renderTable, loading, showToast, openModal, closeModal, confirm } from './utils.js';
 import { t } from '../i18n.js';
+import { direccionDesdeCoords, buscarDireccion } from '../geo.js';
 
 // Leaflet desde CDN (patrón signature_pad): inyecta CSS+JS una sola vez.
 let _leafletP;
@@ -93,58 +94,69 @@ function openPlazaForm(plaza = null) {
   const isEdit = !!plaza;
   openModal(
     isEdit ? `${t('Editar')}: ${plaza.nombre}` : 'Nueva Plaza',
-    `<div class="form-group">
-      <label for="pz-nombre">${t('Nombre de la Plaza')} *</label>
-      <input id="pz-nombre" class="form-input" value="${plaza?.nombre ?? ''}" placeholder="Ej: Silao GTO">
-    </div>
-    <div class="form-group">
-      <label for="pz-ciudad">${t('Ciudad')} *</label>
-      <input id="pz-ciudad" class="form-input" value="${plaza?.ciudad ?? ''}" placeholder="Ej: Silao, Guanajuato">
-    </div>
-
-    <div class="form-group">
-      <label>${t('Ubicación (mueve el pin o haz clic en el mapa)')} *</label>
-      <div id="pz-map" style="height:240px;border-radius:10px;overflow:hidden;border:1px solid var(--ad-linea);z-index:0"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label for="pz-lat">${t('Latitud')} *</label>
-        <input id="pz-lat" class="form-input" type="number" step="0.000001" value="${plaza?.latitud ?? ''}" placeholder="20.934567">
+    `<div class="plaza-edit">
+      <div class="plaza-grid">
+        <section class="plaza-col">
+          <h4 class="plaza-col__title">${t('Información general')}</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pz-nombre">${t('Nombre de la Plaza')} *</label>
+              <input id="pz-nombre" class="form-input" value="${plaza?.nombre ?? ''}" placeholder="Ej: Silao GTO">
+            </div>
+            <div class="form-group">
+              <label for="pz-ciudad">${t('Ciudad')} *</label>
+              <input id="pz-ciudad" class="form-input" value="${plaza?.ciudad ?? ''}" placeholder="Ej: Silao, Guanajuato">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pz-responsable">${t('Responsable')}</label>
+              <input id="pz-responsable" class="form-input" value="${plaza?.responsable ?? ''}" placeholder="${t('Nombre del encargado')}">
+            </div>
+            <div class="form-group">
+              <label for="pz-telefono">${t('Teléfono')}</label>
+              <input id="pz-telefono" class="form-input" type="tel" value="${plaza?.telefono ?? ''}" placeholder="477 123 4567">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pz-lat">${t('Latitud')} *</label>
+              <input id="pz-lat" class="form-input" type="number" step="0.000001" value="${plaza?.latitud ?? ''}" placeholder="20.934567">
+            </div>
+            <div class="form-group">
+              <label for="pz-lng">${t('Longitud')} *</label>
+              <input id="pz-lng" class="form-input" type="number" step="0.000001" value="${plaza?.longitud ?? ''}" placeholder="-101.445678">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pz-radio">${t('Radio de tolerancia (metros)')} *</label>
+              <input id="pz-radio" class="form-input" type="number" min="10" max="5000" value="${plaza?.radio_metros ?? 100}">
+            </div>
+            <div class="form-group">
+              <label for="pz-notas">${t('Notas')}</label>
+              <textarea id="pz-notas" class="form-input" rows="2" placeholder="${t('Observaciones, horarios especiales, etc.')}">${plaza?.notas ?? ''}</textarea>
+            </div>
+          </div>
+        </section>
+        <section class="plaza-col plaza-col--map">
+          <div class="form-group">
+            <label for="pz-direccion">${t('Dirección (busca en el mapa)')}</label>
+            <div class="plaza-search">
+              <svg class="plaza-search__ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="pz-direccion" class="form-input" value="${plaza?.direccion ?? ''}" placeholder="${t('Ej. Av. Paseo de la Reforma 123')}" autocomplete="off">
+              <span id="pz-dir-spin" class="plaza-search__spin" hidden></span>
+            </div>
+          </div>
+          <div id="pz-map" class="plaza-map"></div>
+        </section>
       </div>
-      <div class="form-group">
-        <label for="pz-lng">${t('Longitud')} *</label>
-        <input id="pz-lng" class="form-input" type="number" step="0.000001" value="${plaza?.longitud ?? ''}" placeholder="-101.445678">
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="pz-radio">${t('Radio de tolerancia (metros)')} *</label>
-      <input id="pz-radio" class="form-input" type="number" min="10" max="5000" value="${plaza?.radio_metros ?? 100}">
-    </div>
-
-    <div class="form-group">
-      <label for="pz-direccion">${t('Dirección')}</label>
-      <input id="pz-direccion" class="form-input" value="${plaza?.direccion ?? ''}" placeholder="${t('Calle, número, colonia, C.P.')}">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label for="pz-telefono">${t('Teléfono')}</label>
-        <input id="pz-telefono" class="form-input" type="tel" value="${plaza?.telefono ?? ''}" placeholder="477 123 4567">
-      </div>
-      <div class="form-group">
-        <label for="pz-responsable">${t('Responsable')}</label>
-        <input id="pz-responsable" class="form-input" value="${plaza?.responsable ?? ''}" placeholder="${t('Nombre del encargado')}">
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="pz-notas">${t('Notas')}</label>
-      <textarea id="pz-notas" class="form-input" rows="3" placeholder="${t('Observaciones, horarios especiales, etc.')}">${plaza?.notas ?? ''}</textarea>
-    </div>
-
-    <div class="form-group" style="flex-direction:row;align-items:center;gap:10px">
-      <input id="pz-activo" type="checkbox" ${plaza?.activo !== false ? 'checked' : ''} style="width:16px;height:16px">
-      <label for="pz-activo" style="text-transform:none;font-size:.9rem;color:var(--ad-tinta)">${t('Plaza activa')}</label>
-    </div>
-    <p id="pz-error" class="error-inline" hidden></p>`,
+      <label class="plaza-activo">
+        <input id="pz-activo" type="checkbox" ${plaza?.activo !== false ? 'checked' : ''}>
+        ${t('Plaza activa')}
+      </label>
+      <p id="pz-error" class="error-inline" hidden></p>
+    </div>`,
     async () => {
       const v = (id) => document.getElementById(id).value.trim();
       const nombre   = v('pz-nombre');
@@ -214,17 +226,42 @@ async function initMapaPicker(plaza) {
   }).addTo(map);
   setTimeout(() => map.invalidateSize(), 120); // el modal recién se mostró
 
-  const set = (latlng) => {
-    elLat().value = latlng.lat.toFixed(6);
-    elLng().value = latlng.lng.toFixed(6);
-    circle.setLatLng(latlng);
+  const elDir = () => document.getElementById('pz-direccion');
+  const spin  = (on) => { const s = document.getElementById('pz-dir-spin'); if (s) s.hidden = !on; };
+
+  // Mapa → dirección: al soltar el pin / hacer clic, geocodifica en reverso.
+  const aDireccion = async (latlng) => {
+    spin(true);
+    const txt = await direccionDesdeCoords(latlng.lat, latlng.lng);
+    spin(false);
+    if (txt && elDir()) elDir().value = txt;
   };
-  marker.on('drag', (e) => set(e.target.getLatLng()));
+  // Refleja coords sin geocodificar (para arrastres en vivo y teclado).
+  const reflejar = (latlng) => { elLat().value = latlng.lat.toFixed(6); elLng().value = latlng.lng.toFixed(6); circle.setLatLng(latlng); };
+  const set = (latlng) => { reflejar(latlng); aDireccion(latlng); };
+
+  marker.on('drag',    (e) => reflejar(e.target.getLatLng()));
+  marker.on('dragend', (e) => aDireccion(e.target.getLatLng()));
   map.on('click', (e) => { marker.setLatLng(e.latlng); set(e.latlng); });
+
+  // Dirección → mapa: al pulsar Enter o salir del campo, busca y centra.
+  const buscar = async () => {
+    const q = elDir().value.trim();
+    if (!q) return;
+    spin(true);
+    const r = await buscarDireccion(q);
+    spin(false);
+    if (!r) { showToast('No se encontró esa dirección.', 'warn'); return; }
+    const ll = L.latLng(r.lat, r.lon);
+    marker.setLatLng(ll); circle.setLatLng(ll); map.setView(ll, 16);
+    elLat().value = r.lat.toFixed(6); elLng().value = r.lon.toFixed(6);
+  };
+  elDir().addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buscar(); } });
+  elDir().addEventListener('change', buscar);
 
   const fromInputs = () => {
     const la = parseFloat(elLat().value), ln = parseFloat(elLng().value);
-    if (!isNaN(la) && !isNaN(ln)) { marker.setLatLng([la, ln]); circle.setLatLng([la, ln]); map.panTo([la, ln]); }
+    if (!isNaN(la) && !isNaN(ln)) { const ll = L.latLng(la, ln); marker.setLatLng(ll); map.panTo(ll); set(ll); }
   };
   elLat().addEventListener('change', fromInputs);
   elLng().addEventListener('change', fromInputs);

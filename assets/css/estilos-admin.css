@@ -1408,3 +1408,37 @@ tr.is-inactive { opacity: .55; }
   .puesto-row__name { flex: 1 1 100%; order: -1; }
   .puesto-row__body { padding-left: 16px; }
 }
+
+/* ── Plaza: modal ancho de 2 columnas (form + mapa) ──────────────────────── */
+#ad-modal:has(.plaza-edit) .ad-modal__card { max-width: 860px; }
+.plaza-edit { display: flex; flex-direction: column; gap: 16px; }
+.plaza-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.plaza-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.plaza-col__title {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--ad-tinta3); margin: 0 0 2px;
+}
+.plaza-col--map { display: flex; flex-direction: column; gap: 10px; }
+.plaza-map {
+  flex: 1; min-height: 280px; height: 100%;
+  border-radius: 10px; overflow: hidden; border: 1px solid var(--ad-linea); z-index: 0;
+}
+/* Buscador de dirección con icono y spinner */
+.plaza-search { position: relative; }
+.plaza-search .form-input { padding-left: 36px; }
+.plaza-search__ico {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  color: var(--ad-tinta3); pointer-events: none;
+}
+.plaza-search__spin {
+  position: absolute; right: 11px; top: 50%; width: 15px; height: 15px;
+  margin-top: -7px; border: 2px solid var(--ad-linea); border-top-color: var(--ad-primary);
+  border-radius: 50%; animation: pz-spin .7s linear infinite;
+}
+@keyframes pz-spin { to { transform: rotate(360deg); } }
+.plaza-activo { display: flex; align-items: center; gap: 10px; font-size: .9rem; color: var(--ad-tinta); cursor: pointer; }
+.plaza-activo input { width: 16px; height: 16px; }
+@media (max-width: 760px) {
+  .plaza-grid { grid-template-columns: 1fr; }
+  .plaza-map { min-height: 240px; }
+}
