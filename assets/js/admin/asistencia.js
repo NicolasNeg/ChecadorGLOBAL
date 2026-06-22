@@ -12,13 +12,15 @@ let _sel = null;        // id del empleado seleccionado
 let _menu = null;       // menú contextual (click derecho / mantener pulsado)
 let _menuTarget = null; // { emp, ymd } de la celda apuntada
 
-// Opciones del menú contextual → tipo de incidencia.
+// Opciones del menú contextual → tipo de incidencia ('reset' = borrar overrides del día).
 const MENU = [
   ['asistencia', 'Asistencia'],
   ['falta',      'Falta'],
   ['permiso',    'Permiso'],
   ['festivo',    'Festivo'],
   ['vacaciones', 'Vacaciones'],
+  ['descanso',   'Descanso'],
+  ['reset',      'Reset'],
 ];
 
 const DOW_AB = ['D','L','M','M','J','V','S'];
@@ -62,7 +64,7 @@ export async function init(panel) {
         <button class="abtn abtn--ghost abtn--icon" id="mes-prev" aria-label="${t('Mes anterior')}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <h3 class="asis-nav__title" id="mes-titulo">—</h3>
+        <input type="month" class="asis-nav__title asis-month" id="mes-pick" aria-label="${t('Ir al mes')}">
         <button class="abtn abtn--ghost abtn--icon" id="mes-next" aria-label="${t('Mes siguiente')}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
@@ -86,6 +88,10 @@ export async function init(panel) {
   applySpot();
   document.getElementById('mes-prev').addEventListener('click', () => stepMes(-1));
   document.getElementById('mes-next').addEventListener('click', () => stepMes(1));
+  document.getElementById('mes-pick').addEventListener('change', (e) => {
+    const [y, m] = e.target.value.split('-').map(Number);
+    if (y && m) { _mes = { y, m: m - 1 }; load(); }
+  });
   document.getElementById('asis-legend').addEventListener('click', onLegend);
 
   buildMenu();
@@ -137,10 +143,13 @@ function onEsc(e) { if (e.key === 'Escape') hideMenu(); }
 
 async function setIncidencia(empId, fecha, tipo) {
   try {
+    // Siempre limpiamos overrides previos del día; 'reset' deja el día sin override
+    // (vuelve al estado calculado por checadas + turnos_dia).
     const prev = await api.getIncidencias(empId, { desde: fecha, hasta: fecha });
     for (const i of prev) await api.deleteIncidencia(i.id);
-    await api.createIncidencia({ id_empleado: empId, fecha, tipo, autor_nombre: getAdminSession()?.nombre || 'Admin' });
-    showToast(t('Registro actualizado.'), 'ok');
+    if (tipo !== 'reset')
+      await api.createIncidencia({ id_empleado: empId, fecha, tipo, autor_nombre: getAdminSession()?.nombre || 'Admin' });
+    showToast(tipo === 'reset' ? t('Día restablecido.') : t('Registro actualizado.'), 'ok');
     await load();
   } catch (e) {
     showToast(e.message || t('No se pudo actualizar.'), 'error');
@@ -156,21 +165,19 @@ function stepMes(delta) {
 async function load() {
   const wrap = document.getElementById('asis-grid-wrap');
   if (!wrap) return;
-  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
-  const mesNombre = new Date(_mes.y, _mes.m, 1).toLocaleString(loc, { month: 'long' });
-  document.getElementById('mes-titulo').textContent = `${mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1)} ${_mes.y}`;
+  document.getElementById('mes-pick').value = `${_mes.y}-${String(_mes.m + 1).padStart(2, '0')}`;
   wrap.innerHTML = `<div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando asistencia…')}</div>`;
 
   try {
     const rango = rangoMes(_mes);
-    const [empleados, horarios, turnos, registros, incidencias] = await Promise.all([
-      api.getEmpleados(), api.getHorarios(), api.getTurnos(),
+    const [empleados, turnos, turnosDia, registros, incidencias] = await Promise.all([
+      api.getEmpleados(), api.getTurnos(), api.getTurnosDia(rango),
       api.getRegistrosRango(rango), api.getIncidenciasRango(rango),
     ]);
     const activos = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
     if (!activos.length) { wrap.innerHTML = `<div class="ad-empty">${t('No hay empleados activos en esta plaza.')}</div>`; return; }
 
-    _tablero = tableroMes(activos, registros, incidencias, horarios, turnos, rango);
+    _tablero = tableroMes(activos, registros, incidencias, turnosDia, turnos, rango);
     renderGrid(wrap);
     if (_sel == null || !_tablero.filas.some(f => f.empleado.id === _sel)) _sel = _tablero.filas[0].empleado.id;
     markSel();

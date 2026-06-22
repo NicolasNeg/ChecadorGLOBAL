@@ -114,7 +114,7 @@ export function resumen(registros, turno, incidencias = []) {
 export const CATEGORIA = {
   presente: 'presente', asistencia: 'presente', retardo: 'retardo', falta: 'falta',
   permiso: 'permiso', justificacion: 'permiso', vacaciones: 'permiso', festivo: 'permiso',
-  descanso: 'descanso', futuro: 'futuro',
+  descanso: 'descanso', futuro: 'futuro', previo: 'futuro', // 'previo' = antes del alta: en blanco, no cuenta
 };
 
 // Estado de una celda (un empleado, un día). 'descanso' si no tiene turno ese día.
@@ -128,10 +128,13 @@ export function estadoCelda(reg, inc, turno, ymdKey, hoyKey) {
 
 // Construye el tablero: columnas (días del rango) + una fila por empleado con
 // sus celdas y un resumen por categoría. Puro (sin DOM), node-testable.
-export function tableroMes(empleados, registros, incidencias, horarios, turnos, rango, hoy = new Date()) {
+// El turno de cada día viene de turnos_dia (lo asigna la sección Turnos): si no
+// hay fila para (empleado, fecha) ⇒ ese día es descanso. Días anteriores al alta
+// del empleado (fecha_ingreso) salen en blanco y no se cuentan.
+export function tableroMes(empleados, registros, incidencias, turnosDia, turnos, rango, hoy = new Date()) {
   const hoyKey = ymd(hoy);
   const turnoDe = new Map(turnos.map((t) => [t.id, t]));
-  const horarioDe = new Map(horarios.map((h) => [`${h.id_empleado}-${h.dia_semana}`, h.turno_id]));
+  const turnoDiaDe = new Map(turnosDia.map((d) => [`${d.id_empleado}-${d.fecha}`, d.turno_id]));
 
   // registros agrupados por empleado → Map<empId, Map<ymd,{entrada,salida}>>
   const regsPorEmp = new Map();
@@ -161,12 +164,14 @@ export function tableroMes(empleados, registros, incidencias, horarios, turnos, 
   const filas = empleados.map((e) => {
     const regsDia = diasPorEmp.get(e.id) ?? new Map();
     const resumen = { presente: 0, retardo: 0, falta: 0, permiso: 0, descanso: 0, futuro: 0 };
+    const ingreso = e.fecha_ingreso || null;
     const celdas = dias.map((d) => {
-      const diaSem = d.dow === 0 ? 7 : d.dow; // horarios_semana: 1=Lun..7=Dom
-      const turno = turnoDe.get(horarioDe.get(`${e.id}-${diaSem}`));
+      const turno = turnoDe.get(turnoDiaDe.get(`${e.id}-${d.ymd}`));
       const reg = regsDia.get(d.ymd) ?? null;
       const inc = incPorEmpDia.get(`${e.id}-${d.ymd}`) ?? null;
-      const estado = estadoCelda(reg, inc, turno, d.ymd, hoyKey);
+      const estado = (ingreso && d.ymd < ingreso)
+        ? 'previo'
+        : estadoCelda(reg, inc, turno, d.ymd, hoyKey);
       const cat = CATEGORIA[estado] ?? 'futuro';
       resumen[cat] = (resumen[cat] ?? 0) + 1;
       return { ymd: d.ymd, dia: d.dia, estado, cat, entrada: reg?.entrada ?? null, salida: reg?.salida ?? null, inc };
@@ -192,17 +197,27 @@ if (typeof process !== 'undefined' && process.argv?.[1] && import.meta.url === `
   assert(estadoDia({ notas: [] }, '2026-06-09', '2026-06-15') === 'falta', 'día pasado sin nada ⇒ falta');
   assert(estadoDia({ notas: [] }, '2026-06-20', '2026-06-15') === 'futuro', 'día futuro ⇒ futuro');
 
-  // tableroMes: 1 empleado con turno L-V 09:00, checada tarde el lunes, sin turno sábado.
-  const emp = [{ id: 1, nombre: 'Ana' }];
+  // tableroMes: 1 empleado con turno L-V 09:00 (turnos_dia), checada tarde el lunes.
+  // Sábado/domingo sin fila en turnos_dia ⇒ descanso.
+  const emp = [{ id: 1, nombre: 'Ana', fecha_ingreso: '2026-06-15' }];
   const turnos = [{ id: 10, hora_entrada: '09:00', tolerancia_entrada_min: 0 }];
-  const horarios = [1, 2, 3, 4, 5].map((d) => ({ id_empleado: 1, dia_semana: d, turno_id: 10 }));
+  const turnosDia = ['2026-06-15', '2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19']
+    .map((fecha) => ({ id_empleado: 1, fecha, turno_id: 10 }));
   const regs = [{ id_empleado: 1, tipo: 'entrada', hora: '2026-06-15T09:30:00' }]; // lunes tarde
-  const tab = tableroMes(emp, regs, [], horarios, turnos, { desde: '2026-06-15', hasta: '2026-06-21' }, new Date('2026-06-18T12:00:00'));
+  const tab = tableroMes(emp, regs, [], turnosDia, turnos, { desde: '2026-06-15', hasta: '2026-06-21' }, new Date('2026-06-18T12:00:00'));
   const byYmd = (k) => tab.filas[0].celdas.find((c) => c.ymd === k);
   assert(tab.dias.length === 7, 'tablero: 7 columnas');
   assert(byYmd('2026-06-15').estado === 'retardo', 'lunes con checada tardía ⇒ retardo');
   assert(byYmd('2026-06-16').estado === 'falta', 'martes laboral sin checada y pasado ⇒ falta');
-  assert(byYmd('2026-06-20').cat === 'descanso', 'sábado sin turno ⇒ descanso');
+  assert(byYmd('2026-06-20').cat === 'descanso', 'sábado sin turno_dia ⇒ descanso');
   assert(byYmd('2026-06-19').estado === 'futuro', 'viernes posterior a hoy ⇒ futuro');
+
+  // fecha_ingreso: días anteriores al alta salen en blanco y no se cuentan como falta.
+  const emp2 = [{ id: 2, nombre: 'Beto', fecha_ingreso: '2026-06-17' }];
+  const tab2 = tableroMes(emp2, [], [], [], turnos, { desde: '2026-06-15', hasta: '2026-06-18' }, new Date('2026-06-18T12:00:00'));
+  const c2 = (k) => tab2.filas[0].celdas.find((c) => c.ymd === k);
+  assert(c2('2026-06-16').estado === 'previo', 'día anterior al alta ⇒ previo');
+  assert(c2('2026-06-16').cat === 'futuro', 'previo se pinta en blanco (cat futuro)');
+  assert(tab2.filas[0].resumen.falta === 0, 'días previos al alta no cuentan como falta');
   console.log('historial-calc OK');
 }

@@ -1162,6 +1162,13 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   font-family: var(--ad-font-head); font-size: 1.15rem; font-weight: 700;
   color: var(--ad-tinta); min-width: 150px; text-align: center; text-transform: capitalize;
 }
+/* Selector de mes nativo (salto rápido a meses lejanos) con aspecto de título. */
+.asis-month {
+  background: none; border: 1px solid transparent; border-radius: 8px;
+  padding: 4px 8px; cursor: pointer; color-scheme: light;
+}
+.asis-month:hover { border-color: var(--ad-linea); background: var(--ad-surf2); }
+.asis-month:focus-visible { outline: 2px solid var(--ad-primario); outline-offset: 1px; }
 .asis-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .asis-leg {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1396,6 +1403,8 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .ctx-menu__item--permiso    .ctx-menu__dot { background: #3B82F6; }
 .ctx-menu__item--festivo    .ctx-menu__dot { background: #8B5CF6; }
 .ctx-menu__item--vacaciones .ctx-menu__dot { background: #14B8A6; }
+.ctx-menu__item--descanso   .ctx-menu__dot { background: #CBD5E1; }
+.ctx-menu__item--reset      .ctx-menu__dot { background: transparent; border: 1.5px dashed var(--ad-linea); }
 
 /* ── Usuarios (ADMIN_GLOBAL) ─────────────────────────────────────────────── */
 .u-cell { display: flex; align-items: center; gap: 10px; }

@@ -277,6 +277,7 @@ export const EN = {
   'Sin turno asignado': 'No shift assigned', 'Turno cumplido': 'Shift complete',
   'Últimos 7 días': 'Last 7 days',
   'Registro actualizado.': 'Record updated.', 'No se pudo actualizar.': 'Could not update.',
+  'Día restablecido.': 'Day reset.', 'Ir al mes': 'Go to month', 'Reset': 'Reset',
   'Usa tu dedo o lápiz para firmar en el recuadro': 'Use your finger or stylus to sign in the box',
   'Mira directo a la cámara': 'Look straight at the camera',
   'Confirma que tu foto es clara': 'Confirm your photo is clear',
