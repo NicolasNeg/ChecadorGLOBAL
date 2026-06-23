@@ -1,9 +1,8 @@
 import * as api from './api.js';
-import { loading, showToast, openModal, closeModal, esc, pinFieldHTML, wirePin } from './utils.js';
+import { loading, showToast, openModal, closeModal, esc, pinFieldHTML, wirePin, DEFAULT_PFP } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { t } from '../i18n.js';
 
-const iniciales = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
 // Iconos SVG de las tarjetas (stroke currentColor; un solo juego, mismo grosor).
 const IC = {
@@ -100,9 +99,7 @@ async function loadEmpleados() {
 }
 
 function tarjetaEmp(r) {
-  const foto = r.foto_url
-    ? `<img class="emp-c__img" src="${esc(r.foto_url)}" alt="">`
-    : `<span class="emp-c__img emp-c__img--ph">${esc(iniciales(r.nombre))}</span>`;
+  const foto = `<img class="emp-c__img" src="${esc(r.foto_url || DEFAULT_PFP)}" alt="">`;
   const nombreJs = r.nombre.replace(/'/g, "\\'");
   return `
     <article class="emp-c">
@@ -164,8 +161,7 @@ function openEmpForm(emp = null) {
     `<div class="emp-edit">
       <div class="emp-edit__photo">
         <div class="emp-edit__pic">
-          <img id="e-foto-prev" src="${esc(v('foto_url'))}" alt="" ${v('foto_url') ? '' : 'hidden'}>
-          <span id="e-foto-ph" class="emp-edit__ph" ${v('foto_url') ? 'hidden' : ''}>${esc(iniciales(v('nombre')))}</span>
+          <img id="e-foto-prev" src="${esc(v('foto_url') || DEFAULT_PFP)}" alt="">
         </div>
         <label class="emp-edit__cam" for="e-foto" title="${t('Cambiar foto')}" aria-label="${t('Cambiar foto')}">${IC.edit}</label>
         <input id="e-foto" type="file" accept="image/*" hidden>

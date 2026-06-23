@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { esc, showToast } from './utils.js';
+import { esc, showToast, DEFAULT_PFP } from './utils.js';
 import { filterByPlaza } from './plaza-scope.js';
 import { tableroMes } from './historial-calc.mjs';
 import { getAdminSession } from './auth.js';
@@ -236,9 +236,7 @@ function renderGrid(wrap) {
 
   const body = filas.map(f => {
     const e = f.empleado;
-    const av = e.foto_url
-      ? `<img class="hm-av" src="${esc(e.foto_url)}" alt="">`
-      : `<span class="hm-av hm-av--ph">${esc(iniciales(e.nombre))}</span>`;
+    const av = `<img class="hm-av" src="${esc(e.foto_url || DEFAULT_PFP)}" alt="">`;
     const celdas = f.celdas.map(c =>
       `<td class="hm-cell hm--${c.cat} ${c.ymd === hoy ? 'hm-cell--hoy' : ''}" data-emp="${e.id}" data-ymd="${c.ymd}" title="${c.dia}: ${esc(t(ESTADO_LBL[c.estado] || c.estado))}"></td>`
     ).join('');
@@ -292,9 +290,7 @@ function renderSpotlight() {
   // anillo de estado = categoría del último día con estado real (no futuro)
   const ultima = [...fila.celdas].reverse().find(c => c.cat !== 'futuro');
   const ring = ultima?.cat ?? 'futuro';
-  const av = e.foto_url
-    ? `<img class="spot-av hm--ring-${ring}" src="${esc(e.foto_url)}" alt="">`
-    : `<span class="spot-av spot-av--ph hm--ring-${ring}">${esc(iniciales(e.nombre))}</span>`;
+  const av = `<img class="spot-av hm--ring-${ring}" src="${esc(e.foto_url || DEFAULT_PFP)}" alt="">`;
 
   aside.innerHTML = `
     <div class="spot-head">

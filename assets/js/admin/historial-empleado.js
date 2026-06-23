@@ -1,6 +1,6 @@
 import * as api from './api.js';
 import { esRetardo, resumen, agruparPorDia, notasPorDia, estadoDia } from './historial-calc.mjs';
-import { openModal, closeModal, showToast, confirm, loading, esc } from './utils.js';
+import { openModal, closeModal, showToast, confirm, loading, esc, DEFAULT_PFP } from './utils.js';
 import { combobox } from './combobox.js';
 import { getPlazaScope } from './plaza-scope.js';
 import { getAdminSession } from './auth.js';
@@ -31,7 +31,6 @@ const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
 // UTC (p. ej. México por la tarde), marcando como falta un día que aún no llega.
 const hoyISO = () => ymdLocal(new Date());
 const haceDiasISO = (n) => ymdLocal(new Date(Date.now() - n * 86_400_000));
-const initials = (n) => (n || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const firstOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const horasDe = (d) => (d?.entrada && d?.salida) ? Math.round((new Date(d.salida.hora) - new Date(d.entrada.hora)) / 360000) / 10 : null;
 const DEFECTO = () => `<div class="ad-empty">${t('Selecciona un empleado y pulsa “Ver historial”.')}</div>`;
@@ -118,7 +117,7 @@ export async function init(panel) {
       .filter(e => (!plaza || e.plaza_id === plaza) && (!puesto || e.puesto === puesto))
       .map(e => ({
         value: e.id, label: e.nombre,
-        img: e.foto_url || null, ph: e.foto_url ? null : initials(e.nombre),
+        img: e.foto_url || DEFAULT_PFP, ph: null,
         sub: e.puesto || e.plazas?.nombre || '',
       }));
   }
@@ -267,9 +266,7 @@ function pintar() {
   const wrap = panel.querySelector('#hist-resultado');
   if (!wrap) return;
 
-  const foto = emp?.foto_url
-    ? `<img class="hist-subj__av" src="${esc(emp.foto_url)}" alt="">`
-    : `<span class="hist-subj__av hist-subj__av--ph">${initials(emp?.nombre)}</span>`;
+  const foto = `<img class="hist-subj__av" src="${esc(emp?.foto_url || DEFAULT_PFP)}" alt="">`;
   const meta = [emp?.puesto, emp?.plazas?.nombre].filter(Boolean).join(' · ');
   const subject = `
     <div class="hist-subj">

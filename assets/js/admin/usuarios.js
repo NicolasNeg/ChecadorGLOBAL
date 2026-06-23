@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { loading, showToast, openModal, closeModal, confirm, esc } from './utils.js';
+import { loading, showToast, openModal, closeModal, confirm, esc, DEFAULT_PFP } from './utils.js';
 import { t } from '../i18n.js';
 import { getAdminSession } from './auth.js';
 
@@ -52,12 +52,11 @@ function renderUsuarios(wrap, perfiles) {
       <th>${t('Plaza')}</th><th>${t('Estado')}</th><th style="width:100px">${t('Acciones')}</th>
     </tr></thead><tbody>
     ${perfiles.map(p => {
-      const inicial = (p.nombre?.trim().charAt(0) || 'A').toUpperCase();
       const enChecador = p.email && _emailsChecador.has(p.email.toLowerCase());
       const esYo = p.id === yo;
       return `<tr data-id="${p.id}"${p.activo ? '' : ' class="is-inactive"'}>
         <td data-label="${t('Nombre')}"><div class="u-cell">
-          ${p.foto_url ? `<img class="u-avatar" src="${esc(p.foto_url)}" alt="">` : `<span class="u-avatar u-avatar--ph">${esc(inicial)}</span>`}
+          <img class="u-avatar" src="${esc(p.foto_url || DEFAULT_PFP)}" alt="">
           <div><div class="u-name">${esc(p.nombre)}${esYo ? ` <span class="abadge abadge--blue">${t('Tú')}</span>` : ''}</div>
             ${p.es_admin_global ? `<span class="abadge abadge--violet">ADMIN_GLOBAL</span>` : ''}
             ${enChecador ? `<span class="abadge abadge--green" title="${t('También usa el checador')}">CHECADOR</span>` : ''}

@@ -5,6 +5,13 @@ import { t } from '../i18n.js';
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
+// Avatar por defecto mientras el empleado/admin no suba una foto (evita el hueco
+// en blanco). Ruta relativa: la resuelve el <base> de cada página (raíz o
+// /ChecadorGLOBAL/). Es PURAMENTE cosmética: el reconocimiento facial usa
+// empleados.face_descriptor (embedding del video en vivo), nunca foto_url, así
+// que esta imagen no puede usarse para pasar la verificación facial.
+export const DEFAULT_PFP = 'assets/imgs/default_pfp.png';
+
 export function fmtFecha(iso) {
   if (!iso) return '–';
   return new Date(iso).toLocaleString('es-MX', {
