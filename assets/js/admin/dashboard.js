@@ -677,35 +677,117 @@ async function loadCambios(panel) {
   }
 }
 
+// Filtra el audit_log por buscador (acción + responsable), operación y día.
+function filtrarAudit(rows, { q, op, fecha }) {
+  const needle = (q || '').trim().toLowerCase();
+  return rows.filter(r =>
+    (!op    || r.operacion === op) &&
+    (!fecha || (r.created_at || '').slice(0, 10) === fecha) &&
+    (!needle || `${accionHumana(r)} ${r.perfiles_admin?.nombre ?? ''}`.toLowerCase().includes(needle))
+  );
+}
+
+// Celda de detalle: conserva el <details> "Ver detalle" con el diff; la IP se
+// vuelve un botón "Ver ubicación" que abre ipinfo.io (geolocalización aproximada).
+function detalleHTML(r) {
+  const cambios = cambiosHTML(r);
+  if (!cambios.includes('<b>')) return `<span class="td-muted">—</span>`;
+  const ip = r.ip_address;
+  const verUbic = ip
+    ? ` <a class="abtn abtn--ghost audit-ip-btn" href="https://ipinfo.io/${encodeURIComponent(ip)}" target="_blank" rel="noopener">${t('Ver ubicación')}</a>`
+    : '';
+  return `<details class="audit-item__det"><summary>${t('Ver detalle')}</summary>
+    <div class="audit-item__cambios">${cambios}</div>
+    <span class="audit-item__ip">IP: ${esc(ip ?? '—')}${verUbic}</span>
+  </details>`;
+}
+
+function renderAuditTabla(rows, filtros) {
+  const wrap = document.getElementById('audit-wrap');
+  const list = filtrarAudit(rows, filtros);
+  if (!list.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin registros que coincidan.')}</div>`; return; }
+  wrap.innerHTML = `<div class="table-scroll"><table class="data-table">
+    <thead><tr>
+      <th>${t('Fecha')}</th><th>${t('Operación')}</th><th>${t('Acción')}</th>
+      <th>${t('Responsable')}</th><th>${t('Detalle')}</th>
+    </tr></thead><tbody>
+    ${list.map(r => {
+      const op = r.operacion;
+      return `<tr>
+        <td data-label="${t('Fecha')}">${esc(fmtFecha(r.created_at))}</td>
+        <td data-label="${t('Operación')}"><span class="abadge abadge--${op === 'DELETE' ? 'red' : op === 'INSERT' ? 'green' : 'blue'}">${t(OP_VERBO[op] ?? op)}</span></td>
+        <td data-label="${t('Acción')}">${esc(accionHumana(r))}</td>
+        <td data-label="${t('Responsable')}">${esc(r.perfiles_admin?.nombre ?? t('Sistema'))}</td>
+        <td data-label="${t('Detalle')}">${detalleHTML(r)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+}
+
+async function pdfAuditoria(rows) {
+  if (!rows.length) { showToast(t('No hay registros para exportar.'), 'error'); return; }
+  const w = window.open('', '_blank');
+  if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  const cab = await cabeceraReporteHTML();
+  const titulo = `${t('Log de Auditoría')} — ${fmtFecha(new Date().toISOString())}`;
+  const body = rows.map(r =>
+    `<tr><td>${esc(fmtFecha(r.created_at))}</td><td>${esc(t(OP_VERBO[r.operacion] ?? r.operacion))}</td><td>${esc(accionHumana(r))}</td><td>${esc(r.perfiles_admin?.nombre ?? t('Sistema'))}</td></tr>`).join('');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font:12px system-ui,-apple-system,sans-serif;margin:24px;color:#111}
+    h1{font-size:16px;margin:0 0 12px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #cbd5e1;padding:5px 8px;text-align:left}
+    th{background:#f1f5f9;font-size:10px}
+    @page{margin:14mm}${CABECERA_CSS}
+  </style></head><body>${cab}<h1>${esc(titulo)}</h1>
+    <table><thead><tr><th>${t('Fecha')}</th><th>${t('Operación')}</th><th>${t('Acción')}</th><th>${t('Responsable')}</th></tr></thead><tbody>${body}</tbody></table>
+    <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
+  </body></html>`);
+  w.document.close();
+}
+
 async function loadAuditoria(panel) {
   panel.innerHTML = `
-    <div class="panel-header"><h2>${t('Log de Auditoría')}</h2></div>
-    <div class="ad-card"><div id="audit-wrap">
-      <div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>
-    </div></div>`;
+    <div class="panel-header">
+      <h2>${t('Log de Auditoría')}</h2>
+      <div class="panel-header__actions">
+        <button class="abtn abtn--ghost" id="audit-pdf">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ${t('Generar PDF')}
+        </button>
+      </div>
+    </div>
+    <div class="ad-card">
+      <div class="cambios-bar">
+        <input id="audit-q" class="form-input" type="search" placeholder="${t('Buscar acción o responsable…')}" aria-label="${t('Buscar')}">
+        <select id="audit-op" class="form-input" aria-label="${t('Operación')}"></select>
+        <input id="audit-fecha" class="form-input" type="date" aria-label="${t('Fecha')}">
+      </div>
+      <div id="audit-wrap">
+        <div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>
+      </div>
+    </div>`;
   try {
     const rows = await getAuditLog(100);
-    const wrap = document.getElementById('audit-wrap');
-    if (!rows.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin registros.')}</div>`; return; }
+    if (!rows.length) {
+      document.getElementById('audit-wrap').innerHTML = `<div class="ad-empty">${t('Sin registros.')}</div>`;
+      return;
+    }
+    const q = document.getElementById('audit-q');
+    const opSel = document.getElementById('audit-op');
+    const fechaInp = document.getElementById('audit-fecha');
+    opSel.innerHTML = `<option value="">${t('Todas las operaciones')}</option>` +
+      [...new Set(rows.map(r => r.operacion))].map(op => `<option value="${esc(op)}">${esc(t(OP_VERBO[op] ?? op))}</option>`).join('');
 
-    wrap.innerHTML = `<div class="audit-feed">${rows.map(r => {
-      const cambios = cambiosHTML(r);
-      const hayCambios = cambios.includes('<b>');
-      return `<div class="audit-item">
-        <span class="abadge abadge--${r.operacion === 'DELETE' ? 'red' : r.operacion === 'INSERT' ? 'green' : 'blue'} audit-item__op">${t(OP_VERBO[r.operacion] ?? r.operacion)}</span>
-        <div class="audit-item__main">
-          <p class="audit-item__txt">${esc(accionHumana(r))}</p>
-          <span class="audit-item__meta">${esc(r.perfiles_admin?.nombre ?? t('Sistema'))} · ${fmtFecha(r.created_at)}</span>
-          ${hayCambios ? `<details class="audit-item__det"><summary>${t('Ver detalle')}</summary>
-            <div class="audit-item__cambios">${cambios}</div>
-            <span class="audit-item__ip">IP: ${esc(r.ip_address ?? '—')}</span>
-          </details>` : ''}
-        </div>
-      </div>`;
-    }).join('')}</div>`;
+    const filtros = () => ({ q: q.value, op: opSel.value, fecha: fechaInp.value });
+    const render = () => renderAuditTabla(rows, filtros());
+    [q, opSel, fechaInp].forEach(el => el.addEventListener('input', render));
+    document.getElementById('audit-pdf').addEventListener('click', () => pdfAuditoria(filtrarAudit(rows, filtros())));
+    render();
   } catch (e) {
     document.getElementById('audit-wrap').innerHTML =
-      `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
+      `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
   }
 }
 
