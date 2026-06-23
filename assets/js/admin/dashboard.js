@@ -503,14 +503,26 @@ const TABLA_ENTIDAD = {
   empleados:      'el horario del usuario',  // los cambios de turno_id se registran sobre empleados
   turnos:         'un turno',
   plazas:         'una plaza',
+  puestos:        'un puesto',
   registros:      'un registro de asistencia',
   incidencias:    'una nota',
   perfiles_admin: 'un administrador',
+  config_global:  'la configuración',
+};
+// Etiqueta legible de cada clave de config_global, para nombrar qué se cambió.
+const CONFIG_LBL = {
+  nombre_empresa: 'el nombre de la empresa', empresa_direccion: 'la dirección de la empresa',
+  empresa_rfc: 'el RFC', empresa_logo_url: 'el logo de la empresa',
+  tolerancia_retardo_min: 'la tolerancia de retardo', jornada_horas: 'la jornada estándar',
 };
 function accionHumana(r) {
+  const verbo = t(OP_VERBO[r.operacion] ?? r.operacion).toLowerCase();
+  const d     = r.datos_despues ?? r.datos_antes ?? {};
+  if (r.tabla === 'config_global') {
+    const campo = CONFIG_LBL[d.clave] ? t(CONFIG_LBL[d.clave]) : t('la configuración');
+    return `${t('Se')} ${verbo} ${campo}`.replace(/\s+/g, ' ').trim();
+  }
   const entidad = t(TABLA_ENTIDAD[r.tabla] ?? `un registro (${r.tabla})`);
-  const verbo   = t(OP_VERBO[r.operacion] ?? r.operacion).toLowerCase();
-  const d       = r.datos_despues ?? r.datos_antes ?? {};
   const quien   = d.nombre ? ` ${t('de')} ${d.nombre}` : '';
   // ponytail: plantilla "Se {verbo} {entidad}"; la gramática EN es aproximada, basta para auditoría.
   return `${t('Se')} ${verbo} ${entidad}${quien}`.replace(/\s+/g, ' ').trim();
@@ -769,7 +781,9 @@ async function loadAuditoria(panel) {
       </div>
     </div>`;
   try {
-    const rows = await getAuditLog(100);
+    // Auditoría = administración general. Lo operativo (turnos/horarios/incidencias)
+    // ya vive en Historial de cambios; aquí se excluye para no duplicar.
+    const rows = (await getAuditLog(100)).filter(r => !CAMBIO_OPERATIVO.has(r.tabla));
     if (!rows.length) {
       document.getElementById('audit-wrap').innerHTML = `<div class="ad-empty">${t('Sin registros.')}</div>`;
       return;
