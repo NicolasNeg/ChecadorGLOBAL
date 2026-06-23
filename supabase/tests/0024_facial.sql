@@ -4,31 +4,41 @@
 -- Esperado: "OK 0024". Hace rollback.
 begin;
 
--- Use an existing employee (id=4, Isaac Lerma) for testing
-with orig as (
-  select id, pin_hash from empleados where id = 4
-),
-test_data as (
-  select 4 as emp_id, crypt('7777', gen_salt('bf')) as test_hash
-)
--- Clear any existing face_descriptor and set test PIN
-update empleados set face_descriptor = null where id = 4;
+do $$ declare
+  v_turno_id bigint;
+  v_emp_id bigint;
+  v_turno_nombre text;
+  v_descriptor jsonb;
+begin
+  -- Inserta turno de prueba en plaza 1
+  insert into turnos (plaza_id, nombre, hora_entrada, hora_salida, dias_semana)
+  values (1, 'TEST T 0024', '08:00'::time, '16:00'::time, '{1,2,3,4,5}'::int[])
+  returning id into v_turno_id;
 
--- Set test PIN hash so we can use verificar_pin with a known PIN
-update empleados set pin_hash = crypt('7777', gen_salt('bf')) where id = 4;
+  -- Inserta empleado de prueba con ese turno
+  insert into empleados (nombre, pin_hash, turno_id, activo, numero_empleado, puesto)
+  values ('Test Facial', crypt('8888', gen_salt('bf')), v_turno_id, true, 'TST-0024', 'test')
+  returning id into v_emp_id;
 
--- Sin descriptor: verificar_pin devuelve NULL en face_descriptor
-do $$ declare d jsonb; begin
-  select face_descriptor into d from verificar_pin('7777');
-  if d is not null then raise exception 'face_descriptor debería ser NULL: %', d; end if;
-end $$;
+  -- Asserción 1: verificar_pin devuelve el nombre de turno correcto
+  select turno_nombre into v_turno_nombre from verificar_pin('8888');
+  if v_turno_nombre is distinct from 'TEST T 0024' then
+    raise exception 'turno_nombre debería ser TEST T 0024, pero es: %', v_turno_nombre;
+  end if;
 
--- Tras registrar el descriptor: verificar_pin lo devuelve.
-select registrar_descriptor_facial(4, '[0.1,0.2,0.3]'::jsonb);
-do $$ declare d jsonb; begin
-  select face_descriptor into d from verificar_pin('7777');
-  if d is distinct from '[0.1,0.2,0.3]'::jsonb then
-    raise exception 'face_descriptor no persistió: %', d;
+  -- Asserción 2: Sin descriptor, verificar_pin devuelve NULL en face_descriptor
+  select face_descriptor into v_descriptor from verificar_pin('8888');
+  if v_descriptor is not null then
+    raise exception 'face_descriptor debería ser NULL inicialmente: %', v_descriptor;
+  end if;
+
+  -- Registrar descriptor facial
+  perform registrar_descriptor_facial(v_emp_id, '[0.1,0.2,0.3]'::jsonb);
+
+  -- Asserción 3: Tras registrar el descriptor, verificar_pin lo devuelve
+  select face_descriptor into v_descriptor from verificar_pin('8888');
+  if v_descriptor is distinct from '[0.1,0.2,0.3]'::jsonb then
+    raise exception 'face_descriptor no persistió: %', v_descriptor;
   end if;
 end $$;
 
