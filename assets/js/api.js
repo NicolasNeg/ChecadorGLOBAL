@@ -41,7 +41,8 @@ export async function verificarPin(pin) {
         plazaNombre:    e.plaza_nombre,
         turnoNombre:    e.turno_nombre,
         turnoEntrada:   e.turno_entrada,  // "HH:MM:SS" o null
-        turnoSalida:    e.turno_salida
+        turnoSalida:    e.turno_salida,
+        faceDescriptor: e.face_descriptor ?? null
       };
     } else {
       return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
@@ -53,7 +54,7 @@ export async function verificarPin(pin) {
 }
 
 // ── GUARDAR REGISTRO ──────────────────────────────────────────────────────────
-export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longitud }) {
+export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longitud, rostroVerificado = false, viveza = null, similitud = null }) {
   try {
     if (!_idEmpleado) return { ok: false, error: 'Sesión no válida o expirada.' };
 
@@ -81,7 +82,10 @@ export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longi
         latitud: latitud || null,
         longitud: longitud || null,
         ruta_foto: rutaFoto,
-        ruta_firma: rutaFirma
+        ruta_firma: rutaFirma,
+        rostro_verificado: rostroVerificado,
+        viveza: viveza,
+        similitud: similitud
       })
     });
 
@@ -111,6 +115,26 @@ export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longi
   } catch (error) {
     console.error('Error en guardarRegistro:', error);
     return { ok: false, error: 'Error de red al guardar el registro.' };
+  }
+}
+
+// ── REGISTRAR DESCRIPTOR FACIAL (auto-enroll la primera vez) ────────────────
+export async function guardarDescriptorFacial(embedding) {
+  if (!_idEmpleado) return { ok: false };
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/registrar_descriptor_facial`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_id_empleado: _idEmpleado, p_descriptor: embedding })
+    });
+    return { ok: r.ok };
+  } catch (e) {
+    console.error('Error en guardarDescriptorFacial:', e);
+    return { ok: false };
   }
 }
 
