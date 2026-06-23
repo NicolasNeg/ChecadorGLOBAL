@@ -560,10 +560,18 @@ function cambiosHTML(r) {
   return filas.length ? filas.join('<br>') : '<span style="color:var(--ad-tinta-3)">—</span>';
 }
 
-// ── Historial de cambios (versión operativa del log, para RH) ───────────────────
-// Filtra el audit_log a lo que le importa a coordinación (horarios, descansos,
-// incidencias), resuelve a quién afecta y lo muestra sin diffs ni IPs.
-const CAMBIO_OPERATIVO = new Set(['turnos_dia', 'horarios_semana', 'incidencias']);
+// ── Ruteo de cambios a panel (ÚNICO origen de verdad) ───────────────────────────
+// Cada tabla auditada va a EXACTAMENTE un panel, así nunca se duplica:
+//   'HC'    = operación diaria → Historial de cambios (horarios, descansos, notas)
+//   'AUDIT' = administración general → Log de Auditoría (plazas, empleados, config…)
+// Para mandar una tabla nueva a un panel, añádela aquí y solo aquí.
+const DESTINO_CAMBIO = {
+  turnos_dia: 'HC', horarios_semana: 'HC', incidencias: 'HC',
+  empleados: 'AUDIT', turnos: 'AUDIT', plazas: 'AUDIT', puestos: 'AUDIT',
+  registros: 'AUDIT', perfiles_admin: 'AUDIT', config_global: 'AUDIT',
+};
+// Tabla desconocida → Auditoría (administración) por defecto, nunca se pierde.
+const destinoCambio = (tabla) => DESTINO_CAMBIO[tabla] ?? 'AUDIT';
 const INCIDENCIA_TITULO = {
   vacaciones: 'Vacaciones', permiso: 'Permiso', falta: 'Falta', festivo: 'Día festivo',
   descanso: 'Descanso asignado', justificacion: 'Justificación', asistencia: 'Asistencia registrada',
@@ -658,7 +666,7 @@ async function loadCambios(panel) {
   try {
     const [rows, empleados] = await Promise.all([getAuditLog(150), getEmpleados().catch(() => [])]);
     const nombreEmp = new Map(empleados.map(e => [e.id, e.nombre]));
-    const items = rows.filter(r => CAMBIO_OPERATIVO.has(r.tabla)).map(r => {
+    const items = rows.filter(r => destinoCambio(r.tabla) === 'HC').map(r => {
       const d = r.datos_despues ?? r.datos_antes ?? {};
       const titulo = tituloCambio(r, d);
       return {
@@ -781,9 +789,8 @@ async function loadAuditoria(panel) {
       </div>
     </div>`;
   try {
-    // Auditoría = administración general. Lo operativo (turnos/horarios/incidencias)
-    // ya vive en Historial de cambios; aquí se excluye para no duplicar.
-    const rows = (await getAuditLog(100)).filter(r => !CAMBIO_OPERATIVO.has(r.tabla));
+    // Auditoría = administración general (ver DESTINO_CAMBIO, único origen de verdad).
+    const rows = (await getAuditLog(100)).filter(r => destinoCambio(r.tabla) === 'AUDIT');
     if (!rows.length) {
       document.getElementById('audit-wrap').innerHTML = `<div class="ad-empty">${t('Sin registros.')}</div>`;
       return;
