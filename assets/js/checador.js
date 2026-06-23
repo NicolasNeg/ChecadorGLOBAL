@@ -1,5 +1,6 @@
 import { requireSession } from './auth.js';
-import { setIdEmpleado, guardarRegistro, obtenerUltimaEntrada, obtenerEstadoJornada } from './api.js';
+import { setIdEmpleado, guardarRegistro, obtenerUltimaEntrada, obtenerEstadoJornada, guardarDescriptorFacial } from './api.js';
+import { cargarMotor, analizar, similitud, UMBRAL_SIMILITUD, UMBRAL_VIVEZA, UMBRAL_REAL } from './face.js';
 import { BASE } from './config.js';
 import { solicitarPermisos, streamCamara, coordenadas } from './permisos.js';
 import { iniciarFirma, limpiarFirma, estaVacia, obtenerFirmaPNG } from './firma.js';
@@ -36,7 +37,9 @@ let firmaCleanup = null;
 let current = 'cargando';
 let estado = { dentro: false, horaEntrada: null }; // estado de jornada (fresco del servidor)
 let timerId = null;
-const data = { tipo: null, firmaDataURL: null, fotoDataURL: null };
+let faceLoopId = null;   // intervalo de análisis
+let faceEscapeId = null; // timeout de 15s
+const data = { tipo: null, firmaDataURL: null, fotoDataURL: null, rostroVerificado: false, viveza: null, similitud: null };
 
 const ICON_ENTRADA = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
 const ICON_SALIDA  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`;
@@ -70,6 +73,7 @@ function saludo(nombre) {
 
 // ── Back button ───────────────────────────────────────────────────────────────
 btnAtras.addEventListener('click', () => {
+  detenerGateFacial();
   if (current === 'tipo' || current === 'cargando') location.href = BASE + '/';
   else if (current === 'firma') showTipo();
   else if (current === 'foto')  showFirma();
@@ -77,6 +81,7 @@ btnAtras.addEventListener('click', () => {
 
 // ── TIPO SCREEN (auto: entrada si está fuera, salida si tiene jornada abierta) ─
 function showTipo() {
+  detenerGateFacial();
   current = 'tipo';
   showOnly(sTipo);
   headerTitle.textContent = t('Registrar asistencia');
@@ -154,6 +159,7 @@ function stopTimer()  { if (timerId) { clearInterval(timerId); timerId = null; }
 
 // ── FIRMA SCREEN ──────────────────────────────────────────────────────────────
 function showFirma() {
+  detenerGateFacial();
   current = 'firma';
   showOnly(sFirma, btmFirma);
   headerTitle.textContent = t('Tu firma');
@@ -176,6 +182,50 @@ document.getElementById('btn-continuar-firma').addEventListener('click', () => {
   showFoto();
 });
 
+// ── Gate facial helpers ────────────────────────────────────────────────────────
+const FACE_ICON = {
+  cargando:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg>',
+  sincara:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M9 15c1.5 1.2 4.5 1.2 6 0"/></svg>',
+  verificando: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg>',
+  liveness:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  enrolando:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg>',
+  match:       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  error:       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+};
+const FACE_TXT = {
+  cargando:    'Cargando verificación…',
+  sincara:     'Coloca tu cara en el óvalo',
+  verificando: 'Verificando…',
+  liveness:    'Mira a la cámara, sin fotos',
+  enrolando:   'Registrando tu rostro…',
+  match:       'Identidad verificada',
+  error:       'No se pudo verificar',
+};
+
+function setFaceEstado(estado) {
+  const ring = document.getElementById('face-ring');
+  const chip = document.getElementById('face-chip');
+  if (ring) ring.dataset.estado = estado;
+  if (chip) {
+    chip.dataset.estado = estado;
+    document.getElementById('face-chip-icon').innerHTML = FACE_ICON[estado] || '';
+    document.getElementById('face-chip-txt').textContent = t(FACE_TXT[estado] || '');
+  }
+}
+
+function detenerGateFacial() {
+  if (faceLoopId)   { clearInterval(faceLoopId); faceLoopId = null; }
+  if (faceEscapeId) { clearTimeout(faceEscapeId); faceEscapeId = null; }
+}
+
+function habilitarTomarFoto() {
+  const btn = document.getElementById('btn-tomar-foto');
+  btn.disabled = false;
+  btn.removeAttribute('aria-disabled');
+  btn.classList.add('face-listo');
+  if (navigator.vibrate) navigator.vibrate(40);
+}
+
 // ── FOTO SCREEN ───────────────────────────────────────────────────────────────
 function showFoto() {
   current = 'foto';
@@ -186,15 +236,87 @@ function showFoto() {
 
   document.getElementById('sec-video').hidden   = false;
   document.getElementById('sec-preview').hidden = true;
-  iniciarPreview(document.getElementById('video-preview'), streamCamara);
+
+  // Reset del gate: botón bloqueado, escape oculto.
+  const btnFoto = document.getElementById('btn-tomar-foto');
+  btnFoto.disabled = true; btnFoto.setAttribute('aria-disabled', 'true'); btnFoto.classList.remove('face-listo');
+  const btnEscape = document.getElementById('btn-continuar-sin-verificar');
+  btnEscape.hidden = true;
+  data.rostroVerificado = false; data.viveza = null; data.similitud = null;
+
+  const video = document.getElementById('video-preview');
+  iniciarPreview(video, streamCamara);
 
   // Pre-calienta la dirección (geo.js cachea) para que la pantalla de éxito sea instantánea.
   if (coordenadas.latitud != null && coordenadas.longitud != null) {
     direccionDesdeCoords(coordenadas.latitud, coordenadas.longitud);
   }
+
+  iniciarGateFacial(video, btnEscape);
+}
+
+async function iniciarGateFacial(video, btnEscape) {
+  detenerGateFacial();
+  setFaceEstado('cargando');
+
+  // Escape a 15s: permite checar sin verificar (queda rostro_verificado=false).
+  faceEscapeId = setTimeout(() => {
+    btnEscape.hidden = false;
+    btnEscape.onclick = () => { detenerGateFacial(); data.rostroVerificado = false; habilitarTomarFoto(); };
+  }, 15000);
+
+  try {
+    await cargarMotor();
+  } catch (e) {
+    console.error('Human no cargó:', e);
+    setFaceEstado('error');
+    btnEscape.hidden = false;
+    btnEscape.onclick = () => { detenerGateFacial(); data.rostroVerificado = false; habilitarTomarFoto(); };
+    return;
+  }
+
+  const referencia = sesion.faceDescriptor || null;
+  let ocupado = false;
+
+  faceLoopId = setInterval(async () => {
+    if (ocupado || current !== 'foto') return;
+    ocupado = true;
+    try {
+      const cara = await analizar(video);
+      if (!cara) { setFaceEstado('sincara'); return; }
+      if (cara.real < UMBRAL_REAL || cara.live < UMBRAL_VIVEZA) { setFaceEstado('liveness'); return; }
+
+      if (!referencia) {
+        // Auto-enroll: primer rostro válido se registra como referencia.
+        setFaceEstado('enrolando');
+        const r = await guardarDescriptorFacial(cara.embedding);
+        if (r.ok) {
+          sesion.faceDescriptor = cara.embedding;
+          data.rostroVerificado = true; data.viveza = cara.live; data.similitud = 1;
+          setFaceEstado('match'); detenerGateFacial(); habilitarTomarFoto();
+        } else {
+          setFaceEstado('error');
+        }
+        return;
+      }
+
+      const sim = similitud(cara.embedding, referencia);
+      if (sim >= UMBRAL_SIMILITUD) {
+        data.rostroVerificado = true; data.viveza = cara.live; data.similitud = sim;
+        setFaceEstado('match'); detenerGateFacial(); habilitarTomarFoto();
+      } else {
+        setFaceEstado('verificando');
+      }
+    } catch (e) {
+      console.error('Error en análisis facial:', e);
+    } finally {
+      ocupado = false;
+    }
+  }, 400);
 }
 
 document.getElementById('btn-tomar-foto').addEventListener('click', () => {
+  detenerGateFacial();
   data.fotoDataURL = capturarFoto(document.getElementById('video-preview'));
   document.getElementById('img-preview').src = data.fotoDataURL;
   document.getElementById('sec-video').hidden   = true;
@@ -220,7 +342,11 @@ btnConfirmar.addEventListener('click', async () => {
   const { latitud, longitud } = coordenadas;
   let res;
   try {
-    res = await guardarRegistro({ tipoChecada: data.tipo, foto: data.fotoDataURL, firma: data.firmaDataURL, latitud, longitud });
+    res = await guardarRegistro({
+      tipoChecada: data.tipo, foto: data.fotoDataURL, firma: data.firmaDataURL,
+      latitud, longitud,
+      rostroVerificado: data.rostroVerificado, viveza: data.viveza, similitud: data.similitud
+    });
   } catch {
     res = { ok: false, error: t('Error de red. Intenta de nuevo.') };
   }
