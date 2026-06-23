@@ -25,6 +25,7 @@ const sCargando = document.getElementById('s-cargando');
 const sTipo     = document.getElementById('s-tipo');
 const sFirma    = document.getElementById('s-firma');
 const sFoto     = document.getElementById('s-foto');
+const sEnrolar  = document.getElementById('s-enrolar');
 
 const btmFirma   = document.getElementById('btm-firma');
 
@@ -44,7 +45,7 @@ const ICON_SALIDA  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function showOnly(...els) {
-  [sCargando, sTipo, sFirma, sFoto].forEach(el => el.hidden = true);
+  [sCargando, sTipo, sFirma, sFoto, sEnrolar].forEach(el => el.hidden = true);
   btmFirma.hidden = true;
   els.forEach(el => { if (el) el.hidden = false; });
 }
@@ -200,14 +201,12 @@ const FACE_TXT = {
   error:       'No se pudo verificar',
 };
 
-function setFaceEstado(estado) {
-  const ring = document.getElementById('face-ring');
-  const chip = document.getElementById('face-chip');
+function setFaceEstado(estado, ring = document.getElementById('face-ring'), chip = document.getElementById('face-chip')) {
   if (ring) ring.dataset.estado = estado;
   if (chip) {
     chip.dataset.estado = estado;
-    document.getElementById('face-chip-icon').innerHTML = FACE_ICON[estado] || '';
-    document.getElementById('face-chip-txt').textContent = t(FACE_TXT[estado] || '');
+    chip.querySelector('.facescan__status-icon').innerHTML = FACE_ICON[estado] || '';
+    chip.querySelector('.facescan__status-txt').textContent = t(FACE_TXT[estado] || '');
   }
 }
 
@@ -273,9 +272,18 @@ async function iniciarGateFacial(video, btnEscape) {
     return;
   }
 
+  // La inscripción es previa (showEnrolar), así que aquí siempre hay referencia.
+  // Si faltara, permite checar sin verificar vía el botón de escape.
   const referencia = sesion.faceDescriptor || null;
-  let ocupado = false;
+  if (!referencia) {
+    detenerGateFacial();
+    setFaceEstado('error');
+    btnEscape.hidden = false;
+    btnEscape.onclick = () => { detenerGateFacial(); data.rostroVerificado = false; habilitarTomarFoto(); };
+    return;
+  }
 
+  let ocupado = false;
   faceLoopId = setInterval(async () => {
     if (ocupado || current !== 'foto') return;
     ocupado = true;
@@ -283,20 +291,6 @@ async function iniciarGateFacial(video, btnEscape) {
       const cara = await analizar(video);
       if (!cara) { setFaceEstado('sincara'); return; }
       if (cara.real < UMBRAL_REAL || cara.live < UMBRAL_VIVEZA) { setFaceEstado('liveness'); return; }
-
-      if (!referencia) {
-        // Auto-enroll: primer rostro válido se registra como referencia.
-        setFaceEstado('enrolando');
-        const r = await guardarDescriptorFacial(cara.embedding);
-        if (r.ok) {
-          sesion.faceDescriptor = cara.embedding;
-          data.rostroVerificado = true; data.viveza = cara.live; data.similitud = 1;
-          setFaceEstado('match'); detenerGateFacial(); habilitarTomarFoto();
-        } else {
-          setFaceEstado('error');
-        }
-        return;
-      }
 
       const sim = similitud(cara.embedding, referencia);
       if (sim >= UMBRAL_SIMILITUD) {
@@ -307,6 +301,77 @@ async function iniciarGateFacial(video, btnEscape) {
       }
     } catch (e) {
       console.error('Error en análisis facial:', e);
+    } finally {
+      ocupado = false;
+    }
+  }, 400);
+}
+
+// ── ENROLAR ROSTRO (primera vez, antes de poder checar) ─────────────────────────
+function showEnrolar() {
+  detenerGateFacial();
+  current = 'enrolar';
+  showOnly(sEnrolar);
+  headerTitle.textContent = t('Verificar rostro');
+  headerTag.hidden = true;
+  setDots(1);
+  document.getElementById('enrolar-intro').hidden = false;
+  document.getElementById('enrolar-stage').hidden = true;
+  document.getElementById('enrolar-chip').hidden  = true;
+  iniciarPreview(document.getElementById('video-enrolar'), streamCamara);
+}
+
+document.getElementById('btn-enrolar-comenzar').addEventListener('click', () => {
+  document.getElementById('enrolar-intro').hidden = true;
+  document.getElementById('enrolar-stage').hidden = false;
+  document.getElementById('enrolar-chip').hidden  = false;
+  gateEnrolar(document.getElementById('video-enrolar'));
+});
+
+document.getElementById('btn-enrolar-atras').addEventListener('click', () => {
+  detenerGateFacial();
+  location.href = BASE + '/';
+});
+
+async function gateEnrolar(video) {
+  detenerGateFacial();
+  const ring = document.getElementById('enrolar-ring');
+  const chip = document.getElementById('enrolar-chip');
+  const set  = (e) => setFaceEstado(e, ring, chip);
+  set('cargando');
+
+  try {
+    await cargarMotor();
+  } catch (e) {
+    console.error('Human no cargó:', e);
+    set('error');
+    // ponytail: degradación — sin motor no hay inscripción; deja checar igual
+    // (queda sin rostro de referencia, el checado validará liveness solamente).
+    setTimeout(showTipo, 1800);
+    return;
+  }
+
+  let ocupado = false;
+  faceLoopId = setInterval(async () => {
+    if (ocupado || current !== 'enrolar') return;
+    ocupado = true;
+    try {
+      const cara = await analizar(video);
+      if (!cara) { set('sincara'); return; }
+      if (cara.real < UMBRAL_REAL || cara.live < UMBRAL_VIVEZA) { set('liveness'); return; }
+
+      set('enrolando');
+      const r = await guardarDescriptorFacial(cara.embedding);
+      if (r.ok) {
+        sesion.faceDescriptor = cara.embedding;
+        set('match'); detenerGateFacial();
+        if (navigator.vibrate) navigator.vibrate(40);
+        setTimeout(showTipo, 1100);
+      } else {
+        set('error');
+      }
+    } catch (e) {
+      console.error('Error en inscripción facial:', e);
     } finally {
       ocupado = false;
     }
@@ -439,7 +504,9 @@ async function init() {
   }
   // Estado fresco del servidor: la sesión puede estar obsoleta al re-entrar desde el menú.
   estado = await obtenerEstadoJornada();
-  showTipo();
+  // Sin rostro registrado → inscripción obligatoria antes de poder checar.
+  if (!sesion.faceDescriptor) showEnrolar();
+  else showTipo();
 }
 
 init();

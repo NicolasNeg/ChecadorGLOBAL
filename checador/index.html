@@ -145,6 +145,55 @@
     <p id="error-camara" class="error-msg facescan__error" hidden></p>
   </div>
 
+  <!-- ── SCREEN: Verificar rostro (inscripción 1ª vez, estilo Face ID) ────────── -->
+  <div id="s-enrolar" class="app-content app-content--foto" hidden>
+    <div class="facescan">
+      <video id="video-enrolar" class="facescan__cam" autoplay playsinline muted></video>
+
+      <button id="btn-enrolar-atras" class="facescan__back" aria-label="Volver" data-i18n-title="Volver">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <!-- Paso 1: instrucciones -->
+      <div id="enrolar-intro" class="facescan__intro">
+        <div class="facescan__intro-card">
+          <span class="facescan__intro-badge" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M9 10h.01M15 10h.01M9 15c1.5 1.2 4.5 1.2 6 0"/></svg>
+          </span>
+          <h2 class="facescan__intro-title" data-i18n>Verificar rostro</h2>
+          <p class="facescan__intro-sub" data-i18n>Registraremos tu rostro una vez para confirmar tu identidad al checar.</p>
+          <ul class="facescan__intro-list">
+            <li data-i18n>Rostro descubierto, mirando al frente</li>
+            <li data-i18n>Sin lentes, gorra ni cubrebocas</li>
+            <li data-i18n>Busca un lugar bien iluminado</li>
+          </ul>
+          <button id="btn-enrolar-comenzar" class="btn btn--primario facescan__intro-btn" data-i18n>Comenzar</button>
+        </div>
+      </div>
+
+      <!-- Paso 2: escaneo -->
+      <div id="enrolar-stage" class="facescan__stage" hidden>
+        <div id="enrolar-ring" class="facescan__frame" data-estado="cargando">
+          <span class="facescan__ticks" aria-hidden="true"></span>
+          <svg class="facescan__guide" viewBox="0 0 100 112" aria-hidden="true">
+            <path d="M50 14c-16 0-25 13-25 31 0 21 13 36 25 36s25-15 25-36c0-18-9-31-25-31z"/>
+            <circle cx="39" cy="48" r="2.6"/><circle cx="61" cy="48" r="2.6"/>
+            <path d="M41 64c4 4 14 4 18 0"/>
+          </svg>
+          <span class="facescan__scan" aria-hidden="true"></span>
+          <span class="facescan__check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div id="enrolar-chip" class="facescan__status" role="status" aria-live="polite" data-estado="cargando" hidden>
+        <span class="facescan__status-icon" aria-hidden="true"></span>
+        <span class="facescan__status-txt" data-i18n>Cargando verificación…</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ── BOTTOM BARS ────────────────────────────────────────────────────────── -->
   <div id="btm-firma" class="app-bottom" hidden>
     <button id="btn-limpiar-firma" class="btn btn--secundario" style="flex:1">
