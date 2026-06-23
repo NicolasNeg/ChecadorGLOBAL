@@ -232,6 +232,70 @@
   border: 1px solid rgba(255,255,255,.12); letter-spacing: .01em;
 }
 
+/* ── Gate de reconocimiento facial ─────────────────────────────────────────── */
+.face-ring {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  outline: 3px solid var(--c-borde, #d0d5dd);
+  outline-offset: -3px;
+  transition: outline-color 200ms ease-out;
+}
+.face-ring[data-estado="verificando"],
+.face-ring[data-estado="liveness"],
+.face-ring[data-estado="enrolando"] { outline-color: #f59e0b; }
+.face-ring[data-estado="match"]     { outline-color: #16a34a; }
+
+/* Línea de escaneo (solo mientras verifica/enrola) */
+.face-ring__scan {
+  position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, #f59e0b, transparent);
+  opacity: 0; pointer-events: none;
+}
+.face-ring[data-estado="verificando"] .face-ring__scan,
+.face-ring[data-estado="enrolando"]   .face-ring__scan {
+  opacity: 1; animation: face-scan 2s ease-in-out infinite;
+}
+@keyframes face-scan { 0% { transform: translateY(0); } 100% { transform: translateY(calc(var(--scan-h, 240px))); } }
+
+/* Match: pulso de escala del anillo */
+.face-ring[data-estado="match"] { animation: face-pop 250ms ease-out; }
+@keyframes face-pop { 0% { transform: scale(0.97); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+
+/* Liveness baja: shake sutil 1x */
+.face-ring[data-estado="liveness"] { animation: face-shake 200ms ease-in-out; }
+@keyframes face-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+/* Chip de estado */
+.face-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 12px auto 0; padding: 8px 14px;
+  border-radius: 999px; font-size: 14px; font-weight: 600;
+  background: #f2f4f7; color: #475467;
+  transition: background 200ms ease-out, color 200ms ease-out;
+}
+.face-chip__icon { display: inline-flex; width: 18px; height: 18px; }
+.face-chip[data-estado="verificando"],
+.face-chip[data-estado="liveness"],
+.face-chip[data-estado="enrolando"] { background: #fef0c7; color: #b54708; }
+.face-chip[data-estado="match"]     { background: #dcfae6; color: #067647; }
+.face-chip[data-estado="error"]     { background: #fee4e2; color: #b42318; }
+/* spinner del icono mientras carga/enrola */
+.face-chip[data-estado="cargando"] .face-chip__icon,
+.face-chip[data-estado="enrolando"] .face-chip__icon { animation: face-spin 1s linear infinite; }
+@keyframes face-spin { to { transform: rotate(360deg); } }
+
+/* Botón "Tomar foto" deshabilitado y su desbloqueo */
+#btn-tomar-foto[disabled] { opacity: .4; cursor: not-allowed; }
+#btn-tomar-foto.face-listo { animation: face-pop 260ms ease-out; }
+
+/* Respeto a usuarios que prefieren menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .face-ring, .face-ring__scan, .face-chip, #btn-tomar-foto.face-listo { animation: none !important; }
+  .face-ring__scan { display: none; }
+  .face-ring, .face-chip { transition: outline-color 1ms, background 1ms, color 1ms; }
+}
+
 /* ── Desktop / large screens ──────────────────────────────────────────────── */
 @media (min-width: 1024px) {
   /* Branded backdrop behind a centered phone-style frame */

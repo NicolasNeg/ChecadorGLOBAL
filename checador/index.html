@@ -92,7 +92,14 @@
     <div id="sec-video">
       <p class="app-screen__sub" style="margin-bottom:12px" data-i18n>Mira directo a la cámara</p>
       <div class="camara-wrap">
-        <video id="video-preview" autoplay playsinline muted></video>
+        <div id="face-ring" class="face-ring" data-estado="cargando">
+          <video id="video-preview" autoplay playsinline muted></video>
+          <span class="face-ring__scan" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div id="face-chip" class="face-chip" role="status" aria-live="polite" data-estado="cargando">
+        <span id="face-chip-icon" class="face-chip__icon" aria-hidden="true"></span>
+        <span id="face-chip-txt" class="face-chip__txt" data-i18n>Cargando verificación…</span>
       </div>
     </div>
     <div id="sec-preview" hidden>
@@ -121,7 +128,8 @@
   </div>
 
   <div id="btm-foto" class="app-bottom" hidden>
-    <button id="btn-tomar-foto" class="btn btn--primario" style="flex:1">
+    <button id="btn-continuar-sin-verificar" class="btn btn--secundario" style="flex:1" hidden data-i18n>Continuar sin verificar</button>
+    <button id="btn-tomar-foto" class="btn btn--primario" style="flex:2" disabled aria-disabled="true">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
         <circle cx="12" cy="13" r="4"/>
