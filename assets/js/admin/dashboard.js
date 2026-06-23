@@ -547,34 +547,106 @@ function tituloCambio(r, d) {
   return 'Cambio de horario semanal'; // horarios_semana
 }
 
+// Filtra los items ya normalizados por buscador (empleado/responsable), tipo y día.
+function filtrarCambios(items, { q, tipo, fecha }) {
+  const needle = (q || '').trim().toLowerCase();
+  return items.filter(i =>
+    (!tipo  || i.tipo === tipo) &&
+    (!fecha || (i.fecha || '').slice(0, 10) === fecha) &&
+    (!needle || `${i.emp} ${i.responsable}`.toLowerCase().includes(needle))
+  );
+}
+
+function renderCambiosTabla(items, filtros) {
+  const wrap = document.getElementById('cambios-wrap');
+  const rows = filtrarCambios(items, filtros);
+  if (!rows.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin cambios que coincidan.')}</div>`; return; }
+  wrap.innerHTML = `<div class="table-scroll"><table class="data-table">
+    <thead><tr>
+      <th>${t('Fecha')}</th><th>${t('Tipo de hecho')}</th>
+      <th>${t('Empleado')}</th><th>${t('Responsable')}</th>
+    </tr></thead><tbody>
+    ${rows.map(i => `<tr>
+      <td data-label="${t('Fecha')}">${esc(fmtFecha(i.fecha))}</td>
+      <td data-label="${t('Tipo de hecho')}"><span class="abadge abadge--${i.tono}">${esc(t(i.tipo))}</span></td>
+      <td data-label="${t('Empleado')}">${esc(i.emp || '—')}${i.dia ? ` <span class="td-muted">· ${esc(i.dia)}</span>` : ''}</td>
+      <td data-label="${t('Responsable')}">${esc(i.responsable)}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+// PDF vía ventana imprimible (mismo patrón que asistencia: sin dependencias).
+function pdfCambios(rows) {
+  if (!rows.length) { showToast(t('No hay cambios para exportar.'), 'error'); return; }
+  const w = window.open('', '_blank');
+  if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  const titulo = `${t('Historial de cambios')} — ${fmtFecha(new Date().toISOString())}`;
+  const body = rows.map(i =>
+    `<tr><td>${esc(fmtFecha(i.fecha))}</td><td>${esc(t(i.tipo))}</td><td>${esc(i.emp || '—')}${i.dia ? ' · ' + esc(i.dia) : ''}</td><td>${esc(i.responsable)}</td></tr>`).join('');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font:12px system-ui,-apple-system,sans-serif;margin:24px;color:#111}
+    h1{font-size:16px;margin:0 0 12px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #cbd5e1;padding:5px 8px;text-align:left}
+    th{background:#f1f5f9;font-size:10px}
+    @page{margin:14mm}
+  </style></head><body><h1>${esc(titulo)}</h1>
+    <table><thead><tr><th>${t('Fecha')}</th><th>${t('Tipo de hecho')}</th><th>${t('Empleado')}</th><th>${t('Responsable')}</th></tr></thead><tbody>${body}</tbody></table>
+    <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
+  </body></html>`);
+  w.document.close();
+}
+
 async function loadCambios(panel) {
   panel.innerHTML = `
-    <div class="panel-header"><h2>${t('Historial de cambios')}</h2></div>
-    <div class="ad-card"><div id="cambios-wrap">
-      <div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>
-    </div></div>`;
+    <div class="panel-header">
+      <h2>${t('Historial de cambios')}</h2>
+      <div class="panel-header__actions">
+        <button class="abtn abtn--ghost" id="cambios-pdf">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ${t('Generar PDF')}
+        </button>
+      </div>
+    </div>
+    <div class="ad-card">
+      <div class="cambios-bar">
+        <input id="cambios-q" class="form-input" type="search" placeholder="${t('Buscar empleado o responsable…')}" aria-label="${t('Buscar')}">
+        <select id="cambios-tipo" class="form-input" aria-label="${t('Tipo de hecho')}"></select>
+        <input id="cambios-fecha" class="form-input" type="date" aria-label="${t('Fecha')}">
+      </div>
+      <div id="cambios-wrap">
+        <div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div>
+      </div>
+    </div>`;
   try {
     const [rows, empleados] = await Promise.all([getAuditLog(150), getEmpleados().catch(() => [])]);
     const nombreEmp = new Map(empleados.map(e => [e.id, e.nombre]));
-    const wrap = document.getElementById('cambios-wrap');
-    const items = rows.filter(r => CAMBIO_OPERATIVO.has(r.tabla));
-    if (!items.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin cambios recientes.')}</div>`; return; }
-
-    wrap.innerHTML = `<div class="cambios-feed">${items.map(r => {
+    const items = rows.filter(r => CAMBIO_OPERATIVO.has(r.tabla)).map(r => {
       const d = r.datos_despues ?? r.datos_antes ?? {};
       const titulo = tituloCambio(r, d);
-      const emp = nombreEmp.get(d.id_empleado);
-      const sub = [emp, d.fecha].filter(Boolean).join(' · ');
-      const quien = r.perfiles_admin?.nombre ?? t('Sistema');
-      return `<article class="cambio">
-        <span class="cambio__dot cambio__dot--${CAMBIO_TONO[titulo] ?? 'gray'}"></span>
-        <div class="cambio__body">
-          <p class="cambio__title">${esc(t(titulo))}</p>
-          ${sub ? `<p class="cambio__sub">${esc(sub)}</p>` : ''}
-        </div>
-        <span class="cambio__meta">${esc(quien)} · ${fmtFecha(r.created_at)}</span>
-      </article>`;
-    }).join('')}</div>`;
+      return {
+        fecha: r.created_at, tipo: titulo, tono: CAMBIO_TONO[titulo] ?? 'gray',
+        emp: nombreEmp.get(d.id_empleado) ?? '', dia: d.fecha ?? '',
+        responsable: r.perfiles_admin?.nombre ?? t('Sistema'),
+      };
+    });
+    if (!items.length) {
+      document.getElementById('cambios-wrap').innerHTML = `<div class="ad-empty">${t('Sin cambios recientes.')}</div>`;
+      return;
+    }
+
+    const q = document.getElementById('cambios-q');
+    const tipoSel = document.getElementById('cambios-tipo');
+    const fechaInp = document.getElementById('cambios-fecha');
+    tipoSel.innerHTML = `<option value="">${t('Todos los tipos')}</option>` +
+      [...new Set(items.map(i => i.tipo))].map(tp => `<option value="${esc(tp)}">${esc(t(tp))}</option>`).join('');
+
+    const filtros = () => ({ q: q.value, tipo: tipoSel.value, fecha: fechaInp.value });
+    const render = () => renderCambiosTabla(items, filtros());
+    [q, tipoSel, fechaInp].forEach(el => el.addEventListener('input', render));
+    document.getElementById('cambios-pdf').addEventListener('click', () => pdfCambios(filtrarCambios(items, filtros())));
+    render();
   } catch (e) {
     document.getElementById('cambios-wrap').innerHTML =
       `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;

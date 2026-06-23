@@ -237,9 +237,13 @@ function renderGrid(wrap) {
   const body = filas.map(f => {
     const e = f.empleado;
     const av = `<img class="hm-av" src="${esc(e.foto_url || DEFAULT_PFP)}" alt="">`;
-    const celdas = f.celdas.map(c =>
-      `<td class="hm-cell hm--${c.cat} ${c.ymd === hoy ? 'hm-cell--hoy' : ''}" data-emp="${e.id}" data-ymd="${c.ymd}" title="${c.dia}: ${esc(t(ESTADO_LBL[c.estado] || c.estado))}"></td>`
-    ).join('');
+    const celdas = f.celdas.map(c => {
+      // 'previo' = día anterior al alta del empleado: no es editable (aún no
+      // trabajaba). Se marca inválido y se le quita el menú de incidencias.
+      const previo = c.estado === 'previo';
+      const titulo = `${c.dia}: ${previo ? t('Antes del ingreso · no editable') : t(ESTADO_LBL[c.estado] || c.estado)}`;
+      return `<td class="hm-cell hm--${c.cat}${previo ? ' hm-cell--previo' : ''} ${c.ymd === hoy ? 'hm-cell--hoy' : ''}"${previo ? ' data-previo="1" aria-disabled="true"' : ''} data-emp="${e.id}" data-ymd="${c.ymd}" title="${esc(titulo)}"></td>`;
+    }).join('');
     return `<tr data-emp="${e.id}">
       <td class="hm-emp">
         ${av}
@@ -257,7 +261,8 @@ function renderGrid(wrap) {
   });
 
   // Menú por celda: click derecho (escritorio) o mantener pulsado (móvil).
-  wrap.querySelectorAll('.hm-cell[data-emp][data-ymd]').forEach(c => {
+  // Los días previos al alta (:not([data-previo])) no reciben menú: no editables.
+  wrap.querySelectorAll('.hm-cell[data-emp][data-ymd]:not([data-previo])').forEach(c => {
     c.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showMenu(e.clientX, e.clientY, c.dataset.emp, c.dataset.ymd);
