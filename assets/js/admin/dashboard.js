@@ -500,7 +500,7 @@ function renderQuickLinks() {
 // Traduce un renglón del audit_log a lenguaje administrativo (no de programador).
 const OP_VERBO = { INSERT: 'Creó', UPDATE: 'Modificó', DELETE: 'Eliminó' };
 const TABLA_ENTIDAD = {
-  empleados:      'el horario del usuario',  // los cambios de turno_id se registran sobre empleados
+  empleados:      'un empleado',  // datos del empleado (alta/baja, puesto, plaza, contacto…)
   turnos:         'un turno',
   plazas:         'una plaza',
   puestos:        'un puesto',
@@ -607,14 +607,20 @@ function renderCambiosTabla(items, filtros) {
   wrap.innerHTML = `<div class="table-scroll"><table class="data-table">
     <thead><tr>
       <th>${t('Fecha')}</th><th>${t('Tipo de hecho')}</th>
-      <th>${t('Empleado')}</th><th>${t('Responsable')}</th>
+      <th>${t('Empleado')}</th><th>${t('Responsable')}</th><th>${t('Detalle')}</th>
     </tr></thead><tbody>
-    ${rows.map(i => `<tr>
+    ${rows.map(i => {
+      const cambios = cambiosHTML(i._raw);
+      const det = cambios.includes('<b>')
+        ? `<details class="audit-item__det"><summary>${t('Ver detalle')}</summary><div class="audit-item__cambios">${cambios}</div></details>`
+        : `<span class="td-muted">—</span>`;
+      return `<tr>
       <td data-label="${t('Fecha')}">${esc(fmtFecha(i.fecha))}</td>
       <td data-label="${t('Tipo de hecho')}"><span class="abadge abadge--${i.tono}">${esc(t(i.tipo))}</span></td>
       <td data-label="${t('Empleado')}">${esc(i.emp || '—')}${i.dia ? ` <span class="td-muted">· ${esc(i.dia)}</span>` : ''}</td>
       <td data-label="${t('Responsable')}">${esc(i.responsable)}</td>
-    </tr>`).join('')}
+      <td data-label="${t('Detalle')}">${det}</td>
+    </tr>`; }).join('')}
     </tbody></table></div>`;
 }
 
@@ -672,7 +678,7 @@ async function loadCambios(panel) {
       return {
         fecha: r.created_at, tipo: titulo, tono: CAMBIO_TONO[titulo] ?? 'gray',
         emp: nombreEmp.get(d.id_empleado) ?? '', dia: d.fecha ?? '',
-        responsable: r.perfiles_admin?.nombre ?? t('Sistema'),
+        responsable: r.perfiles_admin?.nombre ?? t('Sistema'), _raw: r,
       };
     });
     if (!items.length) {
@@ -707,18 +713,36 @@ function filtrarAudit(rows, { q, op, fecha }) {
   );
 }
 
-// Celda de detalle: conserva el <details> "Ver detalle" con el diff; la IP se
-// vuelve un botón "Ver ubicación" que abre ipinfo.io (geolocalización aproximada).
+// Reverse-geocode "lat,lon" → dirección (Nominatim/OSM, sin API key). Cachea la
+// promesa por coordenada para no repetir la petición. Se llama al abrir el
+// detalle (no en cada render) para respetar el límite de uso de Nominatim.
+const _geoCache = new Map();
+function reverseGeocode(loc) {
+  if (_geoCache.has(loc)) return _geoCache.get(loc);
+  const [lat, lon] = loc.split(',');
+  const p = fetch(`https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&format=json&zoom=18`,
+      { headers: { 'Accept-Language': 'es' } })
+    .then(r => r.ok ? r.json() : null).then(j => j?.display_name || null).catch(() => null);
+  _geoCache.set(loc, p);
+  return p;
+}
+
+// Celda de detalle: conserva el <details> "Ver detalle" con el diff. En lugar de
+// la IP muestra la ubicación GPS del admin (login): enlace al mapa + dirección
+// (reverse-geocode al abrir). Si no hay ubicación, cae a la IP.
 function detalleHTML(r) {
   const cambios = cambiosHTML(r);
   if (!cambios.includes('<b>')) return `<span class="td-muted">—</span>`;
-  const ip = r.ip_address;
-  const verUbic = ip
-    ? ` <a class="abtn abtn--ghost audit-ip-btn" href="https://ipinfo.io/${encodeURIComponent(ip)}" target="_blank" rel="noopener">${t('Ver ubicación')}</a>`
-    : '';
+  const loc = r.admin_ubicacion;
+  const ubic = loc
+    ? `<span class="audit-item__ip">
+        <a class="abtn abtn--ghost audit-ip-btn" href="https://www.google.com/maps?q=${encodeURIComponent(loc)}" target="_blank" rel="noopener">${t('Ver ubicación')}</a>
+        <span class="audit-addr" data-loc="${esc(loc)}">${t('Cargando dirección…')}</span>
+       </span>`
+    : `<span class="audit-item__ip">IP: ${esc(r.ip_address ?? '—')}</span>`;
   return `<details class="audit-item__det"><summary>${t('Ver detalle')}</summary>
     <div class="audit-item__cambios">${cambios}</div>
-    <span class="audit-item__ip">IP: ${esc(ip ?? '—')}${verUbic}</span>
+    ${ubic}
   </details>`;
 }
 
@@ -805,6 +829,18 @@ async function loadAuditoria(panel) {
     const render = () => renderAuditTabla(rows, filtros());
     [q, opSel, fechaInp].forEach(el => el.addEventListener('input', render));
     document.getElementById('audit-pdf').addEventListener('click', () => pdfAuditoria(filtrarAudit(rows, filtros())));
+
+    // Al abrir un detalle, resuelve la dirección de su ubicación una sola vez.
+    // El wrap persiste entre renders (solo cambia su innerHTML) → un listener.
+    document.getElementById('audit-wrap').addEventListener('click', (e) => {
+      if (!e.target.closest('summary')) return;
+      const addr = e.target.closest('details')?.querySelector('.audit-addr[data-loc]');
+      if (!addr || addr.dataset.loaded) return;
+      addr.dataset.loaded = '1';
+      reverseGeocode(addr.dataset.loc).then(name => {
+        addr.textContent = name ? `📍 ${name}` : t('Dirección no disponible');
+      });
+    });
     render();
   } catch (e) {
     document.getElementById('audit-wrap').innerHTML =

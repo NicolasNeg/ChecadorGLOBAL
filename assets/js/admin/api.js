@@ -3,13 +3,17 @@ import { getAdminSession, refreshAdminSession, clearAdminSession } from './auth.
 
 function hdrs(extra = {}) {
   const s = getAdminSession();
-  return {
+  const h = {
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${s?.access_token}`,
     'Content-Type': 'application/json',
     'Prefer': 'return=representation',
-    ...extra
   };
+  // Ubicación del admin (login) → el trigger de auditoría la guarda. PostgREST
+  // la expone en request.headers. ponytail: header falsificable, sirve como
+  // metadato de auditoría, no como control de seguridad.
+  if (s?.ubicacion) h['x-admin-loc'] = s.ubicacion;
+  return { ...h, ...extra };
 }
 
 // fetch con token; si vence (401) renueva una vez y reintenta. Si el refresh

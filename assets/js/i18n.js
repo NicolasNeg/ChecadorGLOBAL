@@ -26,6 +26,8 @@ export const EN = {
   'No hay correo en tu cuenta.': 'No email on your account.',
   'Operación': 'Operation', 'Acción': 'Action', 'Detalle': 'Detail',
   'Ver ubicación': 'View location', 'Buscar acción o responsable…': 'Search action or manager…',
+  'Cargando dirección…': 'Loading address…', 'Dirección no disponible': 'Address unavailable',
+  'Activa la ubicación para iniciar sesión.': 'Enable location to sign in.',
   'Todas las operaciones': 'All operations', 'Sin registros que coincidan.': 'No matching records.',
   'No hay registros para exportar.': 'No records to export.',
   'la configuración': 'the settings', 'un puesto': 'a position',

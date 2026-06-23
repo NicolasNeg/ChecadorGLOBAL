@@ -12,8 +12,9 @@ export function requireAdminSession(redirect) {
   return s;
 }
 
-// Supabase Auth: email + password → JWT token
-export async function loginAdmin(email, password) {
+// Supabase Auth: email + password → JWT token. `ubicacion` ("lat,lon") se
+// captura en el login y viaja luego en el header x-admin-loc (ver api.js).
+export async function loginAdmin(email, password, ubicacion = null) {
   let res;
   try {
     res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -49,6 +50,7 @@ export async function loginAdmin(email, password) {
 
   setAdminSession({
     ...perfil,
+    ubicacion,
     access_token:  auth.access_token,
     refresh_token: auth.refresh_token,
     expires_at:    Date.now() + auth.expires_in * 1000

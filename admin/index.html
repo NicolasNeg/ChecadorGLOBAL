@@ -118,6 +118,21 @@
     const passIn  = document.getElementById('password');
     const toggleBtn = document.getElementById('btn-toggle-pass');
 
+    // Ubicación obligatoria: se pide al cargar (lanza el prompt) y se exige al
+    // entrar. Sin ubicación no se permite iniciar sesión.
+    let adminLoc = null;
+    function pedirUbicacion() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          (p) => resolve(`${p.coords.latitude.toFixed(6)},${p.coords.longitude.toFixed(6)}`),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+      });
+    }
+    pedirUbicacion().then((loc) => { adminLoc = loc; });
+
     toggleBtn.addEventListener('click', () => {
       const isPass = passIn.type === 'password';
       passIn.type = isPass ? 'text' : 'password';
@@ -138,7 +153,13 @@
       const password = passIn.value;
 
       try {
-        const res = await loginAdmin(email, password);
+        if (!adminLoc) adminLoc = await pedirUbicacion();
+        if (!adminLoc) {
+          errEl.textContent = t('Activa la ubicación para iniciar sesión.');
+          errEl.hidden = false;
+          return;
+        }
+        const res = await loginAdmin(email, password, adminLoc);
         if (res.ok) {
           location.replace(BASE + '/admin/dashboard/');
           return;
