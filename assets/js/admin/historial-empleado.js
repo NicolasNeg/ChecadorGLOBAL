@@ -372,7 +372,7 @@ function abrirDia(key) {
     return `${f ? `<img src="${f}" class="hist-thumb" data-full="${f}" alt="${t('Foto')}">` : ''}${s ? `<img src="${s}" class="hist-thumb hist-thumb--firma" data-full="${s}" alt="${t('Firma')}">` : ''}`;
   };
   const punto = (r, lbl) => r
-    ? `<div class="cordon__pt"><span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span><span class="cordon__t">${horaCorta(r.hora)}</span><span class="cordon__lbl">${t(lbl)}${r.geocerca_valida === false ? ` <span class="abadge abadge--red">${t('Fuera')}</span>` : ''}</span></div>`
+    ? `<div class="cordon__pt"><span class="cordon__dot cordon__dot--${lbl === 'Entrada' ? 'in' : 'out'}"></span><span class="cordon__t">${horaCorta(r.hora)}</span><span class="cordon__lbl">${t(lbl)}${r.geocerca_valida === false ? ` <span class="abadge abadge--red">${t('Fuera')}</span>` : ''}${r.rostro_verificado === false ? ` <span class="abadge abadge--orange">${t('Sin verificar')}</span>` : ''}</span></div>`
     : `<div class="cordon__pt cordon__pt--miss"><span class="cordon__dot cordon__dot--miss"></span><span class="cordon__lbl">${t(lbl === 'Entrada' ? 'Sin entrada' : 'Sin salida')}</span></div>`;
   const horas = horasDe(reg);
   const tarde = reg.entrada && esRetardo(reg.entrada, _ctx.turno);

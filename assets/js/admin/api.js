@@ -147,7 +147,7 @@ export const getIncidenciasRango = ({ desde, hasta }) =>
 
 // ── Historial por empleado ──────────────────────────────────────────────────
 export const getRegistrosEmpleado = (idEmpleado, { desde, hasta }) =>
-  apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,ruta_foto,ruta_firma` +
+  apiFetch(`registros?select=id,tipo,hora,latitud,longitud,geocerca_valida,distancia_metros,ruta_foto,ruta_firma,rostro_verificado` +
     `&id_empleado=eq.${idEmpleado}&hora=gte.${desde}T00:00:00&hora=lte.${hasta}T23:59:59&order=hora.asc`);
 
 export const getEmpleado = (id) =>
