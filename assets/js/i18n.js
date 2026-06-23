@@ -271,6 +271,7 @@ export const EN = {
   'Abrir día · click derecho: alternar asistencia/falta': 'Open day · right-click: toggle attendance/absence',
   'Fuera': 'Outside', 'Sin entrada': 'No check-in', 'Sin salida': 'No check-out',
   'Cargando verificación…': 'Loading verification…', 'Coloca tu cara en el óvalo': 'Place your face in the oval',
+  'Centra tu rostro en el círculo': 'Center your face in the circle', '¿Se ve bien tu foto?': 'Does your photo look good?',
   'Verificando…': 'Verifying…', 'Mira a la cámara, sin fotos': 'Look at the camera, no photos',
   'Registrando tu rostro…': 'Registering your face…', 'Identidad verificada': 'Identity verified',
   'No se pudo verificar': 'Could not verify', 'Continuar sin verificar': 'Continue without verifying',

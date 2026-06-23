@@ -2,6 +2,7 @@
 
 /* App shell */
 .app-shell {
+  position: relative;
   height: 100dvh; display: flex; flex-direction: column;
   overflow: hidden; background: var(--fondo);
 }
@@ -130,11 +131,6 @@
   background: #FAFBFC; touch-action: none; display: block;
 }
 
-/* Camera */
-.camara-wrap { border-radius: 14px; overflow: hidden; background: #111; aspect-ratio: 4/3; width: 100%; }
-.camara-wrap video,
-.camara-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
 /* Spinner */
 .spinner {
   width: 44px; height: 44px;
@@ -232,68 +228,171 @@
   border: 1px solid rgba(255,255,255,.12); letter-spacing: .01em;
 }
 
-/* ── Gate de reconocimiento facial ─────────────────────────────────────────── */
-.face-ring {
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  outline: 3px solid var(--c-borde, #d0d5dd);
-  outline-offset: -3px;
-  transition: outline-color 200ms ease-out;
+/* ── Escáner facial a pantalla completa (estilo Face ID) ───────────────────── */
+/* El paso de foto cubre toda la app-shell (incl. cabecera) para inmersión.
+   Variables de color por estado las fija #face-ring[data-estado]. */
+.app-content--foto {
+  position: absolute; inset: 0; z-index: 50;
+  padding: 0; overflow: hidden; background: #0a0e16;
 }
-.face-ring[data-estado="verificando"],
-.face-ring[data-estado="liveness"],
-.face-ring[data-estado="enrolando"] { outline-color: #f59e0b; }
-.face-ring[data-estado="match"]     { outline-color: #16a34a; }
 
-/* Línea de escaneo (solo mientras verifica/enrola) */
-.face-ring__scan {
-  position: absolute; left: 0; right: 0; top: 0; height: 3px;
-  background: linear-gradient(90deg, transparent, #f59e0b, transparent);
-  opacity: 0; pointer-events: none;
+.facescan {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #0a0e16;
 }
-.face-ring[data-estado="verificando"] .face-ring__scan,
-.face-ring[data-estado="enrolando"]   .face-ring__scan {
-  opacity: 1; animation: face-scan 2s ease-in-out infinite;
+.facescan__cam {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block;
 }
-@keyframes face-scan { 0% { transform: translateY(0); } 100% { transform: translateY(calc(var(--scan-h, 240px))); } }
 
-/* Match: pulso de escala del anillo */
-.face-ring[data-estado="match"] { animation: face-pop 250ms ease-out; }
-@keyframes face-pop { 0% { transform: scale(0.97); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+/* Botón atrás (flota sobre la cámara) */
+.facescan__back {
+  position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 6;
+  width: 44px; height: 44px; border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,14,22,.45); color: #fff;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  touch-action: manipulation;
+}
+.facescan__back:active { background: rgba(10,14,22,.7); }
+
+/* Marco circular: ventana de cámara con el resto atenuado (spotlight) */
+.facescan__stage { position: relative; z-index: 2; display: grid; place-items: center; }
+.facescan__frame {
+  --c: rgba(255,255,255,.92);
+  --d: min(74vw, 300px);
+  position: relative; width: var(--d); height: var(--d);
+  border-radius: 50%; overflow: hidden;
+  border: 3px solid var(--c);
+  box-shadow: 0 0 0 100vmax rgba(8,12,20,.6);
+  transition: border-color .25s ease-out;
+}
+.facescan__frame[data-estado="verificando"],
+.facescan__frame[data-estado="liveness"],
+.facescan__frame[data-estado="enrolando"] { --c: #FBBF24; }
+.facescan__frame[data-estado="match"]     { --c: #22C55E; }
+.facescan__frame[data-estado="error"]     { --c: #F87171; }
+
+/* Anillo de marcas radiales (estilo Face ID) — gira mientras escanea */
+.facescan__ticks {
+  position: absolute; inset: -1px; border-radius: 50%; color: var(--c); opacity: .85;
+  background: repeating-conic-gradient(currentColor 0 1.3deg, transparent 1.3deg 6deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 84%, #000 86%, #000 97%, transparent 99%);
+          mask: radial-gradient(closest-side, transparent 84%, #000 86%, #000 97%, transparent 99%);
+  transition: color .25s ease-out;
+}
+.facescan__frame[data-estado="verificando"] .facescan__ticks,
+.facescan__frame[data-estado="liveness"]    .facescan__ticks,
+.facescan__frame[data-estado="enrolando"]   .facescan__ticks { animation: facescan-rot 7s linear infinite; }
+@keyframes facescan-rot { to { transform: rotate(360deg); } }
+
+/* Silueta-guía para centrar el rostro */
+.facescan__guide {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  fill: none; stroke: rgba(255,255,255,.5); stroke-width: 2; opacity: .55;
+}
+
+/* Línea de escaneo (solo mientras verifica/enrola/liveness) */
+.facescan__scan {
+  position: absolute; left: 7%; right: 7%; top: 8%; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, var(--c), transparent);
+  box-shadow: 0 0 14px 3px var(--c); opacity: 0; pointer-events: none;
+}
+.facescan__frame[data-estado="verificando"] .facescan__scan,
+.facescan__frame[data-estado="liveness"]    .facescan__scan,
+.facescan__frame[data-estado="enrolando"]   .facescan__scan {
+  opacity: .95; animation: facescan-sweep 1.8s ease-in-out infinite;
+}
+@keyframes facescan-sweep { 0% { top: 10%; } 50% { top: 86%; } 100% { top: 10%; } }
+
+/* Check de verificado */
+.facescan__check {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: #22C55E; opacity: 0; transform: scale(.5);
+}
+.facescan__check svg { width: 34%; height: 34%; filter: drop-shadow(0 2px 8px rgba(0,0,0,.4)); }
+.facescan__frame[data-estado="match"] { animation: facescan-pop 280ms ease-out; }
+.facescan__frame[data-estado="match"] .facescan__check { opacity: 1; transform: scale(1); transition: opacity .2s, transform .28s cubic-bezier(.2,1.3,.4,1); }
+.facescan__frame[data-estado="match"] .facescan__guide { opacity: 0; }
+@keyframes facescan-pop { 0% { transform: scale(.97); } 55% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
 /* Liveness baja: shake sutil 1x */
-.face-ring[data-estado="liveness"] { animation: face-shake 200ms ease-in-out; }
-@keyframes face-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.facescan__frame[data-estado="liveness"] { animation: facescan-shake 220ms ease-in-out; }
+@keyframes facescan-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
-/* Chip de estado */
-.face-chip {
-  display: inline-flex; align-items: center; gap: 8px;
-  margin: 12px auto 0; padding: 8px 14px;
-  border-radius: 999px; font-size: 14px; font-weight: 600;
-  background: #f2f4f7; color: #475467;
-  transition: background 200ms ease-out, color 200ms ease-out;
+/* Estado (texto bajo el marco) */
+.facescan__status {
+  position: relative; z-index: 3; margin-top: 30px;
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 10px 18px; border-radius: 999px;
+  background: rgba(10,14,22,.5); color: #fff;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  font-size: 14px; font-weight: 600; letter-spacing: .01em;
+  max-width: 86vw; text-align: center;
+  transition: background .25s, color .25s;
 }
-.face-chip__icon { display: inline-flex; width: 18px; height: 18px; }
-.face-chip[data-estado="verificando"],
-.face-chip[data-estado="liveness"],
-.face-chip[data-estado="enrolando"] { background: #fef0c7; color: #b54708; }
-.face-chip[data-estado="match"]     { background: #dcfae6; color: #067647; }
-.face-chip[data-estado="error"]     { background: #fee4e2; color: #b42318; }
-/* spinner del icono mientras carga/enrola */
-.face-chip[data-estado="cargando"] .face-chip__icon,
-.face-chip[data-estado="enrolando"] .face-chip__icon { animation: face-spin 1s linear infinite; }
-@keyframes face-spin { to { transform: rotate(360deg); } }
+.facescan__status-icon { display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; }
+.facescan__status[data-estado="match"] { background: rgba(22,101,52,.62); }
+.facescan__status[data-estado="error"] { background: rgba(127,29,29,.62); }
+.facescan__status[data-estado="cargando"]  .facescan__status-icon,
+.facescan__status[data-estado="enrolando"] .facescan__status-icon { animation: facescan-rot 1s linear infinite; }
 
-/* Botón "Tomar foto" deshabilitado y su desbloqueo */
-#btn-tomar-foto[disabled] { opacity: .4; cursor: not-allowed; }
-#btn-tomar-foto.face-listo { animation: face-pop 260ms ease-out; }
+/* Acciones (parte inferior, sobre la cámara) */
+.facescan__actions {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+  padding: 18px 16px max(20px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.facescan__skip {
+  background: none; border: none; color: rgba(255,255,255,.82);
+  font-size: .85rem; font-weight: 500; text-decoration: underline;
+  min-height: 44px; padding: 8px 16px; touch-action: manipulation;
+}
+
+/* Obturador redondo (estilo cámara) */
+.facescan__shutter {
+  width: 74px; height: 74px; padding: 0; border: none; background: none;
+  display: grid; place-items: center; touch-action: manipulation;
+}
+.facescan__shutter-ring {
+  width: 62px; height: 62px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.35);
+  transition: transform .15s ease, box-shadow .25s ease;
+}
+.facescan__shutter[disabled] { opacity: .4; cursor: not-allowed; }
+.facescan__shutter:not([disabled]):active .facescan__shutter-ring { transform: scale(.88); }
+.facescan__shutter.face-listo .facescan__shutter-ring {
+  box-shadow: 0 0 0 4px rgba(34,197,94,.5), 0 0 22px 4px rgba(34,197,94,.45);
+  animation: facescan-shutter-in 280ms ease-out;
+}
+@keyframes facescan-shutter-in { 0% { transform: scale(.8); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.facescan__shutter-lbl { color: rgba(255,255,255,.92); font-size: .8rem; font-weight: 600; }
+
+/* Vista previa de la foto tomada */
+.facescan--preview .facescan__cam { object-fit: cover; }
+.facescan__preview-hint {
+  position: absolute; top: max(20px, env(safe-area-inset-top)); left: 0; right: 0; z-index: 3;
+  text-align: center; color: #fff; font-weight: 600; font-size: .95rem;
+  text-shadow: 0 1px 6px rgba(0,0,0,.55);
+}
+.facescan__actions--confirm {
+  flex-direction: row; gap: 10px;
+  padding-top: 60px;
+  background: linear-gradient(0deg, rgba(8,12,20,.7) 30%, transparent);
+}
+
+.facescan__error {
+  position: absolute; left: 16px; right: 16px; bottom: 128px; z-index: 7;
+  text-align: center; background: rgba(127,29,29,.85); color: #fff;
+  padding: 10px 14px; border-radius: 12px; font-size: .85rem; font-weight: 600;
+}
 
 /* Respeto a usuarios que prefieren menos movimiento */
 @media (prefers-reduced-motion: reduce) {
-  .face-ring, .face-ring__scan, .face-chip, #btn-tomar-foto.face-listo { animation: none !important; }
-  .face-ring__scan { display: none; }
-  .face-ring, .face-chip { transition: outline-color 1ms, background 1ms, color 1ms; }
+  .facescan__ticks, .facescan__scan, .facescan__frame, .facescan__shutter.face-listo,
+  .facescan__status-icon, .facescan__check { animation: none !important; }
+  .facescan__scan { display: none; }
 }
 
 /* ── Desktop / large screens ──────────────────────────────────────────────── */

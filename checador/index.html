@@ -87,28 +87,62 @@
     <p id="error-firma" class="error-msg" hidden></p>
   </div>
 
-  <!-- ── SCREEN: Foto ───────────────────────────────────────────────────────── -->
-  <div id="s-foto" class="app-content" hidden>
-    <div id="sec-video">
-      <p class="app-screen__sub" style="margin-bottom:12px" data-i18n>Mira directo a la cámara</p>
-      <div class="camara-wrap">
-        <div id="face-ring" class="face-ring" data-estado="cargando">
-          <video id="video-preview" autoplay playsinline muted></video>
-          <span class="face-ring__scan" aria-hidden="true"></span>
+  <!-- ── SCREEN: Foto (cámara pantalla completa, estilo Face ID) ─────────────── -->
+  <div id="s-foto" class="app-content app-content--foto" hidden>
+
+    <!-- Escaneo facial en vivo -->
+    <div id="sec-video" class="facescan">
+      <video id="video-preview" class="facescan__cam" autoplay playsinline muted></video>
+
+      <button id="btn-foto-atras" class="facescan__back" aria-label="Volver" data-i18n-title="Volver">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <div class="facescan__stage">
+        <div id="face-ring" class="facescan__frame" data-estado="cargando">
+          <span class="facescan__ticks" aria-hidden="true"></span>
+          <svg class="facescan__guide" viewBox="0 0 100 112" aria-hidden="true">
+            <path d="M50 14c-16 0-25 13-25 31 0 21 13 36 25 36s25-15 25-36c0-18-9-31-25-31z"/>
+            <circle cx="39" cy="48" r="2.6"/><circle cx="61" cy="48" r="2.6"/>
+            <path d="M41 64c4 4 14 4 18 0"/>
+          </svg>
+          <span class="facescan__scan" aria-hidden="true"></span>
+          <span class="facescan__check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
         </div>
       </div>
-      <div id="face-chip" class="face-chip" role="status" aria-live="polite" data-estado="cargando">
-        <span id="face-chip-icon" class="face-chip__icon" aria-hidden="true"></span>
-        <span id="face-chip-txt" class="face-chip__txt" data-i18n>Cargando verificación…</span>
+
+      <div id="face-chip" class="facescan__status" role="status" aria-live="polite" data-estado="cargando">
+        <span id="face-chip-icon" class="facescan__status-icon" aria-hidden="true"></span>
+        <span id="face-chip-txt" class="facescan__status-txt" data-i18n>Cargando verificación…</span>
+      </div>
+
+      <div class="facescan__actions">
+        <button id="btn-continuar-sin-verificar" class="facescan__skip" hidden data-i18n>Continuar sin verificar</button>
+        <button id="btn-tomar-foto" class="facescan__shutter" disabled aria-disabled="true" aria-label="Tomar foto">
+          <span class="facescan__shutter-ring"></span>
+        </button>
+        <span class="facescan__shutter-lbl" data-i18n>Tomar foto</span>
       </div>
     </div>
-    <div id="sec-preview" hidden>
-      <p class="app-screen__sub" style="margin-bottom:12px" data-i18n>Confirma que tu foto es clara</p>
-      <div class="camara-wrap">
-        <img id="img-preview" alt="Vista previa">
+
+    <!-- Confirmación de la foto tomada -->
+    <div id="sec-preview" class="facescan facescan--preview" hidden>
+      <img id="img-preview" class="facescan__cam" alt="Vista previa">
+      <p class="facescan__preview-hint" data-i18n>¿Se ve bien tu foto?</p>
+      <div class="facescan__actions facescan__actions--confirm">
+        <button id="btn-repetir-foto" class="btn btn--secundario" style="flex:1" data-i18n>Repetir</button>
+        <button id="btn-confirmar-foto" class="btn btn--primario" style="flex:2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span data-i18n>Confirmar</span>
+        </button>
       </div>
     </div>
-    <p id="error-camara" class="error-msg" hidden></p>
+
+    <p id="error-camara" class="error-msg facescan__error" hidden></p>
   </div>
 
   <!-- ── BOTTOM BARS ────────────────────────────────────────────────────────── -->
@@ -124,27 +158,6 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"/>
       </svg>
-    </button>
-  </div>
-
-  <div id="btm-foto" class="app-bottom" hidden>
-    <button id="btn-continuar-sin-verificar" class="btn btn--secundario" style="flex:1" hidden data-i18n>Continuar sin verificar</button>
-    <button id="btn-tomar-foto" class="btn btn--primario" style="flex:2" disabled aria-disabled="true">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-        <circle cx="12" cy="13" r="4"/>
-      </svg>
-      <span data-i18n>Tomar foto</span>
-    </button>
-  </div>
-
-  <div id="btm-confirm" class="app-bottom" hidden>
-    <button id="btn-repetir-foto" class="btn btn--secundario" style="flex:1" data-i18n>Repetir</button>
-    <button id="btn-confirmar-foto" class="btn btn--primario" style="flex:2">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"/>
-      </svg>
-      <span data-i18n>Confirmar</span>
     </button>
   </div>
 

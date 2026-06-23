@@ -27,8 +27,6 @@ const sFirma    = document.getElementById('s-firma');
 const sFoto     = document.getElementById('s-foto');
 
 const btmFirma   = document.getElementById('btm-firma');
-const btmFoto    = document.getElementById('btm-foto');
-const btmConfirm = document.getElementById('btm-confirm');
 
 const overlayLoad = document.getElementById('overlay-cargando');
 const overlayOk   = document.getElementById('overlay-exito');
@@ -47,7 +45,7 @@ const ICON_SALIDA  = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function showOnly(...els) {
   [sCargando, sTipo, sFirma, sFoto].forEach(el => el.hidden = true);
-  [btmFirma, btmFoto, btmConfirm].forEach(el => el.hidden = true);
+  btmFirma.hidden = true;
   els.forEach(el => { if (el) el.hidden = false; });
 }
 
@@ -194,7 +192,7 @@ const FACE_ICON = {
 };
 const FACE_TXT = {
   cargando:    'Cargando verificación…',
-  sincara:     'Coloca tu cara en el óvalo',
+  sincara:     'Centra tu rostro en el círculo',
   verificando: 'Verificando…',
   liveness:    'Mira a la cámara, sin fotos',
   enrolando:   'Registrando tu rostro…',
@@ -229,7 +227,7 @@ function habilitarTomarFoto() {
 // ── FOTO SCREEN ───────────────────────────────────────────────────────────────
 function showFoto() {
   current = 'foto';
-  showOnly(sFoto, btmFoto);
+  showOnly(sFoto);
   headerTitle.textContent = t('Foto de verificación');
   setDots(3);
   setError('error-camara', '');
@@ -321,15 +319,17 @@ document.getElementById('btn-tomar-foto').addEventListener('click', () => {
   document.getElementById('img-preview').src = data.fotoDataURL;
   document.getElementById('sec-video').hidden   = true;
   document.getElementById('sec-preview').hidden = false;
-  btmFoto.hidden    = true;
-  btmConfirm.hidden = false;
 });
 
 document.getElementById('btn-repetir-foto').addEventListener('click', () => {
   document.getElementById('sec-video').hidden   = false;
   document.getElementById('sec-preview').hidden = true;
-  btmFoto.hidden    = false;
-  btmConfirm.hidden = true;
+});
+
+// Botón atrás dentro del escáner (cubre la cabecera a pantalla completa).
+document.getElementById('btn-foto-atras').addEventListener('click', () => {
+  detenerGateFacial();
+  showFirma();
 });
 
 const btnConfirmar = document.getElementById('btn-confirmar-foto');
