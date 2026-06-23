@@ -113,6 +113,8 @@ export const EN = {
   'Sin turnos asignados esta semana.': 'No shifts assigned this week.',
   'Ya hay horario de la próxima semana': 'Next week\'s schedule is ready',
   'Empleado': 'Employee', 'Descanso': 'Day off', 'Horario actualizado.': 'Schedule updated.',
+  'Sin asignar': 'Unassigned',
+  'No se puede marcar asistencia ni falta en días que aún no llegan.': 'You cannot mark attendance or absence on days that have not arrived yet.',
   'Nombre': 'Name', 'Nombre completo': 'Full name', 'Correo': 'Email', 'Teléfono': 'Phone',
   'Puesto': 'Position', 'Plaza': 'Location', 'Estado': 'Status', 'Acciones': 'Actions',
   'Rol': 'Role', 'PIN': 'PIN', 'Número de empleado': 'Employee number',

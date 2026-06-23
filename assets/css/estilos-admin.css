@@ -1182,6 +1182,7 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .asis-leg--falta    .asis-leg__dot { background: #EF4444; }
 .asis-leg--permiso  .asis-leg__dot { background: #3B82F6; }
 .asis-leg--descanso .asis-leg__dot { background: #CBD5E1; }
+.asis-leg--sinasignar .asis-leg__dot { background: repeating-linear-gradient(45deg,#E2E8F0,#E2E8F0 2px,#fff 2px,#fff 4px); box-shadow: inset 0 0 0 1px var(--ad-linea); }
 .asis-leg[aria-pressed="true"] { border-color: var(--ad-primary); color: var(--ad-tinta); background: var(--ad-surf2); box-shadow: inset 0 0 0 1px var(--ad-primary); }
 
 .asis-board { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; align-items: start; }
@@ -1229,6 +1230,7 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .hm--falta::after    { background: #EF4444; }
 .hm--permiso::after  { background: #3B82F6; }
 .hm--descanso::after { background: #CBD5E1; }
+.hm--sinasignar::after { background: repeating-linear-gradient(45deg,#E2E8F0,#E2E8F0 3px,transparent 3px,transparent 6px); box-shadow: inset 0 0 0 1px var(--ad-linea); }
 .hm--futuro::after   { background: var(--ad-fondo); box-shadow: inset 0 0 0 1px var(--ad-linea); }
 .hm-cell:hover { transform: scale(1.18); }
 .hm-cell--hoy { box-shadow: inset 1px 0 0 var(--ad-primary), inset -1px 0 0 var(--ad-primary); }
@@ -1248,6 +1250,7 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 .hm--ring-falta    { box-shadow: 0 0 0 3px #EF4444; }
 .hm--ring-permiso  { box-shadow: 0 0 0 3px #3B82F6; }
 .hm--ring-descanso { box-shadow: 0 0 0 3px #CBD5E1; }
+.hm--ring-sinasignar { box-shadow: 0 0 0 3px #E2E8F0; }
 .hm--ring-futuro   { box-shadow: 0 0 0 3px var(--ad-linea); }
 .spot-id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .spot-id strong { font-family: var(--ad-font-head); font-size: 1.05rem; color: var(--ad-tinta); }
@@ -1397,6 +1400,7 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   font-size: .9rem; font-weight: 500; color: var(--ad-tinta); text-align: left;
 }
 .ctx-menu__item:hover, .ctx-menu__item:focus-visible { background: var(--ad-surf2); }
+.ctx-menu__item--disabled, .ctx-menu__item:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
 .ctx-menu__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .ctx-menu__item--asistencia .ctx-menu__dot { background: #22C55E; }
 .ctx-menu__item--falta      .ctx-menu__dot { background: #EF4444; }

@@ -25,13 +25,35 @@ const MENU = [
 
 const DOW_AB = ['D','L','M','M','J','V','S'];
 const CATS = [
-  { cat: 'presente', label: 'Asistencia' },
-  { cat: 'retardo',  label: 'Retardo' },
-  { cat: 'falta',    label: 'Falta' },
-  { cat: 'permiso',  label: 'Permiso' },
-  { cat: 'descanso', label: 'Descanso' },
+  { cat: 'presente',   label: 'Asistencia' },
+  { cat: 'retardo',    label: 'Retardo' },
+  { cat: 'falta',      label: 'Falta' },
+  { cat: 'permiso',    label: 'Permiso' },
+  { cat: 'descanso',   label: 'Descanso' },
+  { cat: 'sinasignar', label: 'Sin asignar' },
 ];
+
+// Etiqueta legible por estado granular (para el tooltip de cada celda).
+const ESTADO_LBL = {
+  presente: 'Asistencia', retardo: 'Retardo', falta: 'Falta', permiso: 'Permiso',
+  justificacion: 'Justificación', vacaciones: 'Vacaciones', festivo: 'Festivo',
+  descanso: 'Descanso', sinasignar: 'Sin asignar', futuro: '', previo: '',
+};
+
+// PDF: inicial + color por estado. Estados sin entrada (sinasignar/futuro/previo)
+// salen en blanco. Colores alineados con la leyenda en pantalla.
+const PDF_CELL = {
+  presente:      { ini: 'A',  bg: '#22C55E', fg: '#fff' },
+  retardo:       { ini: 'R',  bg: '#F59E0B', fg: '#fff' },
+  falta:         { ini: 'F',  bg: '#EF4444', fg: '#fff' },
+  permiso:       { ini: 'P',  bg: '#3B82F6', fg: '#fff' },
+  justificacion: { ini: 'J',  bg: '#3B82F6', fg: '#fff' },
+  vacaciones:    { ini: 'V',  bg: '#3B82F6', fg: '#fff' },
+  festivo:       { ini: 'Fe', bg: '#3B82F6', fg: '#fff' },
+  descanso:      { ini: 'D',  bg: '#CBD5E1', fg: '#0f172a' },
+};
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const hoyYmd = () => ymd(new Date()); // fecha local de hoy (ymd queda tapado por el parámetro en showMenu)
 const iniciales = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const rangoMes = ({ y, m }) => ({ desde: ymd(new Date(y, m, 1)), hasta: ymd(new Date(y, m + 1, 0)) });
 
@@ -130,8 +152,18 @@ function buildMenu() {
   window.addEventListener('scroll', hideMenu, true);
 }
 
+// Asistencia/Falta no se pueden marcar en días que aún no llegan (no son hechos
+// todavía); permiso/festivo/vacaciones/descanso sí se pueden adelantar.
+const FUTURO_BLOQUEADO = new Set(['asistencia', 'falta']);
+
 function showMenu(x, y, emp, ymd) {
   _menuTarget = { emp: parseInt(emp), ymd };
+  const esFuturo = ymd > hoyYmd();
+  _menu.querySelectorAll('[data-tipo]').forEach((b) => {
+    const bloq = esFuturo && FUTURO_BLOQUEADO.has(b.dataset.tipo);
+    b.disabled = bloq;
+    b.classList.toggle('ctx-menu__item--disabled', bloq);
+  });
   _menu.hidden = false; // mostrar para medir tamaño
   const w = _menu.offsetWidth, h = _menu.offsetHeight;
   _menu.style.left = Math.min(x, window.innerWidth - w - 8) + 'px';
@@ -142,6 +174,10 @@ function onDocClick(e) { if (_menu && !_menu.hidden && !_menu.contains(e.target)
 function onEsc(e) { if (e.key === 'Escape') hideMenu(); }
 
 async function setIncidencia(empId, fecha, tipo) {
+  if (FUTURO_BLOQUEADO.has(tipo) && fecha > hoyYmd()) {
+    showToast(t('No se puede marcar asistencia ni falta en días que aún no llegan.'), 'error');
+    return;
+  }
   try {
     // Siempre limpiamos overrides previos del día; 'reset' deja el día sin override
     // (vuelve al estado calculado por checadas + turnos_dia).
@@ -204,7 +240,7 @@ function renderGrid(wrap) {
       ? `<img class="hm-av" src="${esc(e.foto_url)}" alt="">`
       : `<span class="hm-av hm-av--ph">${esc(iniciales(e.nombre))}</span>`;
     const celdas = f.celdas.map(c =>
-      `<td class="hm-cell hm--${c.cat} ${c.ymd === hoy ? 'hm-cell--hoy' : ''}" data-emp="${e.id}" data-ymd="${c.ymd}" title="${c.dia}: ${esc(c.estado)}"></td>`
+      `<td class="hm-cell hm--${c.cat} ${c.ymd === hoy ? 'hm-cell--hoy' : ''}" data-emp="${e.id}" data-ymd="${c.ymd}" title="${c.dia}: ${esc(t(ESTADO_LBL[c.estado] || c.estado))}"></td>`
     ).join('');
     return `<tr data-emp="${e.id}">
       <td class="hm-emp">
@@ -308,13 +344,26 @@ function exportarPDF() {
     dias.map(d => `<th${d.finde ? ' class="we"' : ''}>${d.dia}<br><small>${DOW_AB[d.dow]}</small></th>`).join('');
   const body = filas.map(f =>
     `<tr><td class="emp">${esc(f.empleado.nombre)}</td><td>${esc(f.empleado.numero_empleado || '')}</td>` +
-    f.celdas.map(c => `<td>${c.cat === 'futuro' ? '' : esc(c.estado || '')}</td>`).join('') + '</tr>').join('');
+    f.celdas.map(c => {
+      const m = PDF_CELL[c.estado];
+      return m ? `<td style="background:${m.bg};color:${m.fg};font-weight:700">${m.ini}</td>` : '<td></td>';
+    }).join('') + '</tr>').join('');
+  // Leyenda de iniciales (solo las que aparecen en el tablero, en orden estable).
+  const presentes = new Set(filas.flatMap(f => f.celdas.map(c => c.estado)));
+  const leyenda = Object.keys(PDF_CELL).filter(e => presentes.has(e)).map(e => {
+    const m = PDF_CELL[e];
+    return `<span class="lg"><b style="background:${m.bg};color:${m.fg}">${m.ini}</b> ${esc(t(ESTADO_LBL[e] || e))}</span>`;
+  }).join('');
 
   const w = window.open('', '_blank');
   if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font:12px system-ui,-apple-system,sans-serif;margin:24px;color:#111}
-    h1{font-size:16px;margin:0 0 12px}
+    h1{font-size:16px;margin:0 0 8px}
+    .leg{margin:0 0 12px;font-size:10px;display:flex;flex-wrap:wrap;gap:10px}
+    .lg{display:inline-flex;align-items:center;gap:4px}
+    .lg b{display:inline-block;min-width:16px;text-align:center;border-radius:3px;padding:1px 3px;font-size:9px}
     table{border-collapse:collapse;width:100%}
     th,td{border:1px solid #cbd5e1;padding:4px 6px;text-align:center}
     th{background:#f1f5f9;font-size:10px}
@@ -322,6 +371,7 @@ function exportarPDF() {
     .we{background:#e2e8f0}
     @page{size:landscape;margin:12mm}
   </style></head><body><h1>${esc(titulo)}</h1>
+    <div class="leg">${leyenda}</div>
     <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
     <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
   </body></html>`);

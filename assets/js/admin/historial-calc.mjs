@@ -114,15 +114,19 @@ export function resumen(registros, turno, incidencias = []) {
 export const CATEGORIA = {
   presente: 'presente', asistencia: 'presente', retardo: 'retardo', falta: 'falta',
   permiso: 'permiso', justificacion: 'permiso', vacaciones: 'permiso', festivo: 'permiso',
-  descanso: 'descanso', futuro: 'futuro', previo: 'futuro', // 'previo' = antes del alta: en blanco, no cuenta
+  descanso: 'descanso', sinasignar: 'sinasignar',
+  futuro: 'futuro', previo: 'futuro', // 'previo' = antes del alta: en blanco, no cuenta
 };
 
-// Estado de una celda (un empleado, un día). 'descanso' si no tiene turno ese día.
+// Estado de una celda (un empleado, un día).
+// Sin turno asignado ⇒ 'sinasignar' (NO descanso): un día sin turno no es un
+// descanso, es que aún no se le asignó horario. 'descanso' solo cuando se marca
+// explícitamente como incidencia (inc.tipo === 'descanso').
 export function estadoCelda(reg, inc, turno, ymdKey, hoyKey) {
   if (reg && reg.entrada) return esRetardo(reg.entrada, turno) ? 'retardo' : 'presente';
   if (reg && reg.salida)  return 'presente';
   if (inc)                return inc.tipo;
-  if (!turno)             return 'descanso';
+  if (!turno)             return 'sinasignar';
   return ymdKey <= hoyKey ? 'falta' : 'futuro';
 }
 
@@ -163,7 +167,7 @@ export function tableroMes(empleados, registros, incidencias, turnosDia, turnos,
 
   const filas = empleados.map((e) => {
     const regsDia = diasPorEmp.get(e.id) ?? new Map();
-    const resumen = { presente: 0, retardo: 0, falta: 0, permiso: 0, descanso: 0, futuro: 0 };
+    const resumen = { presente: 0, retardo: 0, falta: 0, permiso: 0, descanso: 0, sinasignar: 0, futuro: 0 };
     const ingreso = e.fecha_ingreso || null;
     const celdas = dias.map((d) => {
       const turno = turnoDe.get(turnoDiaDe.get(`${e.id}-${d.ymd}`));
@@ -209,8 +213,11 @@ if (typeof process !== 'undefined' && process.argv?.[1] && import.meta.url === `
   assert(tab.dias.length === 7, 'tablero: 7 columnas');
   assert(byYmd('2026-06-15').estado === 'retardo', 'lunes con checada tardía ⇒ retardo');
   assert(byYmd('2026-06-16').estado === 'falta', 'martes laboral sin checada y pasado ⇒ falta');
-  assert(byYmd('2026-06-20').cat === 'descanso', 'sábado sin turno_dia ⇒ descanso');
+  assert(byYmd('2026-06-20').estado === 'sinasignar', 'sábado sin turno_dia ⇒ sin asignar (no descanso)');
   assert(byYmd('2026-06-19').estado === 'futuro', 'viernes posterior a hoy ⇒ futuro');
+  // descanso solo cuando se marca explícitamente (incidencia), no por ausencia de turno
+  assert(estadoCelda(null, { tipo: 'descanso' }, null, '2026-06-20', '2026-06-18') === 'descanso', 'descanso explícito (incidencia) ⇒ descanso');
+  assert(estadoCelda(null, null, null, '2026-06-16', '2026-06-18') === 'sinasignar', 'sin turno ni incidencia ⇒ sin asignar');
 
   // fecha_ingreso: días anteriores al alta salen en blanco y no se cuentan como falta.
   const emp2 = [{ id: 2, nombre: 'Beto', fecha_ingreso: '2026-06-17' }];

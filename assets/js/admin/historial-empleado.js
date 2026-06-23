@@ -26,10 +26,12 @@ const horaCorta = (iso) => new Date(iso).toLocaleTimeString(LOC(), { hour: '2-di
 const diaCorto  = (ymd) => new Date(ymd + 'T12:00:00').toLocaleDateString(LOC(), { day: '2-digit', month: 'short' });
 const diaLargo  = (ymd) => { const s = new Date(ymd + 'T12:00:00').toLocaleDateString(LOC(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 const publicURL = (ruta) => ruta ? `${SUPABASE_URL}/storage/v1/object/public/${ruta}` : null;
-const hoyISO = () => new Date().toISOString().slice(0, 10);
-const haceDiasISO = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
-const initials = (n) => (n || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// Fecha LOCAL, no UTC: toISOString() devolvía el día siguiente en zonas detrás de
+// UTC (p. ej. México por la tarde), marcando como falta un día que aún no llega.
+const hoyISO = () => ymdLocal(new Date());
+const haceDiasISO = (n) => ymdLocal(new Date(Date.now() - n * 86_400_000));
+const initials = (n) => (n || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const firstOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const horasDe = (d) => (d?.entrada && d?.salida) ? Math.round((new Date(d.salida.hora) - new Date(d.entrada.hora)) / 360000) / 10 : null;
 const DEFECTO = () => `<div class="ad-empty">${t('Selecciona un empleado y pulsa “Ver historial”.')}</div>`;
