@@ -292,6 +292,8 @@ export const EN = {
   'Tel. emerg.': 'Emerg. phone',
   'Historial de cambios': 'Change history', 'Sin cambios recientes.': 'No recent changes.',
   'Generar PDF': 'Generate PDF', 'Tipo de hecho': 'Event type', 'Todos los tipos': 'All types',
+  'No hay turnos que exportar.': 'No shifts to export.', 'Primero genera un historial.': 'Generate a history first.',
+  'Reporte de asistencia': 'Attendance report', 'Horas': 'Hours', 'Sin días en el rango.': 'No days in range.',
   'Sin cambios que coincidan.': 'No matching changes.', 'No hay cambios para exportar.': 'No changes to export.',
   'Buscar empleado o responsable…': 'Search employee or manager…',
   'Antes del ingreso · no editable': 'Before hire date · not editable',

@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { loading, showToast, openModal, closeModal, fmtHora, confirm } from './utils.js';
+import { loading, showToast, openModal, closeModal, fmtHora, confirm, esc } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { t as tr } from '../i18n.js'; // alias: 't' ya se usa para objetos turno en este módulo
 
@@ -14,6 +14,7 @@ const minutos = (t) => { const [h, m] = (t || '0:0').split(':'); return (+h) * 6
 const horasTurno = (t) => t ? Math.max(0, minutos(t.hora_salida) - minutos(t.hora_entrada) - (t.pausa_min || 0)) : 0;
 let _semana = lunesDe(new Date()); // lunes de la semana visible
 let _gridActivos = [];             // empleados activos de la plaza en foco (para copiar semana)
+let _gridPDF = null;               // datos de la cuadrícula visible para exportar a PDF
 
 export async function init(panel) {
   _plazas = await api.getPlazas().catch(() => []);
@@ -32,11 +33,18 @@ export async function init(panel) {
 
     <div class="panel-header" style="margin-top:28px">
       <h2>${tr('Distribución de turnos')}</h2>
-      <span class="td-muted" style="font-size:.85rem">${tr('Asigna el turno de cada empleado por fecha. Las semanas pasadas son solo lectura.')}</span>
+      <div class="panel-header__actions">
+        <button class="abtn abtn--ghost" id="btn-pdf-turnos">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ${tr('Generar PDF')}
+        </button>
+      </div>
     </div>
+    <p class="td-muted" style="font-size:.85rem;margin:-6px 0 12px">${tr('Asigna el turno de cada empleado por fecha. Las semanas pasadas son solo lectura.')}</p>
     <div class="ad-card"><div id="grid-horarios-wrap"></div></div>`;
 
   document.getElementById('btn-nuevo-turno')?.addEventListener('click', () => openTurnoForm());
+  document.getElementById('btn-pdf-turnos')?.addEventListener('click', pdfTurnos);
   await loadTurnos();
   await loadGrid();
 }
@@ -64,6 +72,9 @@ async function loadGrid() {
     const readonly = ymd(_semana) < ymd(lunesDe(new Date())); // semana ya pasada → inmutable
     const fechaLabel = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
     const rango = `${fechaLabel(_semana)} – ${fechaLabel(fechas[6])} ${fechas[6].getFullYear()}`;
+    // Datos para el PDF: nombre de plaza + lo necesario para reconstruir la cuadrícula.
+    const plazaNombre = _plazas.find(p => p.id === getPlazaScope())?.nombre ?? null;
+    _gridPDF = { fechas, activos, turnoDe, rango, plazaNombre };
 
     const optsFor = (sel) => `<option value="">${tr('Descanso')}</option>` + turnos.map(t =>
       `<option value="${t.id}" ${sel === t.id ? 'selected' : ''}>${t.nombre} (${(t.hora_entrada||'').slice(0,5)}-${(t.hora_salida||'').slice(0,5)})</option>`
@@ -127,6 +138,66 @@ async function loadGrid() {
   } catch (e) {
     wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
   }
+}
+
+// Color de celda en el PDF, mismo mapeo que la cuadrícula (.grid-sel.sel--c-*).
+const TURNO_PDF = {
+  'c-blue':    { bg: '#DBEAFE', fg: '#1E40AF' },
+  'c-emerald': { bg: '#DCFCE7', fg: '#166534' },
+  'c-teal':    { bg: '#CCFBF1', fg: '#115E59' },
+  'c-amber':   { bg: '#FEF3C7', fg: '#92400E' },
+  'c-violet':  { bg: '#EDE9FE', fg: '#5B21B6' },
+};
+
+// PDF de la distribución semanal: réplica imprimible de la cuadrícula en pantalla.
+// Lee los <select> en vivo para reflejar exactamente lo que ve el usuario.
+function pdfTurnos() {
+  if (!_gridPDF || !_gridPDF.activos.length) { showToast(tr('No hay turnos que exportar.'), 'error'); return; }
+  const { fechas, activos, turnoDe, rango, plazaNombre } = _gridPDF;
+  const w = window.open('', '_blank');
+  if (!w) { showToast(tr('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  const fechaLabel = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+
+  const head = `<th class="emp">${tr('Empleado')}</th>` + fechas.map(d => {
+    const finde = [0, 6].includes(d.getDay());
+    return `<th${finde ? ' class="we"' : ''}>${tr(DIAS[((d.getDay() + 6) % 7) + 1])}<br><small>${fechaLabel(d)}</small></th>`;
+  }).join('');
+
+  let totalMin = 0;
+  const body = activos.map(e => {
+    const tds = fechas.map(d => {
+      const f = ymd(d);
+      const sel = document.querySelector(`.grid-sel[data-emp="${e.id}"][data-fecha="${f}"]`);
+      const tn = sel ? turnoDe.get(parseInt(sel.value) || 0) : null;
+      if (!tn) return `<td class="off">${tr('Descanso')}</td>`;
+      totalMin += horasTurno(tn);
+      const c = TURNO_PDF[turnoColor(tn)] ?? { bg: '#fff', fg: '#111' };
+      return `<td style="background:${c.bg};color:${c.fg};font-weight:600">${esc(tn.nombre)}<br><small>${(tn.hora_entrada || '').slice(0, 5)}–${(tn.hora_salida || '').slice(0, 5)}</small></td>`;
+    }).join('');
+    return `<tr><td class="emp">${esc(e.nombre)}</td>${tds}</tr>`;
+  }).join('');
+
+  const titulo = `${tr('Distribución de turnos')}${plazaNombre ? ' — ' + esc(plazaNombre) : ''}`;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font:12px system-ui,-apple-system,sans-serif;margin:22px;color:#0f172a}
+    h1{font-size:17px;margin:0 0 2px}
+    .sub{color:#64748b;font-size:11px;margin:0 0 14px;display:flex;justify-content:space-between;gap:12px}
+    table{border-collapse:collapse;width:100%;table-layout:fixed}
+    th,td{border:1px solid #cbd5e1;padding:6px 7px;text-align:center;vertical-align:middle}
+    th{background:#f1f5f9;font-size:10px;line-height:1.3}
+    th small,td small{font-weight:400;opacity:.75;font-size:9px}
+    td.emp,th.emp{text-align:left;white-space:nowrap;font-weight:600;background:#f8fafc;width:150px}
+    td.off{color:#94a3b8;font-style:italic}
+    .we{background:#e2e8f0}
+    @page{size:landscape;margin:12mm}
+  </style></head><body>
+    <h1>${esc(titulo)}</h1>
+    <div class="sub"><span>${esc(rango)}</span><span>${tr('Total semana')}: ${(totalMin / 60).toFixed(1)} h</span></div>
+    <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+    <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
+  </body></html>`);
+  w.document.close();
 }
 
 function bindNav(wrap) {

@@ -279,6 +279,9 @@ function pintar() {
       <button id="hist-stats-btn" class="abtn abtn--ghost abtn--icon" title="${t('Estadísticas')}" aria-label="${t('Ver estadísticas')}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </button>
+      <button id="hist-pdf-btn" class="abtn abtn--ghost abtn--icon" title="${t('Generar PDF')}" aria-label="${t('Generar PDF')}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
       <button id="hist-nueva-nota" class="abtn abtn--primary">+ ${t('Nota')}</button>
     </div>`;
 
@@ -292,8 +295,68 @@ function pintar() {
     <div class="ad-card cal-month" id="hist-cal">${mesHTML()}</div>`;
 
   wrap.querySelector('#hist-stats-btn').onclick = showStatsPop;
+  wrap.querySelector('#hist-pdf-btn').onclick = pdfHistorial;
   wrap.querySelector('#hist-nueva-nota').onclick = () => formNota(hoyISO());
   wireCal(wrap);
+}
+
+// PDF: reporte de asistencia tabular del rango (mejor para imprimir que el
+// calendario). Patrón de ventana imprimible, sin dependencias.
+function pdfHistorial() {
+  if (!_ctx?.emp) { showToast(t('Primero genera un historial.'), 'error'); return; }
+  const { emp, desde, hasta, turno } = _ctx;
+  const w = window.open('', '_blank');
+  if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+
+  const r = resumen(_ctx.registros, turno, _ctx.incidencias);
+  const hoyKey = hoyISO();
+  const filas = [];
+  for (let d = new Date(desde + 'T12:00:00'); ymdLocal(d) <= hasta; d.setDate(d.getDate() + 1)) {
+    const key = ymdLocal(d);
+    const reg = _ctx.mapDia.get(key) ?? {};
+    const notas = _ctx.notasMap.get(key) ?? [];
+    const estado = estadoDia({ entrada: reg.entrada, salida: reg.salida, notas }, key, hoyKey);
+    if (estado === 'futuro') continue; // días que aún no llegan no se imprimen
+    const e = ESTADO[estado] ?? ESTADO.falta;
+    const tarde = reg.entrada && esRetardo(reg.entrada, turno);
+    const horas = horasDe(reg);
+    filas.push(`<tr class="st-${e.cls}">
+      <td class="d">${esc(diaLargo(key))}</td>
+      <td>${reg.entrada ? horaCorta(reg.entrada.hora) : '—'}</td>
+      <td>${reg.salida ? horaCorta(reg.salida.hora) : '—'}</td>
+      <td>${horas != null ? horas + ' h' : '—'}</td>
+      <td><b>${esc(t(e.txt) || '—')}</b>${tarde ? ` · ${t('Retardo')}` : ''}</td>
+      <td>${notas.map(n => esc(t(n.tipo))).join(', ') || '—'}</td>
+    </tr>`);
+  }
+
+  const meta = [emp?.puesto, emp?.plazas?.nombre].filter(Boolean).map(esc).join(' · ');
+  const kpi = (lbl, val) => `<span class="kpi"><b>${val}</b> ${esc(t(lbl))}</span>`;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t('Reporte de asistencia'))} — ${esc(emp?.nombre ?? '')}</title><style>
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font:12px system-ui,-apple-system,sans-serif;margin:24px;color:#0f172a}
+    h1{font-size:18px;margin:0 0 2px}
+    .meta{color:#64748b;font-size:11px;margin:0 0 4px}
+    .range{color:#0f172a;font-size:12px;font-weight:600;margin:0 0 12px}
+    .kpis{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 16px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px}
+    .kpi{font-size:11px;color:#475569}.kpi b{font-size:15px;color:#0f172a;margin-right:4px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #cbd5e1;padding:5px 8px;text-align:center}
+    th{background:#f1f5f9;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+    td.d{text-align:left;white-space:nowrap}
+    tr.st-red b{color:#b91c1c}tr.st-green b{color:#15803d}tr.st-orange b{color:#b45309}tr.st-blue b{color:#1d4ed8}
+    @page{margin:14mm}
+  </style></head><body>
+    <h1>${esc(t('Reporte de asistencia'))}</h1>
+    <p class="meta">${esc(emp?.nombre ?? '')}${meta ? ' — ' + meta : ''}</p>
+    <p class="range">${esc(diaCorto(desde))} – ${esc(diaCorto(hasta))}</p>
+    <div class="kpis">${kpi('Checadas', r.totalChecadas)}${kpi('Retardos', turno ? r.retardos : '–')}${kpi('Horas trabajadas', r.horasTotales)}${kpi('Notas', r.incidencias)}</div>
+    <table><thead><tr>
+      <th>${t('Fecha')}</th><th>${t('Entrada')}</th><th>${t('Salida')}</th><th>${t('Horas')}</th><th>${t('Estado')}</th><th>${t('Notas')}</th>
+    </tr></thead><tbody>${filas.join('') || `<tr><td colspan="6">${t('Sin días en el rango.')}</td></tr>`}</tbody></table>
+    <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
+  </body></html>`);
+  w.document.close();
 }
 
 function wireCal(wrap) {
