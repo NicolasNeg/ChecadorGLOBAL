@@ -11,6 +11,11 @@ export function capturarFoto(videoEl, quality = 0.7) {
   const canvas = document.createElement('canvas');
   canvas.width  = videoEl.videoWidth;
   canvas.height = videoEl.videoHeight;
-  canvas.getContext('2d').drawImage(videoEl, 0, 0);
+  // Espejo (selfie): voltea horizontal para que la foto guardada coincida con
+  // el preview espejado. No afecta el reconocimiento (analiza el <video>, no el JPEG).
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(videoEl, 0, 0);
   return canvas.toDataURL('image/jpeg', quality);
 }

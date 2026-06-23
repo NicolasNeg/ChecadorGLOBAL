@@ -245,6 +245,9 @@
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; display: block;
 }
+/* Espejo solo en el video en vivo (selfie). La foto ya se captura espejada en
+   el canvas, así que #img-preview NO se voltea (si no, se invertiría dos veces). */
+#video-preview.facescan__cam { transform: scaleX(-1); }
 
 /* Botón atrás (flota sobre la cámara) */
 .facescan__back {
