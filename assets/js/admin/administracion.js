@@ -6,6 +6,8 @@ import { t } from '../i18n.js';
 // ponytail: 3 ajustes KV; añade filas aquí cuando el negocio pida más.
 const CAMPOS = [
   ['nombre_empresa',         'Nombre de la empresa',     'Aparece en el panel y los reportes.', 'text'],
+  ['empresa_direccion',      'Dirección de la empresa',  'Aparece en el encabezado de los reportes impresos.', 'text'],
+  ['empresa_rfc',            'RFC',                       'Aparece en el encabezado de los reportes impresos.', 'text'],
   ['tolerancia_retardo_min', 'Tolerancia de retardo (min)', 'Minutos de gracia antes de marcar retardo.', 'number'],
   ['jornada_horas',          'Jornada estándar (horas)',  'Horas esperadas por turno completo.', 'number'],
 ];
@@ -35,9 +37,33 @@ export async function init(panel) {
       </div>
       <input id="cfg-${clave}" class="form-input setting-row__input" type="${type}"${type === 'number' ? ' min="0"' : ''} value="${esc(cfg[clave] ?? '')}">
     </div>`).join('') +
+    `<div class="setting-row">
+      <div>
+        <label class="setting-row__label">${t('Logo de la empresa')}</label>
+        <div class="setting-row__hint">${t('Aparece en el encabezado de los reportes impresos.')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <img id="cfg-logo-img" src="${esc(cfg.empresa_logo_url ?? '')}" alt="" style="height:44px;width:auto;object-fit:contain;border:1px solid var(--ad-linea);border-radius:6px;background:#fff;padding:2px"${cfg.empresa_logo_url ? '' : ' hidden'}>
+        <label class="abtn" style="cursor:pointer;margin:0">${t('Subir logo')}<input type="file" id="cfg-logo-file" accept="image/*" hidden></label>
+      </div>
+    </div>` +
     `<div class="setting-row" style="justify-content:flex-end">
       <button class="abtn abtn--primary" id="cfg-save">${t('Guardar cambios')}</button>
     </div>`;
+
+  document.getElementById('cfg-logo-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast(t('Sube una imagen.'), 'error'); return; }
+    try {
+      const url = await api.subirFotoPerfil(file); // reusa el bucket público 'fotos'
+      await api.setConfigGlobal('empresa_logo_url', url);
+      cfg.empresa_logo_url = url;
+      const img = document.getElementById('cfg-logo-img');
+      img.src = url; img.hidden = false;
+      showToast('Logo guardado.', 'ok');
+    } catch (err) { showToast(err.message, 'error'); }
+  });
 
   document.getElementById('cfg-save').addEventListener('click', async (e) => {
     const btn = e.currentTarget;

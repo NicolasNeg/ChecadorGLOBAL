@@ -6,6 +6,7 @@ import { getPlazaScope } from './plaza-scope.js';
 import { getAdminSession } from './auth.js';
 import { SUPABASE_URL } from '../config.js';
 import { t, getLang } from '../i18n.js';
+import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
 
 const TIPOS = ['falta', 'permiso', 'justificacion', 'vacaciones', 'festivo'];
 
@@ -302,11 +303,12 @@ function pintar() {
 
 // PDF: reporte de asistencia tabular del rango (mejor para imprimir que el
 // calendario). Patrón de ventana imprimible, sin dependencias.
-function pdfHistorial() {
+async function pdfHistorial() {
   if (!_ctx?.emp) { showToast(t('Primero genera un historial.'), 'error'); return; }
   const { emp, desde, hasta, turno } = _ctx;
   const w = window.open('', '_blank');
   if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  const cab = await cabeceraReporteHTML();
 
   const r = resumen(_ctx.registros, turno, _ctx.incidencias);
   const hoyKey = hoyISO();
@@ -345,8 +347,8 @@ function pdfHistorial() {
     th{background:#f1f5f9;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
     td.d{text-align:left;white-space:nowrap}
     tr.st-red b{color:#b91c1c}tr.st-green b{color:#15803d}tr.st-orange b{color:#b45309}tr.st-blue b{color:#1d4ed8}
-    @page{margin:14mm}
-  </style></head><body>
+    @page{margin:14mm}${CABECERA_CSS}
+  </style></head><body>${cab}
     <h1>${esc(t('Reporte de asistencia'))}</h1>
     <p class="meta">${esc(emp?.nombre ?? '')}${meta ? ' — ' + meta : ''}</p>
     <p class="range">${esc(diaCorto(desde))} – ${esc(diaCorto(hasta))}</p>

@@ -2,6 +2,7 @@ import * as api from './api.js';
 import { loading, showToast, openModal, closeModal, fmtHora, confirm, esc } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { t as tr } from '../i18n.js'; // alias: 't' ya se usa para objetos turno en este módulo
+import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
 
 let _plazas = [];
 const DIAS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -151,11 +152,12 @@ const TURNO_PDF = {
 
 // PDF de la distribución semanal: réplica imprimible de la cuadrícula en pantalla.
 // Lee los <select> en vivo para reflejar exactamente lo que ve el usuario.
-function pdfTurnos() {
+async function pdfTurnos() {
   if (!_gridPDF || !_gridPDF.activos.length) { showToast(tr('No hay turnos que exportar.'), 'error'); return; }
   const { fechas, activos, turnoDe, rango, plazaNombre } = _gridPDF;
   const w = window.open('', '_blank');
   if (!w) { showToast(tr('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  const cab = await cabeceraReporteHTML();
   const fechaLabel = (d) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 
   const head = `<th class="emp">${tr('Empleado')}</th>` + fechas.map(d => {
@@ -190,8 +192,8 @@ function pdfTurnos() {
     td.emp,th.emp{text-align:left;white-space:nowrap;font-weight:600;background:#f8fafc;width:150px}
     td.off{color:#94a3b8;font-style:italic}
     .we{background:#e2e8f0}
-    @page{size:landscape;margin:12mm}
-  </style></head><body>
+    @page{size:landscape;margin:12mm}${CABECERA_CSS}
+  </style></head><body>${cab}
     <h1>${esc(titulo)}</h1>
     <div class="sub"><span>${esc(rango)}</span><span>${tr('Total semana')}: ${(totalMin / 60).toFixed(1)} h</span></div>
     <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>

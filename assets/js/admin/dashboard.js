@@ -1,8 +1,9 @@
 import { requireAdminSession, logoutAdmin } from './auth.js';
-import { getAuditLog, countEmpleados, getRegistros, getPlazas, getEmpleados } from './api.js';
+import { getAuditLog, countEmpleados, getRegistros, getPlazas, getEmpleados, enviarResetPassword } from './api.js';
 import { fmtFecha, esc, showToast } from './utils.js';
 import { getPlazaScope, setPlazaScope } from './plaza-scope.js';
 import { t, applyI18n, mountLangToggle, getLang } from '../i18n.js';
+import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
 
 const sesion = requireAdminSession();
 // auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
@@ -291,6 +292,13 @@ function loadAjustes(panel) {
         <div class="setting-row"><span class="setting-row__label">${t('Nombre')}</span><span class="setting-row__val">${esc(sesion?.nombre ?? 'Admin')}</span></div>
         <div class="setting-row"><span class="setting-row__label">${t('Rol')}</span><span class="setting-row__val">${rolTxt}</span></div>
         <div class="setting-row"><span class="setting-row__label">${t('Correo')}</span><span class="setting-row__val">${esc(sesion?.email ?? '—')}</span></div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-row__label">${t('Contraseña')}</div>
+            <div class="setting-row__hint">${t('Te enviaremos un enlace a tu correo para cambiarla.')}</div>
+          </div>
+          <button class="abtn" id="ajustes-password">${t('Enviar enlace a mi correo')}</button>
+        </div>
       </div>
     </div>
     <div class="ad-card"><div class="ad-card__header"><h3>${t('Sesión')}</h3></div>
@@ -317,6 +325,21 @@ function loadAjustes(panel) {
   syncKpis();
 
   panel.querySelector('#ajustes-logout')?.addEventListener('click', logoutAdmin);
+
+  panel.querySelector('#ajustes-password')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (!sesion?.email) { showToast(t('No hay correo en tu cuenta.'), 'error'); return; }
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = t('Enviando…');
+    try {
+      await enviarResetPassword(sesion.email);
+      showToast(t('Enlace enviado a tu correo.'), 'ok');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  });
   applyTheme();
 }
 
@@ -576,10 +599,11 @@ function renderCambiosTabla(items, filtros) {
 }
 
 // PDF vía ventana imprimible (mismo patrón que asistencia: sin dependencias).
-function pdfCambios(rows) {
+async function pdfCambios(rows) {
   if (!rows.length) { showToast(t('No hay cambios para exportar.'), 'error'); return; }
   const w = window.open('', '_blank');
   if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
+  const cab = await cabeceraReporteHTML();
   const titulo = `${t('Historial de cambios')} — ${fmtFecha(new Date().toISOString())}`;
   const body = rows.map(i =>
     `<tr><td>${esc(fmtFecha(i.fecha))}</td><td>${esc(t(i.tipo))}</td><td>${esc(i.emp || '—')}${i.dia ? ' · ' + esc(i.dia) : ''}</td><td>${esc(i.responsable)}</td></tr>`).join('');
@@ -590,8 +614,8 @@ function pdfCambios(rows) {
     table{border-collapse:collapse;width:100%}
     th,td{border:1px solid #cbd5e1;padding:5px 8px;text-align:left}
     th{background:#f1f5f9;font-size:10px}
-    @page{margin:14mm}
-  </style></head><body><h1>${esc(titulo)}</h1>
+    @page{margin:14mm}${CABECERA_CSS}
+  </style></head><body>${cab}<h1>${esc(titulo)}</h1>
     <table><thead><tr><th>${t('Fecha')}</th><th>${t('Tipo de hecho')}</th><th>${t('Empleado')}</th><th>${t('Responsable')}</th></tr></thead><tbody>${body}</tbody></table>
     <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
   </body></html>`);
