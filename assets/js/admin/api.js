@@ -238,6 +238,31 @@ export const getAuditLog = (limit = 50) =>
 export const countPlazas     = () => apiFetch('plazas?select=id&activo=eq.true', { headers: { 'Prefer': 'count=exact' } });
 export const countEmpleados  = () => apiFetch('empleados?select=id&activo=eq.true', { headers: { 'Prefer': 'count=exact' } });
 
+// ── Realtime: checadas en vivo para el Centro de Operaciones ────────────────
+// supabase-js solo para el websocket de Realtime (el resto del admin es REST).
+// setAuth(JWT) hace que el canal respete la RLS por rol (rh/jefe). El callback
+// recibe la fila insertada. Devuelve una función para cancelar la suscripción.
+// ponytail: dep CDN solo-realtime; hilar el protocolo Phoenix a mano sería un
+// nido de bugs. Fallback al polling lo decide el llamador si subscribe() falla.
+let _sb = null, _sbChannel = null;
+export async function suscribirRegistros(onInsert, onStatus) {
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  if (!_sb) _sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const token = getAdminSession()?.access_token;
+  if (token) _sb.realtime.setAuth(token);
+
+  if (_sbChannel) { _sb.removeChannel(_sbChannel); _sbChannel = null; }
+  _sbChannel = _sb
+    .channel('ops-registros')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registros' },
+        (payload) => onInsert(payload.new))
+    .subscribe((status) => onStatus?.(status));
+
+  return () => { if (_sbChannel) { _sb.removeChannel(_sbChannel); _sbChannel = null; } };
+}
+
 export async function statsHoy() {
   const hoy = new Date().toISOString().slice(0, 10);
   const [total, incid] = await Promise.all([

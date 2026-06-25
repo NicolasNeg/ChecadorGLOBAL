@@ -162,6 +162,12 @@ export const EN = {
   'Entradas': 'Check-ins', 'Salidas': 'Check-outs', 'Incidencias': 'Incidents',
   'Ver asistencia': 'View attendance', 'Historial por empleado': 'History by employee',
   'Asistencia en tiempo real': 'Real-time attendance',
+  // —— Admin: centro de operaciones ——
+  'Centro de operaciones': 'Operations center', 'Mapa de plazas': 'Sites map',
+  'Activos ahora': 'Active now', 'Ausentes': 'Absent', 'Llegadas tarde': 'Late arrivals',
+  'En vivo': 'Live', 'Conectando…': 'Connecting…', 'Actualizar': 'Refresh',
+  'Actualizado': 'Updated', 'Nadie activo ahora.': 'Nobody active now.',
+  'El mapa no está disponible.': 'The map is unavailable.', 'Sin plaza': 'No site',
 
   // —— Admin: ajustes ——
   'Apariencia': 'Appearance', 'Tema': 'Theme',

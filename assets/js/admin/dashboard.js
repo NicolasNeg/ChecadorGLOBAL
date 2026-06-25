@@ -1,7 +1,8 @@
 import { requireAdminSession, logoutAdmin } from './auth.js';
-import { getAuditLog, countEmpleados, getRegistros, getPlazas, getEmpleados, enviarResetPassword } from './api.js';
+import { getAuditLog, getRegistros, getPlazas, getEmpleados, getTurnos, suscribirRegistros, enviarResetPassword } from './api.js';
 import { fmtFecha, esc, showToast } from './utils.js';
-import { getPlazaScope, setPlazaScope } from './plaza-scope.js';
+import { getPlazaScope, setPlazaScope, filterByPlaza } from './plaza-scope.js';
+import { presentes, activosPorPlaza, contarAusentes, contarTarde, contarIncidencias } from './operaciones-calc.mjs';
 import { t, applyI18n, mountLangToggle, getLang } from '../i18n.js';
 import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
 
@@ -34,6 +35,8 @@ const _loaded = {};
 let _current = null;
 
 async function showPanel(id) {
+  // Al salir del Centro de Operaciones: corta realtime/polling y destruye el mapa.
+  if (_current === 'overview' && id !== 'overview') limpiarOps();
   _current = id;
   panels.forEach(p => p.hidden = true);
   navLinks.forEach(l => l.classList.toggle('active', l.dataset.panel === id));
@@ -42,6 +45,9 @@ async function showPanel(id) {
   if (!panel) return;
   panel.hidden = false;
   pageTitle.textContent = t(panel.dataset.title ?? id);
+
+  // Operaciones siempre se re-monta (mapa + realtime con estado fresco), no se cachea.
+  if (id === 'overview') { await loadOperaciones(panel); return; }
 
   if (id === 'historial') {
     const m = await import('./historial-empleado.js');
@@ -55,7 +61,6 @@ async function showPanel(id) {
   _loaded[id] = true;
 
   switch (id) {
-    case 'overview':   await loadOverview(panel); break;
     case 'plazas':     { const m = await import('./plazas.js');    await m.init(panel); break; }
     case 'puestos':    { const m = await import('./puestos.js');   await m.init(panel); break; }
     case 'empleados':  { const m = await import('./empleados.js'); await m.init(panel); break; }
@@ -343,157 +348,198 @@ function loadAjustes(panel) {
   applyTheme();
 }
 
-// ── Overview stats ────────────────────────────────────────────────────────────
-const ICONS = {
-  empleados: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-  plazas:    '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
-  registros: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+// ── Centro de Operaciones (overview en vivo: mapa + métricas + activos) ─────────
+const STAT_ICONS = {
+  empleados:  '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  ausente:    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="22" y2="13"/><line x1="22" y1="8" x2="17" y2="13"/>',
+  reloj:      '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   incidencias:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
 };
+const STAT_DEFS = {
+  presentes:   { tono: 'green',  icon: 'empleados',   label: 'Presentes ahora' },
+  ausentes:    { tono: 'blue',   icon: 'ausente',     label: 'Ausentes' },
+  tarde:       { tono: 'orange', icon: 'reloj',       label: 'Llegadas tarde' },
+  incidencias: { tono: 'red',    icon: 'incidencias', label: 'Incidencias hoy' },
+};
+const STAT_KEYS = ['presentes', 'ausentes', 'tarde', 'incidencias'];
 
-function statCard(tono, icon, label, value, sub) {
+function statCard(key, value, sub) {
+  const d = STAT_DEFS[key];
   return `
-    <div class="stat-card stat-card--${tono}">
+    <div class="stat-card stat-card--${d.tono}" data-stat="${key}">
       <div class="stat-card__icon">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[icon]}</svg>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${STAT_ICONS[d.icon]}</svg>
       </div>
-      <div class="stat-card__label">${label}</div>
+      <div class="stat-card__label">${t(d.label)}</div>
       <div class="stat-card__value">${value}</div>
       ${sub ? `<div class="stat-card__sub">${sub}</div>` : ''}
     </div>`;
 }
 
-function barRow(label, value, total, tono) {
-  const pct = total ? Math.round((value / total) * 100) : 0;
-  return `
-    <div class="dist-row">
-      <span class="dist-row__label">${label}</span>
-      <div class="dist-row__track"><div class="dist-row__fill dist-row__fill--${tono}" style="width:${pct}%"></div></div>
-      <span class="dist-row__val">${value}</span>
-    </div>`;
+// Estado de la vista en vivo (mapa, suscripción, timers). Se limpia al salir.
+let _ops = { handle: null, mapMod: null, unsub: null, fallbackId: null, debounceId: null, live: false };
+
+function limpiarOps() {
+  clearInterval(_ops.fallbackId);
+  clearTimeout(_ops.debounceId);
+  try { _ops.unsub?.(); } catch { /* noop */ }
+  if (_ops.handle && _ops.mapMod) _ops.mapMod.destruirMapa(_ops.handle);
+  _ops = { handle: null, mapMod: null, unsub: null, fallbackId: null, debounceId: null, live: false };
 }
 
-async function loadOverview(panel) {
+async function loadOperaciones(panel) {
+  limpiarOps(); // idempotente: cubre re-entradas y reloadCurrent (idioma/plaza)
   const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
   const hoy = new Date().toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   panel.innerHTML = `
     <div class="overview-hero">
       <div>
         <p class="overview-hero__hi">${t('Hola')}, ${esc(sesion?.nombre ?? 'Admin')} 👋</p>
-        <h2 class="overview-hero__title">${t('Resumen del día')}</h2>
+        <h2 class="overview-hero__title">${t('Centro de operaciones')}</h2>
       </div>
-      <span class="overview-hero__date">${hoy}</span>
+      <div class="ops-live">
+        <span class="ops-live__dot" id="ops-dot" aria-hidden="true"></span>
+        <span id="ops-live-txt">${t('Conectando…')}</span>
+        <button class="hicon-btn" id="ops-refresh" title="${t('Actualizar')}" aria-label="${t('Actualizar')}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
     </div>
 
-    <div class="stat-grid" id="stat-grid">
-      ${['empleados','presentes','registros','incidencias'].map(ic => statCard(
-          { empleados:'blue', presentes:'green', registros:'orange', incidencias:'red' }[ic],
-          ic === 'presentes' ? 'empleados' : ic,
-          t({ empleados:'Empleados activos', presentes:'Presentes ahora', registros:'Registros hoy', incidencias:'Incidencias hoy' }[ic]),
-          '—')).join('')}
+    <div class="stat-grid" id="ops-stats">
+      ${STAT_KEYS.map(k => statCard(k, '—')).join('')}
     </div>
 
-    <div class="overview-cols">
-      <div class="ad-card">
-        <div class="ad-card__header"><h3>${t('Actividad de hoy')}</h3></div>
-        <div id="overview-actividad"><div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div></div>
+    <div class="ops-cols">
+      <div class="ad-card ops-map-card">
+        <div class="ad-card__header"><h3>${t('Mapa de plazas')}</h3><span class="overview-hero__date">${hoy}</span></div>
+        <div id="ops-map" class="ops-map"></div>
       </div>
-      <div class="overview-aside">
-        <div class="ad-card">
-          <div class="ad-card__header"><h3>${t('Distribución de hoy')}</h3></div>
-          <div class="ad-card__body" id="overview-dist"><div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div></div>
-        </div>
-        <div class="ad-card">
-          <div class="ad-card__header"><h3>${t('Accesos rápidos')}</h3></div>
-          <div class="ad-card__body quick-links" id="overview-quick"></div>
-        </div>
+      <div class="ad-card ops-side">
+        <div class="ad-card__header"><h3>${t('Activos ahora')}</h3></div>
+        <div class="ad-card__body" id="ops-activos"><div class="ad-loading"><div class="ad-spinner"></div> ${t('Cargando…')}</div></div>
       </div>
     </div>`;
 
-  renderQuickLinks();
+  panel.querySelector('#ops-refresh').addEventListener('click', refrescarOps);
 
-  // Empleados activos: cuenta independiente (no viene en los registros del día).
-  countEmpleados()
-    .then(emp => setStat('empleados', emp?.length ?? 0))
-    .catch(() => setStat('empleados', '—'));
+  // Monta el mapa (si Leaflet carga). Si falla, el panel sigue útil sin mapa.
+  try {
+    _ops.mapMod = await import('./mapa-operaciones.js');
+    await _ops.mapMod.cargarMapa();
+    const plazas = filterByPlaza(await getPlazas(), p => p.id);
+    _ops.handle = _ops.mapMod.montarMapa(panel.querySelector('#ops-map'), plazas, mostrarActivosPlaza);
+  } catch (e) {
+    console.error('Leaflet no cargó:', e);
+    const m = panel.querySelector('#ops-map');
+    if (m) m.outerHTML = `<div class="ad-empty">${t('El mapa no está disponible.')}</div>`;
+  }
 
-  // Una sola consulta del día alimenta stats + distribución + actividad.
+  await refrescarOps();
+
+  // Realtime: cada checada (INSERT) refresca; fallback a polling de 30 s.
+  try {
+    _ops.unsub = await suscribirRegistros(scheduleRefresh, (status) => setLive(status === 'SUBSCRIBED'));
+  } catch (e) {
+    console.error('Realtime no conectó:', e);
+    setLive(false);
+  }
+  _ops.fallbackId = setInterval(refrescarOps, 30000);
+}
+
+function scheduleRefresh() {
+  clearTimeout(_ops.debounceId);
+  _ops.debounceId = setTimeout(refrescarOps, 1000); // agrupa ráfagas de checadas
+}
+
+async function refrescarOps() {
   const hoyISO = new Date().toISOString().slice(0, 10);
   try {
-    const rows = await getRegistros({ fecha: hoyISO, limit: 300 });
-    const entradas    = rows.filter(r => r.tipo === 'entrada').length;
-    const salidas     = rows.filter(r => r.tipo === 'salida').length;
-    const incidencias = rows.filter(r => r.geocerca_valida === false).length;
-    const presentes   = Math.max(entradas - salidas, 0); // ponytail: entradas-salidas; por-empleado si se requiere precisión
+    let [rows, empleados, turnos] = await Promise.all([
+      getRegistros({ fecha: hoyISO, limit: 500 }),
+      getEmpleados(),
+      getTurnos(),
+    ]);
+    rows      = filterByPlaza(rows, r => r.empleados?.plaza_id);
+    empleados = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
 
-    setStat('presentes',   presentes);
-    setStat('registros',   rows.length);
-    setStat('incidencias', incidencias, t(incidencias ? 'fuera de geocerca' : 'todo en orden'));
+    const turnoPorId = new Map(turnos.map(tn => [tn.id, tn]));
+    const conTurno   = empleados.filter(e => e.turno_id).map(e => ({ id: e.id, turno_id: e.turno_id }));
+    const turnoPorEmpleado = new Map(
+      empleados.filter(e => e.turno_id && turnoPorId.has(e.turno_id)).map(e => [e.id, turnoPorId.get(e.turno_id)])
+    );
 
-    renderDistribucion({ entradas, salidas, incidencias, total: rows.length });
-    renderActividad(rows.slice(0, 8));
+    const activos = activosPorPlaza(rows);
+    setStat('presentes',   presentes(rows).length);
+    setStat('ausentes',    contarAusentes(rows, conTurno));
+    setStat('tarde',       contarTarde(rows, turnoPorEmpleado));
+    const incid = contarIncidencias(rows);
+    setStat('incidencias', incid, t(incid ? 'fuera de geocerca' : 'todo en orden'));
+
+    // Conteos para el mapa (+ marca de incidencia por plaza).
+    const incidPorPlaza = new Set(rows.filter(r => r.geocerca_valida === false).map(r => r.empleados?.plaza_id));
+    const conteos = new Map();
+    for (const [pid, info] of activos) conteos.set(pid, { count: info.activos.length, incidencia: incidPorPlaza.has(pid) });
+    for (const pid of incidPorPlaza) if (pid != null && !conteos.has(pid)) conteos.set(pid, { count: 0, incidencia: true });
+    if (_ops.handle && _ops.mapMod) _ops.mapMod.pintarConteos(_ops.handle, conteos);
+
+    renderActivos(activos);
+    stampHora();
   } catch (e) {
-    ['presentes','registros','incidencias'].forEach(k => setStat(k, '—'));
-    const d = document.getElementById('overview-dist');
-    const a = document.getElementById('overview-actividad');
-    if (d) d.innerHTML = `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
+    STAT_KEYS.forEach(k => setStat(k, '—'));
+    const a = document.getElementById('ops-activos');
     if (a) a.innerHTML = `<div class="ad-empty" style="color:#DC2626">${esc(e.message)}</div>`;
   }
 }
 
-// Reemplaza una stat-card por su clave sin recargar todo el grid.
-const STAT_LABELS = { empleados:'Empleados activos', presentes:'Presentes ahora', registros:'Registros hoy', incidencias:'Incidencias hoy' };
-const STAT_TONOS  = { empleados:'blue', presentes:'green', registros:'orange', incidencias:'red' };
 function setStat(key, value, sub) {
-  const grid = document.getElementById('stat-grid');
-  if (!grid) return;
-  const idx = ['empleados','presentes','registros','incidencias'].indexOf(key);
-  const card = grid.children[idx];
-  if (!card) return;
-  card.outerHTML = statCard(STAT_TONOS[key], key === 'presentes' ? 'empleados' : key, t(STAT_LABELS[key]), value, sub);
+  const card = document.querySelector(`#ops-stats [data-stat="${key}"]`);
+  if (card) card.outerHTML = statCard(key, value, sub);
 }
 
-function renderDistribucion({ entradas, salidas, incidencias, total }) {
-  const wrap = document.getElementById('overview-dist');
+function renderActivos(activos) {
+  const wrap = document.getElementById('ops-activos');
   if (!wrap) return;
-  if (!total) { wrap.innerHTML = `<div class="ad-empty">${t('Sin registros hoy.')}</div>`; return; }
-  wrap.innerHTML =
-    barRow(t('Entradas'), entradas, total, 'green') +
-    barRow(t('Salidas'), salidas, total, 'blue') +
-    barRow(t('Incidencias'), incidencias, total, 'red');
-}
-
-function renderActividad(rows) {
-  const wrap = document.getElementById('overview-actividad');
-  if (!wrap) return;
-  if (!rows.length) { wrap.innerHTML = `<div class="ad-empty">${t('Sin actividad hoy.')}</div>`; return; }
-  wrap.innerHTML = `<ul class="activity-list">${rows.map(r => `
-    <li class="activity-item">
-      <span class="abadge abadge--${r.tipo === 'entrada' ? 'entrada' : 'salida'}">${t(r.tipo === 'entrada' ? 'Entrada' : 'Salida')}</span>
-      <span class="activity-item__name">${esc(r.empleados?.nombre ?? '–')}</span>
-      <span class="activity-item__plaza">${esc(r.empleados?.plazas?.nombre ?? '')}</span>
-      <span class="activity-item__time">${fmtFecha(r.hora)}</span>
-    </li>`).join('')}</ul>`;
-}
-
-function renderQuickLinks() {
-  const wrap = document.getElementById('overview-quick');
-  if (!wrap) return;
-  const links = [
-    ['asistencia', 'Ver asistencia'],
-    ['empleados',  'Empleados'],
-    ['historial',  'Historial por empleado'],
-    ...(esRH ? [['plazas', 'Plazas'], ['turnos', 'Turnos']] : [])
-  ];
-  wrap.innerHTML = links.map(([id, label]) =>
-    `<button class="quick-link" data-goto="${id}">${t(label)}
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-    </button>`).join('');
-  wrap.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
-    const id = b.dataset.goto;
-    history.pushState(null, '', hashURL(id));
-    showPanel(id);
+  const total = [...activos.values()].reduce((n, p) => n + p.activos.length, 0);
+  if (!total) { wrap.innerHTML = `<div class="ad-empty">${t('Nadie activo ahora.')}</div>`; return; }
+  wrap.innerHTML = [...activos.entries()].map(([pid, info]) => `
+    <div class="ops-grp">
+      <button class="ops-grp__head" data-plaza="${pid}">
+        <span class="ops-grp__plaza">${esc(info.nombre ?? t('Sin plaza'))}</span>
+        <span class="ops-grp__count">${info.activos.length}</span>
+      </button>
+      <ul class="ops-grp__list">${info.activos.map(a => `
+        <li><span class="ops-grp__name">${esc(a.nombre)}</span><span class="ops-grp__time">${fmtFecha(a.hora)}</span></li>
+      `).join('')}</ul>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-plaza]').forEach(b => b.addEventListener('click', () => {
+    const pid = parseInt(b.dataset.plaza);
+    if (_ops.handle && _ops.mapMod) _ops.mapMod.seleccionarPlaza(_ops.handle, pid);
   }));
+}
+
+// Marcador del mapa clicado → resalta su grupo en la lista lateral.
+function mostrarActivosPlaza(plazaId) {
+  const head = document.querySelector(`#ops-activos [data-plaza="${plazaId}"]`);
+  if (!head) return;
+  head.closest('.ops-grp')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  head.classList.add('is-flash');
+  setTimeout(() => head.classList.remove('is-flash'), 900);
+}
+
+function setLive(on) {
+  _ops.live = on;
+  document.getElementById('ops-dot')?.classList.toggle('is-on', on);
+  const txt = document.getElementById('ops-live-txt');
+  if (txt && on) txt.textContent = t('En vivo');
+}
+
+function stampHora() {
+  if (_ops.live) return; // "En vivo" gana sobre la marca de hora
+  const txt = document.getElementById('ops-live-txt');
+  if (!txt) return;
+  const loc = getLang() === 'en' ? 'en-US' : 'es-MX';
+  txt.textContent = `${t('Actualizado')} ${new Date().toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 // ── Audit log panel ───────────────────────────────────────────────────────────
