@@ -1,4 +1,4 @@
-import { verificarPin, limpiarSesion, obtenerTurnosPlazaSemana, setIdEmpleado, verificarTokenPlaza } from './api.js';
+import { verificarPin, limpiarSesion, obtenerTurnosPlazaSemana, setIdEmpleado, verificarTokenPlaza, obtenerAvisos } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
 import { BASE, TOKEN_PLAZA_REQUERIDO } from './config.js';
 import { t, applyI18n, mountLangToggle } from './i18n.js';
@@ -316,8 +316,10 @@ function enterMenu(perfil) {
 
   document.getElementById('btn-checar').onclick    = () => { location.href = BASE + '/checador/'; };
   document.getElementById('btn-historial').onclick = () => { location.href = BASE + '/historial/'; };
+  document.getElementById('btn-avisos').onclick    = () => { location.href = BASE + '/avisos/'; };
   document.getElementById('btn-turnos').onclick    = () => enterTurnos();
   checkProximaSemana(); // fire-and-forget: pinta el punto rojo si ya hay horario nuevo
+  checkAvisos(perfil.plazaId); // fire-and-forget: badge con avisos no vistos
   document.getElementById('btn-cerrar-sesion').onclick = () => {
     clearSession();
     limpiarSesion();
@@ -351,6 +353,20 @@ async function checkProximaSemana() {
   const visto = localStorage.getItem(vistoKey()) === ymdT(pl);
   dot.hidden = !(tengo && !visto);
   if (!dot.hidden) dot.setAttribute('aria-label', t('Ya hay horario de la próxima semana'));
+}
+
+// Badge de avisos no vistos. "Visto" = id guardado en localStorage (lo escribe
+// la página de avisos al abrirla). ponytail: cuenta simple por ids; sin push/realtime.
+const AVISOS_VISTOS = 'eqs_avisos_vistos';
+async function checkAvisos(plazaId) {
+  const badge = document.getElementById('avisos-badge');
+  if (!badge) return;
+  const avisos = await obtenerAvisos(plazaId);
+  let vistos = [];
+  try { vistos = JSON.parse(localStorage.getItem(AVISOS_VISTOS) || '[]'); } catch {}
+  const nuevos = avisos.filter((a) => !vistos.includes(a.id)).length;
+  badge.textContent = nuevos > 9 ? '9+' : String(nuevos);
+  badge.hidden = nuevos === 0;
 }
 
 async function enterTurnos() {

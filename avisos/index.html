@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script>!function(){document.write('<base href="'+(location.pathname.startsWith('/ChecadorGLOBAL/')?'/ChecadorGLOBAL/':'/')+'">');try{document.documentElement.dataset.theme=localStorage.getItem('eqs_theme')||'light'}catch(e){}}()</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0369A1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title data-marca-titulo="Avisos">Avisos · EQS</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/historial.css">
+  <link rel="stylesheet" href="assets/css/avisos.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="app-header">
+    <button class="app-header__back" id="btn-atras" aria-label="Volver" data-i18n-title="Volver">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+    <div class="app-header__info">
+      <div class="app-header__title" data-i18n>Avisos</div>
+      <div class="app-header__sub" id="header-sub"></div>
+    </div>
+  </header>
+
+  <div class="app-content app-content--historial">
+    <div id="contenedor-avisos"></div>
+  </div>
+
+</div>
+
+<script type="module" src="assets/js/marca.js"></script>
+<script type="module" src="assets/js/avisos-page.js"></script>
+</body>
+</html>

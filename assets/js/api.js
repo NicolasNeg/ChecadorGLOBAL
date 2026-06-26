@@ -287,6 +287,23 @@ export async function obtenerTurnosPlazaSemana(desde, hasta) {
   } catch { return []; }
 }
 
+// ── AVISOS VIGENTES (RPC: anuncios activos de su plaza + globales) ──────────
+export async function obtenerAvisos(plazaId) {
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/avisos_vigentes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_plaza_id: plazaId ?? null })
+    });
+    if (!r.ok) return [];
+    return await r.json(); // [{id, titulo, imagen_url, creado_en}]
+  } catch { return []; }
+}
+
 // ── SET ID DESDE SESIÓN (para páginas que cargan con sessionStorage) ────────
 export function setIdEmpleado(id) { _idEmpleado = id; }
 

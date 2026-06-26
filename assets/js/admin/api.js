@@ -238,6 +238,23 @@ export const setConfigGlobal = (clave, valor) =>
 export const getAuditLog = (limit = 50) =>
   apiFetch(`audit_log?select=*,perfiles_admin(nombre)&order=created_at.desc&limit=${limit}`);
 
+// ── Avisos ──────────────────────────────────────────────────────────────────
+export const getAvisos   = () => apiFetch('avisos?select=*,plazas(nombre)&order=creado_en.desc');
+export const createAviso = (d) => apiFetch('avisos', { method: 'POST', body: JSON.stringify(d) });
+export const updateAviso = (id, d) => apiFetch(`avisos?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
+export const deleteAviso = (id) => apiFetch(`avisos?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
+
+// Sube el PNG renderizado al bucket 'avisos'. La política exige rol authenticated,
+// así que va con el JWT admin (authedFetch), no con la anon key.
+export async function subirImagenAviso(blob) {
+  const path = `${crypto.randomUUID()}.png`;
+  const res = await authedFetch(`${SUPABASE_URL}/storage/v1/object/avisos/${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'image/png' }, body: blob,
+  });
+  if (!res.ok) throw new Error('No se pudo subir la imagen del aviso.');
+  return `${SUPABASE_URL}/storage/v1/object/public/avisos/${path}`;
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────────
 export const countPlazas     = () => apiFetch('plazas?select=id&activo=eq.true', { headers: { 'Prefer': 'count=exact' } });
 export const countEmpleados  = () => apiFetch('empleados?select=id&activo=eq.true', { headers: { 'Prefer': 'count=exact' } });

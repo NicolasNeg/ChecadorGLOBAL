@@ -289,6 +289,17 @@
 @keyframes dot-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: .7; } }
 @media (prefers-reduced-motion: reduce) { .btn-dot { animation: none; } }
 
+/* Contador de avisos no vistos en el botón "Avisos" */
+#btn-avisos { position: relative; }
+.btn-badge {
+  position: absolute; top: 8px; right: 10px;
+  min-width: 20px; height: 20px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: #EF4444; color: #fff;
+  font-size: .72rem; font-weight: 700; line-height: 1;
+  box-shadow: 0 0 0 3px var(--tarjeta);
+}
+
 .turnos-vacio { font-size: .9rem; color: var(--tinta-2); text-align: center; padding: 8px 0; }
 .turnos-grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
 .turnos-grid { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 540px; font-size: .82rem; }

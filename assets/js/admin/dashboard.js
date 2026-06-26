@@ -73,6 +73,7 @@ async function showPanel(id) {
     case 'puestos':    { const m = await import('./puestos.js');   await m.init(panel); break; }
     case 'empleados':  { const m = await import('./empleados.js'); await m.init(panel); break; }
     case 'gafetes':    { const m = await import('./gafetes.js');   await m.init(panel); break; }
+    case 'avisos':     { const m = await import('./avisos.js');    await m.init(panel); break; }
     case 'turnos':     { const m = await import('./turnos.js');    await m.init(panel); break; }
     case 'asistencia': {
       const m = await import('./asistencia.js');
