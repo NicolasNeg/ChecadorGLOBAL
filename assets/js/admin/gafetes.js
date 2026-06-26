@@ -62,7 +62,7 @@ export async function init(panel) {
       vacio.textContent = t('Generando vista previa…'); vacio.hidden = false; iframe.hidden = true;
       try {
         const doc = await construirDocIndividual(empSel);
-        iframe.src = doc.output('datauristring');
+        iframe.src = doc.output('datauristring') + '#toolbar=0&navpanes=0&view=Fit';
         iframe.hidden = false; vacio.hidden = true;
         btnDesc.disabled = false;
       } catch (e) {
@@ -107,7 +107,8 @@ export async function init(panel) {
 // Gafete individual: una página del tamaño exacto de la tarjeta.
 async function construirDocIndividual(emp) {
   const jsPDF = await loadJsPDF();
-  const doc = new jsPDF({ unit: 'mm', format: [CARD_W, CARD_H] });
+  // landscape: sin esto jsPDF voltea el formato a vertical (54×85.6) y corta la tarjeta.
+  const doc = new jsPDF({ unit: 'mm', orientation: 'landscape', format: [CARD_W, CARD_H] });
   await dibujarGafete(doc, emp, 0, 0, await prepararImagenes(emp));
   return doc;
 }
@@ -166,51 +167,65 @@ async function qrDataUrl(text) {
 // Dibuja una tarjeta CR80 en (x,y). doc en mm. Fuente helvetica (estándar PDF;
 // ponytail: incrustar Lexend pesaría — innecesario para un gafete).
 function dibujarGafete(doc, emp, x, y, { foto, qr }) {
-  const W = CARD_W, H = CARD_H, r = 3;
+  const W = CARD_W, H = CARD_H, r = 3.2;
+  const PRIM = [3, 105, 161];
+
   // Marco
-  doc.setFillColor(255, 255, 255); doc.setDrawColor(208, 213, 221); doc.setLineWidth(0.3);
+  doc.setFillColor(255, 255, 255); doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
   doc.roundedRect(x, y, W, H, r, r, 'FD');
-  // Banda superior con marca (rect redondeado arriba + rect recto debajo)
-  doc.setFillColor(3, 105, 161);
-  doc.roundedRect(x, y, W, 11, r, r, 'F');
-  doc.rect(x, y + 5, W, 6, 'F');
-  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-  doc.text('EQS Checador', x + 5, y + 7.2);
 
-  // Foto (o iniciales) a la izquierda
-  const fx = x + 5, fy = y + 15, fs = 23;
+  // Banda superior con marca (esquinas sup. redondeadas, base recta)
+  const hb = 13;
+  doc.setFillColor(...PRIM);
+  doc.roundedRect(x, y, W, hb, r, r, 'F');
+  doc.rect(x, y + r, W, hb - r, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.text('EQS', x + 5, y + 8.6);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(186, 222, 247);
+  doc.text('CHECADOR', x + 5 + doc.getTextWidth('EQS') + 1.5, y + 8.6);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(255, 255, 255);
+  doc.text('CREDENCIAL', x + W - 5, y + 8.4, { align: 'right' });
+
+  // Foto vertical (o iniciales) a la izquierda
+  const fw = 20, fh = 26, fx = x + 5, fy = y + hb + 3;
   if (foto) {
-    doc.addImage(foto, 'JPEG', fx, fy, fs, fs);
-    doc.setDrawColor(208, 213, 221); doc.setLineWidth(0.3); doc.rect(fx, fy, fs, fs);
+    doc.addImage(foto, 'JPEG', fx, fy, fw, fh);
   } else {
-    doc.setFillColor(3, 105, 161); doc.roundedRect(fx, fy, fs, fs, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
-    doc.text(iniciales(emp.nombre) || '–', fx + fs / 2, fy + fs / 2 + 2, { align: 'center' });
+    doc.setFillColor(...PRIM); doc.roundedRect(fx, fy, fw, fh, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+    doc.text(iniciales(emp.nombre) || '–', fx + fw / 2, fy + fh / 2 + 1.5, { align: 'center' });
   }
+  doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3); doc.roundedRect(fx, fy, fw, fh, 2, 2, 'S');
 
-  // Datos a la derecha
-  const tx = fx + fs + 4;
-  const maxW = W - (tx - x) - 4;
-  doc.setTextColor(17, 24, 39); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  // Datos a la derecha de la foto. maxW acotado: el texto queda a la izquierda
+  // del QR (que arranca en ~x+63.6), así nunca se encima ni se corta.
+  const tx = fx + fw + 5, maxW = 32;
+  doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
   const nombreLineas = doc.splitTextToSize(emp.nombre || '', maxW).slice(0, 2);
-  doc.text(nombreLineas, tx, y + 18);
-  let ty = y + 18 + nombreLineas.length * 4.6 + 1;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
-  for (const linea of [emp.puesto, emp.plazas?.nombre].filter(Boolean)) {
-    doc.text(doc.splitTextToSize(linea, maxW).slice(0, 1), tx, ty);
-    ty += 4.4;
+  doc.text(nombreLineas, tx, y + hb + 6);
+  let ty = y + hb + 6 + nombreLineas.length * 4.8 + 1.5;
+  if (emp.puesto) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+    const puestoLineas = doc.splitTextToSize(emp.puesto, maxW).slice(0, 2);
+    doc.text(puestoLineas, tx, ty); ty += puestoLineas.length * 4 + 0.5;
+  }
+  if (emp.plazas?.nombre) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+    doc.text(doc.splitTextToSize(emp.plazas.nombre, maxW).slice(0, 1), tx, ty);
   }
 
-  // Número de empleado (etiqueta inferior izquierda)
+  // Número de empleado (inferior izquierda)
   if (emp.numero_empleado) {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(3, 105, 161);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...PRIM);
     doc.text(`#${emp.numero_empleado}`, x + 5, y + H - 4);
   }
 
-  // QR de verificación (esquina inferior derecha)
+  // QR de verificación (inferior derecha) con su rótulo
   if (qr) {
-    const qs = 17, qx = x + W - qs - 4, qy = y + H - qs - 3;
+    const qs = 18, qx = x + W - qs - 4, qy = y + H - qs - 4;
     doc.addImage(qr, 'PNG', qx, qy, qs, qs);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(148, 163, 184);
+    doc.text('VERIFICAR', qx + qs / 2, qy - 1.2, { align: 'center' });
   }
 }
 
