@@ -4,7 +4,7 @@
   <script>!function(){document.write('<base href="'+(location.pathname.startsWith('/ChecadorGLOBAL/')?'/ChecadorGLOBAL/':'/')+'">')}()</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EQS Admin · Acceso</title>
+  <title data-marca-titulo="Acceso">EQS Admin · Acceso</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="assets/css/estilos-admin.css">
 </head>
@@ -21,7 +21,7 @@
           </svg>
         </div>
         <div>
-          <div class="login-brand__name">EQS Checador</div>
+          <div class="login-brand__name" data-marca>EQS Checador</div>
           <div class="login-brand__sub" data-i18n>Panel Administrativo</div>
         </div>
       </div>
@@ -58,7 +58,7 @@
       </div>
 
       <div class="login-form-wrap">
-        <img src="assets/imgs/logo_.png" alt="EQS México" class="login-logo">
+        <img src="assets/imgs/logo_.png" alt="EQS México" class="login-logo" data-marca-logo>
         <h2 class="login-title" data-i18n>Iniciar sesión</h2>
         <p class="login-hint" data-i18n>Ingresa con tu cuenta de administrador.</p>
 
@@ -98,6 +98,7 @@
 
   </div>
 
+  <script type="module" src="assets/js/marca.js"></script>
   <script type="module">
     import { loginAdmin, getAdminSession } from './assets/js/admin/auth.js';
     import { BASE } from './assets/js/config.js';

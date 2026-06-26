@@ -62,10 +62,12 @@ export const createPuesto   = (nombre) => apiFetch('puestos', { method: 'POST', 
 export const deletePuesto   = (id) => apiFetch(`puestos?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
 
 // ── Empleados ─────────────────────────────────────────────────────────────
-export const getEmpleados    = () => apiFetch('empleados?select=*,plazas(nombre),turnos(nombre)&order=nombre.asc');
+export const getEmpleados    = () => apiFetch('empleados?select=*,plazas(nombre),turnos(nombre)&eliminado=eq.false&order=nombre.asc');
 export const updateEmpleado  = (id, d) => apiFetch(`empleados?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
 export const crearEmpleado   = (d) => rpc('crear_empleado', d);
 export const actualizarPin   = (id, pin) => rpc('actualizar_pin_empleado', { p_empleado_id: id, p_nuevo_pin: pin });
+// Borrado lógico (RH): oculta el empleado y bloquea su login (activo=false).
+export const eliminarEmpleado = (id) => updateEmpleado(id, { eliminado: true, activo: false });
 
 // Sube una foto de perfil al bucket público 'fotos' con la anon key (las
 // políticas de storage permiten insert/read anon). Devuelve la URL pública.

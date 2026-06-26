@@ -36,6 +36,7 @@ let firmaCleanup = null;
 let current = 'cargando';
 let estado = { dentro: false, horaEntrada: null }; // estado de jornada (fresco del servidor)
 let timerId = null;
+let timerModo = 'salida'; // 'entrada' = cuenta regresiva al turno; 'salida' = tiempo en turno
 let faceLoopId = null;   // intervalo de análisis
 let faceEscapeId = null; // timeout de 15s
 const data = { tipo: null, firmaDataURL: null, fotoDataURL: null, rostroVerificado: false, viveza: null, similitud: null };
@@ -99,6 +100,8 @@ function showTipo() {
     document.getElementById('checar-sub').textContent   = t('Fin de jornada');
     document.getElementById('tipo-sub').textContent     = t('Tienes un turno abierto');
     jc.hidden = false;
+    timerModo = 'salida';
+    setTimerLabels(jc, t('En turno'), t('Para terminar'));
     pintarTurno();
     startTimer();
   } else {
@@ -108,9 +111,24 @@ function showTipo() {
     document.getElementById('checar-label').textContent = t('Registrar entrada');
     document.getElementById('checar-sub').textContent   = t('Inicio de jornada');
     document.getElementById('tipo-sub').textContent     = t('¿Listo para iniciar tu jornada?');
-    jc.hidden = true;
-    stopTimer();
+    if (sesion.turnoEntrada) {
+      jc.hidden = false;
+      timerModo = 'entrada';
+      setTimerLabels(jc, t('Faltan'), t('Tu entrada'));
+      pintarTurno();
+      startTimer();
+    } else {
+      jc.hidden = true;
+      stopTimer();
+    }
   }
+}
+
+// Sobreescribe las dos etiquetas del jornada-card según el modo del timer.
+function setTimerLabels(jc, lbl1, lbl2) {
+  const lbls = jc.querySelectorAll('.jornada-timer__lbl');
+  if (lbls[0]) lbls[0].textContent = lbl1;
+  if (lbls[1]) lbls[1].textContent = lbl2;
 }
 
 document.getElementById('btn-checar').addEventListener('click', () => { stopTimer(); showFirma(); });
@@ -136,6 +154,7 @@ function fmtDur(ms) {
 }
 
 function tick() {
+  if (timerModo === 'entrada') return tickEntrada();
   const now = new Date();
   const ent = estado.horaEntrada ? new Date(estado.horaEntrada) : null;
   document.getElementById('timer-elapsed').textContent = ent ? fmtDur(now - ent) : '--';
@@ -151,6 +170,19 @@ function tick() {
   } else {
     rem.textContent = '--';
   }
+}
+
+// Cuenta regresiva hasta la hora de entrada del turno (modo 'entrada').
+function tickEntrada() {
+  const now = new Date();
+  const elapsed = document.getElementById('timer-elapsed');
+  const rem = document.getElementById('timer-remaining');
+  if (!sesion.turnoEntrada) { elapsed.textContent = '--'; rem.textContent = '--'; return; }
+  const [h, m, s] = sesion.turnoEntrada.split(':').map(Number);
+  const ini = new Date(now); ini.setHours(h, m, s || 0, 0);
+  const d = ini - now;
+  elapsed.textContent = d > 0 ? fmtDur(d) : t('Es tu hora');
+  rem.textContent = hm(sesion.turnoEntrada);
 }
 
 function startTimer() { tick(); stopTimer(); timerId = setInterval(tick, 1000); }

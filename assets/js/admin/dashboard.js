@@ -37,7 +37,15 @@ let _current = null;
 async function showPanel(id) {
   // Al salir del Centro de Operaciones: corta realtime/polling y destruye el mapa.
   if (_current === 'overview' && id !== 'overview') limpiarOps();
+  // Animación suave de salida del panel anterior antes de ocultarlo.
+  const prevId = _current;
   _current = id;
+  const prevPanel = prevId && prevId !== id ? document.getElementById(`panel-${prevId}`) : null;
+  if (prevPanel && !prevPanel.hidden) {
+    prevPanel.classList.add('panel-exit');
+    await new Promise(r => setTimeout(r, 140));
+    prevPanel.classList.remove('panel-exit');
+  }
   panels.forEach(p => p.hidden = true);
   navLinks.forEach(l => l.classList.toggle('active', l.dataset.panel === id));
 

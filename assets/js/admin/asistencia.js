@@ -312,9 +312,13 @@ function renderSpotlight() {
       </div>`).join('')}
     </div>
     <button class="abtn abtn--primary spot-cta" id="spot-hist" type="button">${t('Ver historial completo')}</button>`;
-  // Navega al panel de historial reusando el enlace del sidebar (no recargamos).
-  aside.querySelector('#spot-hist')?.addEventListener('click', () =>
-    document.querySelector('.sidebar__link[data-panel="historial"]')?.click());
+  // Navega al panel de historial PRESELECCIONANDO al empleado (antes solo abría
+  // el panel sin transferir la selección y se reseteaba).
+  aside.querySelector('#spot-hist')?.addEventListener('click', async () => {
+    const m = await import('./historial-empleado.js');
+    m.preseleccionar(_sel);
+    document.querySelector('.sidebar__link[data-panel="historial"]')?.click();
+  });
   // ponytail: "Enviar notificación" / "Generar justificante" del diseño quedan
   // fuera — requieren backend (envío de avisos, generación de PDF) inexistente.
 }

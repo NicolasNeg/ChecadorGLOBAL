@@ -6,7 +6,7 @@
   <script>!function () { try { var t = localStorage.getItem('eqs_admin_theme') || 'system'; var d = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.setAttribute('data-theme', d ? 'dark' : 'light') } catch (e) { } }()</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EQS Admin · Dashboard</title>
+  <title data-marca-titulo="Dashboard">EQS Admin · Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet"
@@ -26,9 +26,9 @@
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
       <div class="sidebar__brand">
         <div class="sidebar__brand-icon sidebar__brand-icon--logo">
-          <img src="assets/imgs/logo_.png" alt="EQS México">
+          <img src="assets/imgs/logo_.png" alt="EQS México" data-marca-logo>
         </div>
-        <div class="sidebar__brand-name">EQS Checador</div>
+        <div class="sidebar__brand-name" data-marca>EQS Checador</div>
       </div>
 
       <nav class="sidebar__nav">
@@ -236,6 +236,7 @@
   <!-- ── Toast container ─────────────────────────────────────────── -->
   <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 
+  <script type="module" src="assets/js/marca.js"></script>
   <script type="module" src="assets/js/admin/dashboard.js"></script>
   <script type="module">
     // Wire modal close buttons (no module needed)

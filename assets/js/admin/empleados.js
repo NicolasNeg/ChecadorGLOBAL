@@ -1,7 +1,10 @@
 import * as api from './api.js';
 import { loading, showToast, openModal, closeModal, esc, pinFieldHTML, wirePin, DEFAULT_PFP } from './utils.js';
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
+import { getAdminSession } from './auth.js';
 import { t } from '../i18n.js';
+
+const esRH = getAdminSession()?.rol === 'rh'; // solo RH puede eliminar empleados
 
 
 // Iconos SVG de las tarjetas (stroke currentColor; un solo juego, mismo grosor).
@@ -14,6 +17,7 @@ const IC = {
   pin:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
   baja:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
   alta:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  elim:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>',
 };
 
 let _plazas  = [];
@@ -67,6 +71,21 @@ async function loadEmpleados() {
         await loadEmpleados();
       } catch (e) { showToast(e.message, 'error'); }
     };
+    // Borrado lógico (solo RH): se oculta de los listados pero la fila persiste.
+    window._eliminarEmp = (id, nombre) => {
+      openModal(`${t('Eliminar empleado')}: ${nombre}`,
+        `<p>${t('El empleado dejará de aparecer y no podrá iniciar sesión. Su historial se conserva. Esta acción no se puede deshacer desde el panel.')}</p>`,
+        async () => {
+          try {
+            await api.eliminarEmpleado(id);
+            closeModal();
+            showToast('Empleado eliminado.', 'ok');
+            await loadEmpleados();
+          } catch (e) { showToast(e.message, 'error'); }
+        },
+        'Eliminar empleado'
+      );
+    };
     window._resetPin = (id, nombre) => {
       openModal(`${t('Resetear PIN')}: ${nombre}`,
         `${pinFieldHTML('pin-nuevo', 'Nuevo PIN (solo números)', { full: true })}
@@ -119,6 +138,8 @@ function tarjetaEmp(r) {
         <button class="emp-c__act ${r.activo ? 'emp-c__act--danger' : 'emp-c__act--ok'}"
           title="${t(r.activo ? 'Desactivar' : 'Reactivar')}" aria-label="${t(r.activo ? 'Desactivar' : 'Reactivar')}"
           onclick="window._toggleEmp(${r.id}, ${r.activo})">${r.activo ? IC.baja : IC.alta}</button>
+        ${esRH ? `<button class="emp-c__act emp-c__act--danger" title="${t('Eliminar empleado')}" aria-label="${t('Eliminar empleado')}"
+          onclick="window._eliminarEmp(${r.id}, '${nombreJs}')">${IC.elim}</button>` : ''}
       </div>
     </article>`;
 }
@@ -282,7 +303,18 @@ function openEmpForm(emp = null) {
     isEdit ? 'Guardar cambios' : 'Crear empleado'
   );
 
-  if (!isEdit) wirePin('e-pin'); // dígitos, máx 4, botón ojo
+  if (!isEdit) {
+    wirePin('e-pin'); // dígitos, máx 4, botón ojo
+    // PIN por defecto = DDMM de la fecha de nacimiento (28 jul → "2807"), editable.
+    // No machaca si el usuario ya tecleó un PIN a mano.
+    const pinEl = document.getElementById('e-pin');
+    pinEl.addEventListener('input', () => { pinEl.dataset.tocado = '1'; });
+    document.getElementById('e-nac')?.addEventListener('change', (ev) => {
+      if (!ev.target.value || pinEl.dataset.tocado) return;
+      const [, mm, dd] = ev.target.value.split('-'); // yyyy-mm-dd
+      pinEl.value = `${dd}${mm}`;
+    });
+  }
 
   // preview de la foto al elegir archivo
   document.getElementById('e-foto')?.addEventListener('change', (ev) => {

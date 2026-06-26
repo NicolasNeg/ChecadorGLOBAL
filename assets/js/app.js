@@ -44,6 +44,16 @@ function shakeInput(id) {
   el.addEventListener('animationend', () => el.classList.remove('input-pin--shake'), { once: true });
 }
 
+// ── Límite de intentos de PIN (anti fuerza bruta básico) ───────────────────────
+// ponytail: contador en localStorage, por dispositivo — disuasorio, no barrera
+// real (se puede limpiar el storage). El control duro debe ir en el RPC
+// verificar_pin (rate-limit server-side) — pendiente.
+const PIN_MAX_INTENTOS = 5;
+const PIN_BLOQUEO_MS = 60_000;
+const pinIntentos     = () => parseInt(localStorage.getItem('eqs_pin_intentos') || '0', 10);
+const pinBloqueoHasta = () => parseInt(localStorage.getItem('eqs_pin_bloqueo') || '0', 10);
+const limpiarIntentosPin = () => { localStorage.removeItem('eqs_pin_intentos'); localStorage.removeItem('eqs_pin_bloqueo'); };
+
 // ── Switch de tema (sol/luna) — el tema ya se aplicó en el <script> del <head> ──
 (function initTheme() {
   const btn = document.getElementById('theme-toggle');
@@ -94,8 +104,32 @@ function enterLogin() {
   switchTo(sMenu, sLogin);
   setTimeout(() => input.focus(), 380);
 
+  // Bloqueo temporal tras superar el máximo de intentos: deshabilita el botón y
+  // muestra una cuenta regresiva; se rehabilita solo al expirar.
+  let bloqueoTimer = null;
+  function aplicarBloqueo() {
+    const restante = () => Math.ceil((pinBloqueoHasta() - Date.now()) / 1000);
+    if (restante() <= 0) return;
+    shakeInput('input-pin');
+    const pintar = () => {
+      const s = restante();
+      if (s <= 0) {
+        clearInterval(bloqueoTimer); bloqueoTimer = null;
+        btnPin.disabled = false; label.textContent = t('Continuar'); setError('error-pin', '');
+        return;
+      }
+      btnPin.disabled = true;
+      setError('error-pin', `${t('Demasiados intentos. Espera')} ${s}s.`);
+    };
+    pintar();
+    clearInterval(bloqueoTimer);
+    bloqueoTimer = setInterval(pintar, 1000);
+  }
+  if (Date.now() < pinBloqueoHasta()) aplicarBloqueo();
+
   form.onsubmit = async (e) => {
     e.preventDefault();
+    if (Date.now() < pinBloqueoHasta()) { aplicarBloqueo(); return; }
     const pin = input.value.trim();
     if (!pin) { setError('error-pin', t('Ingresa tu PIN.')); shakeInput('input-pin'); return; }
     setError('error-pin', '');
@@ -108,18 +142,26 @@ function enterLogin() {
     try {
       res = await verificarPin(pin);
     } finally {
-      btnPin.disabled   = false;
-      label.textContent = t('Continuar');
-      spinner.hidden    = true;
+      if (!bloqueoTimer) { btnPin.disabled = false; label.textContent = t('Continuar'); }
+      spinner.hidden = true;
     }
 
     if (res?.ok) {
+      limpiarIntentosPin();
       const { ok, ...perfil } = res;
       setSession(perfil);
       enterMenu(perfil);
     } else {
-      setError('error-pin', res?.error || t('PIN incorrecto.'));
-      shakeInput('input-pin');
+      const n = pinIntentos() + 1;
+      if (n >= PIN_MAX_INTENTOS) {
+        localStorage.setItem('eqs_pin_bloqueo', String(Date.now() + PIN_BLOQUEO_MS));
+        localStorage.setItem('eqs_pin_intentos', '0');
+        aplicarBloqueo();
+      } else {
+        localStorage.setItem('eqs_pin_intentos', String(n));
+        setError('error-pin', `${res?.error || t('PIN incorrecto.')} ${PIN_MAX_INTENTOS - n} ${t('intentos restantes')}.`);
+        shakeInput('input-pin');
+      }
     }
   };
 }
