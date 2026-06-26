@@ -75,8 +75,8 @@ function saludo(nombre) {
 btnAtras.addEventListener('click', () => {
   detenerGateFacial();
   if (current === 'tipo' || current === 'cargando') location.href = BASE + '/';
-  else if (current === 'firma') showTipo();
-  else if (current === 'foto')  showFirma();
+  else if (current === 'foto')  showTipo();
+  else if (current === 'firma') showFoto();
 });
 
 // ── TIPO SCREEN (auto: entrada si está fuera, salida si tiene jornada abierta) ─
@@ -131,7 +131,7 @@ function setTimerLabels(jc, lbl1, lbl2) {
   if (lbls[1]) lbls[1].textContent = lbl2;
 }
 
-document.getElementById('btn-checar').addEventListener('click', () => { stopTimer(); showFirma(); });
+document.getElementById('btn-checar').addEventListener('click', () => { stopTimer(); showFoto(); });
 
 // ── Temporizador de jornada (modo salida) ──────────────────────────────────────
 const hm = (s) => s.slice(0, 5); // "08:00:00" → "08:00"
@@ -197,7 +197,7 @@ function showFirma() {
   headerTag.textContent   = t(data.tipo === 'entrada' ? 'Entrada' : 'Salida');
   headerTag.className     = `app-header__tag app-header__tag--${data.tipo}`;
   headerTag.hidden        = false;
-  setDots(2);
+  setDots(3);
   setError('error-firma', '');
 
   const canvas = document.getElementById('canvas-firma');
@@ -206,11 +206,12 @@ function showFirma() {
 }
 
 document.getElementById('btn-limpiar-firma').addEventListener('click', limpiarFirma);
+// Firma es el último paso: valida la firma y guarda el registro (lee la ubicación al confirmar).
 document.getElementById('btn-continuar-firma').addEventListener('click', () => {
   if (estaVacia()) { setError('error-firma', t('Dibuja tu firma antes de continuar.')); return; }
   setError('error-firma', '');
   data.firmaDataURL = obtenerFirmaPNG();
-  showFoto();
+  guardarYConfirmar();
 });
 
 // ── Gate facial helpers ────────────────────────────────────────────────────────
@@ -260,7 +261,7 @@ function showFoto() {
   current = 'foto';
   showOnly(sFoto);
   headerTitle.textContent = t('Foto de verificación');
-  setDots(3);
+  setDots(2);
   setError('error-camara', '');
 
   document.getElementById('sec-video').hidden   = false;
@@ -426,16 +427,22 @@ document.getElementById('btn-repetir-foto').addEventListener('click', () => {
 // Botón atrás dentro del escáner (cubre la cabecera a pantalla completa).
 document.getElementById('btn-foto-atras').addEventListener('click', () => {
   detenerGateFacial();
+  showTipo();
+});
+
+// Foto aceptada → pasa a firmar (la firma es el paso final que guarda).
+document.getElementById('btn-confirmar-foto').addEventListener('click', () => {
+  detenerGateFacial();
   showFirma();
 });
 
-const btnConfirmar = document.getElementById('btn-confirmar-foto');
-btnConfirmar.addEventListener('click', async () => {
-  setError('error-camara', '');
-  btnConfirmar.disabled     = true;
-  btnConfirmar.textContent  = t('Guardando…');
-  overlayLoad.hidden        = false;
+const btnGuardar = document.getElementById('btn-continuar-firma');
+async function guardarYConfirmar() {
+  btnGuardar.disabled    = true;
+  btnGuardar.textContent = t('Guardando…');
+  overlayLoad.hidden     = false;
 
+  // Ubicación leída al confirmar (watchPosition la mantiene fresca).
   const { latitud, longitud } = coordenadas;
   let res;
   try {
@@ -453,11 +460,11 @@ btnConfirmar.addEventListener('click', async () => {
   if (res.ok) {
     mostrarExito(data.tipo, data.fotoDataURL, coordenadas.latitud, coordenadas.longitud);
   } else {
-    setError('error-camara', res.error ?? t('No se pudo guardar. Intenta de nuevo.'));
-    btnConfirmar.disabled    = false;
-    btnConfirmar.innerHTML   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${t('Confirmar')}`;
+    setError('error-firma', res.error ?? t('No se pudo guardar. Intenta de nuevo.'));
+    btnGuardar.disabled  = false;
+    btnGuardar.innerHTML = `<span>${t('Confirmar')}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
   }
-});
+}
 
 function mostrarExito(tipo, fotoDataURL, lat, lon) {
   const ahora = new Date();
