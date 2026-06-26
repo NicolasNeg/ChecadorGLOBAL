@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script>!function(){document.write('<base href="'+(location.pathname.startsWith('/ChecadorGLOBAL/')?'/ChecadorGLOBAL/':'/')+'">');try{document.documentElement.dataset.theme=localStorage.getItem('eqs_theme')||'light'}catch(e){}}()</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0369A1">
+  <title>Verificar credencial — EQS Checador</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <style>
+    /* Estado de la verificación: icono + texto + color (no solo color). */
+    .vf-estado { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; font-weight:600; font-size:.95rem; }
+    .vf-estado svg { flex-shrink:0; }
+    .vf-estado--ok    { color:#15803D; background:#DCFCE7; }
+    .vf-estado--off   { color:#475569; background:#E2E8F0; }
+    .vf-estado--error { color:#B91C1C; background:#FEE2E2; }
+    .vf-foto { width:96px; height:96px; border-radius:50%; object-fit:cover; margin:0 auto;
+               background:var(--primario); color:#fff; display:flex; align-items:center; justify-content:center;
+               font-family:'Lexend',sans-serif; font-size:2rem; font-weight:700; box-shadow:0 2px 12px rgba(3,105,161,.3); }
+    .vf-nombre { font-family:'Lexend',sans-serif; font-size:1.3rem; font-weight:700; text-align:center; color:var(--tinta); margin-top:4px; }
+    .vf-datos { display:flex; flex-direction:column; gap:4px; text-align:center; color:var(--tinta-2); font-size:.92rem; }
+    .vf-num { align-self:center; font-family:'Lexend',sans-serif; font-size:.72rem; font-weight:600;
+              color:var(--primario); background:var(--primario-bg); padding:3px 10px; border-radius:99px; }
+    .vf-cargando { text-align:center; color:var(--tinta-3); padding:20px 0; }
+  </style>
+</head>
+<body>
+  <section class="pantalla">
+    <div class="tarjeta">
+      <div class="brand-header">
+        <div class="brand-icon brand-icon--logo">
+          <img src="assets/imgs/logo_.png" alt="EQS México" data-marca-logo>
+        </div>
+        <div class="brand-text-block">
+          <span class="brand-name" data-marca>EQS Checador</span>
+          <span class="brand-sub">Verificación de credencial</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div id="vf-contenido">
+        <p class="vf-cargando">Verificando…</p>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="assets/js/marca.js"></script>
+  <script type="module" src="assets/js/verificar.js"></script>
+</body>
+</html>

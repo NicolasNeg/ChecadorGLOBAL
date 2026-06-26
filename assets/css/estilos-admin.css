@@ -1619,3 +1619,28 @@ tr.is-inactive { opacity: .55; }
   .plazas-tbl .data-table td:nth-child(n+3) { text-align: left; }
   .plazas-tbl .actions { justify-content: flex-start; gap: 22px; }
 }
+
+/* ── Gafetes / credenciales ─────────────────────────────────────────────────── */
+.gf-card { margin-bottom: 18px; }
+.gf-sub {
+  font-family: 'Lexend', sans-serif; font-size: .95rem; font-weight: 600;
+  color: var(--ad-tinta); margin: 0 0 12px;
+}
+.gf-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.gf-pick { flex: 1; min-width: 220px; }
+.gf-row .abtn { flex-shrink: 0; }
+.gf-preview-wrap {
+  margin-top: 16px; border: 1px dashed var(--ad-linea); border-radius: 12px;
+  background: var(--ad-fondo); min-height: 240px;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.gf-preview {
+  width: 100%; max-width: 420px; aspect-ratio: 85.6 / 54;
+  border: none; border-radius: 10px; background: #fff;
+  box-shadow: 0 4px 18px rgba(15,23,42,.14);
+}
+.gf-preview-vacio { color: var(--ad-tinta-3); font-size: .9rem; text-align: center; }
+
+@media (max-width: 767px) {
+  .gf-row .abtn { width: 100%; }
+}
