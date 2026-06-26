@@ -301,61 +301,107 @@ function pintar() {
   wireCal(wrap);
 }
 
-// PDF: reporte de asistencia tabular del rango (mejor para imprimir que el
-// calendario). Patrón de ventana imprimible, sin dependencias.
+// PDF: reproduce la vista del programa — encabezado del empleado, tarjetas KPI
+// y calendario(s) mensual(es) a color. Ventana imprimible, sin dependencias.
 async function pdfHistorial() {
   if (!_ctx?.emp) { showToast(t('Primero genera un historial.'), 'error'); return; }
   const { emp, desde, hasta, turno } = _ctx;
   const w = window.open('', '_blank');
   if (!w) { showToast(t('Permite las ventanas emergentes para exportar.'), 'error'); return; }
   const cab = await cabeceraReporteHTML();
-
   const r = resumen(_ctx.registros, turno, _ctx.incidencias);
   const hoyKey = hoyISO();
-  const filas = [];
-  for (let d = new Date(desde + 'T12:00:00'); ymdLocal(d) <= hasta; d.setDate(d.getDate() + 1)) {
-    const key = ymdLocal(d);
-    const reg = _ctx.mapDia.get(key) ?? {};
-    const notas = _ctx.notasMap.get(key) ?? [];
-    const estado = estadoDia({ entrada: reg.entrada, salida: reg.salida, notas }, key, hoyKey);
-    if (estado === 'futuro') continue; // días que aún no llegan no se imprimen
-    const e = ESTADO[estado] ?? ESTADO.falta;
-    const tarde = reg.entrada && esRetardo(reg.entrada, turno);
-    const horas = horasDe(reg);
-    filas.push(`<tr class="st-${e.cls}">
-      <td class="d">${esc(diaLargo(key))}</td>
-      <td>${reg.entrada ? horaCorta(reg.entrada.hora) : '—'}</td>
-      <td>${reg.salida ? horaCorta(reg.salida.hora) : '—'}</td>
-      <td>${horas != null ? horas + ' h' : '—'}</td>
-      <td><b>${esc(t(e.txt) || '—')}</b>${tarde ? ` · ${t('Retardo')}` : ''}</td>
-      <td>${notas.map(n => esc(t(n.tipo))).join(', ') || '—'}</td>
-    </tr>`);
+
+  // Un calendario por mes que toca el rango, con celdas coloreadas igual que en pantalla.
+  function mesPrint(mDate) {
+    const y = mDate.getFullYear(), m = mDate.getMonth();
+    const titulo = mDate.toLocaleDateString(LOC(), { month: 'long', year: 'numeric' });
+    const startDow = new Date(y, m, 1).getDay();
+    const nDias = new Date(y, m + 1, 0).getDate();
+    let celdas = '';
+    for (let i = 0; i < startDow; i++) celdas += '<div class="pc pc--blank"></div>';
+    for (let d = 1; d <= nDias; d++) {
+      const key = ymdLocal(new Date(y, m, d));
+      if (key < desde || key > hasta) { celdas += `<div class="pc pc--out"><span class="pc__n">${d}</span></div>`; continue; }
+      const reg = _ctx.mapDia.get(key) ?? {};
+      const notas = _ctx.notasMap.get(key) ?? [];
+      const estado = estadoDia({ entrada: reg.entrada, salida: reg.salida, notas }, key, hoyKey);
+      if (estado === 'futuro') { celdas += `<div class="pc pc--out"><span class="pc__n">${d}</span></div>`; continue; }
+      const e = ESTADO[estado] ?? ESTADO.falta;
+      const tarde = reg.entrada && esRetardo(reg.entrada, turno);
+      const horas = horasDe(reg);
+      const esInicio = key === emp?.fecha_ingreso;
+      const tags =
+        (esInicio ? `<span class="tg tg--inicio">★ ${t('INICIO')}</span>` : '') +
+        (estado === 'presente'
+          ? `<span class="tg tg--green">${horas != null ? horas + ' h' : t('Presente')}</span>`
+          : `<span class="tg tg--${e.cls}">${esc(t(e.txt))}</span>`) +
+        (tarde ? `<span class="tg tg--red">${t('Retardo')}</span>` : '') +
+        (notas.length ? `<span class="tg tg--note">📝 ${notas.length}</span>` : '');
+      celdas += `<div class="pc pc--${estado}${key === hoyKey ? ' pc--hoy' : ''}"><span class="pc__n">${d}</span><div class="pc__tags">${tags}</div></div>`;
+    }
+    return `<section class="cal"><h3 class="cal__t">${esc(titulo.charAt(0).toUpperCase() + titulo.slice(1))}</h3>
+      <div class="cal__grid">${DOW.map((dd) => `<div class="dow">${t(dd)}</div>`).join('')}${celdas}</div></section>`;
   }
 
+  const meses = [];
+  for (let mm = firstOfMonth(new Date(desde + 'T12:00:00')); mm <= firstOfMonth(new Date(hasta + 'T12:00:00')); mm.setMonth(mm.getMonth() + 1)) {
+    meses.push(mesPrint(new Date(mm)));
+  }
+
+  const initials = (emp?.nombre ?? '').trim().split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '–';
+  const avatar = emp?.foto_url
+    ? `<img class="subj__av" src="${esc(emp.foto_url)}" alt="">`
+    : `<div class="subj__av subj__av--ini">${esc(initials)}</div>`;
   const meta = [emp?.puesto, emp?.plazas?.nombre].filter(Boolean).map(esc).join(' · ');
-  const kpi = (lbl, val) => `<span class="kpi"><b>${val}</b> ${esc(t(lbl))}</span>`;
+  const kc = (variant, label, val) => `<div class="kc kc--${variant}"><div class="kc__v">${val}</div><div class="kc__l">${esc(t(label))}</div></div>`;
+  const lg = (sw, label) => `<span class="lg"><i class="sw sw--${sw}"></i>${esc(label)}</span>`;
+
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t('Reporte de asistencia'))} — ${esc(emp?.nombre ?? '')}</title><style>
-    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    body{font:12px system-ui,-apple-system,sans-serif;margin:24px;color:#0f172a}
-    h1{font-size:18px;margin:0 0 2px}
-    .meta{color:#64748b;font-size:11px;margin:0 0 4px}
-    .range{color:#0f172a;font-size:12px;font-weight:600;margin:0 0 12px}
-    .kpis{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 16px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px}
-    .kpi{font-size:11px;color:#475569}.kpi b{font-size:15px;color:#0f172a;margin-right:4px}
-    table{border-collapse:collapse;width:100%}
-    th,td{border:1px solid #cbd5e1;padding:5px 8px;text-align:center}
-    th{background:#f1f5f9;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
-    td.d{text-align:left;white-space:nowrap}
-    tr.st-red b{color:#b91c1c}tr.st-green b{color:#15803d}tr.st-orange b{color:#b45309}tr.st-blue b{color:#1d4ed8}
-    @page{margin:14mm}${CABECERA_CSS}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}
+    body{font:12px system-ui,-apple-system,sans-serif;margin:22px;color:#0F172A}
+    .rep-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748B;font-weight:700;margin:14px 0 6px}
+    .subj{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #E2E8F0;border-radius:12px;background:#F8FAFC;margin-bottom:14px}
+    .subj__av{width:46px;height:46px;border-radius:50%;object-fit:cover;border:1px solid #E2E8F0;flex-shrink:0}
+    .subj__av--ini{display:flex;align-items:center;justify-content:center;background:#1D4ED8;color:#fff;font-weight:700;font-size:16px}
+    .subj__info{flex:1}.subj__info h1{font-size:16px;margin:0}
+    .subj__meta{margin:2px 0 0;color:#64748B;font-size:11px}
+    .subj__range{font-weight:600;font-size:12px;white-space:nowrap}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+    .kc{border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;border-left-width:4px}
+    .kc__v{font-size:18px;font-weight:700;line-height:1}
+    .kc__l{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748B;margin-top:3px}
+    .kc--blue{border-left-color:#1D4ED8}.kc--red{border-left-color:#DC2626}.kc--green{border-left-color:#16A34A}.kc--orange{border-left-color:#D97706}
+    .leg{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-size:10px;color:#475569}
+    .lg{display:inline-flex;align-items:center;gap:5px}
+    .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+    .sw--green{background:#DCFCE7;box-shadow:0 0 0 1px #16A34A inset}.sw--red{background:#FEE2E2;box-shadow:0 0 0 1px #DC2626 inset}.sw--orange{background:#FEF3C7;box-shadow:0 0 0 1px #D97706 inset}.sw--blue{background:#DBEAFE;box-shadow:0 0 0 1px #1D4ED8 inset}.sw--gray{background:#E2E8F0;box-shadow:0 0 0 1px #94A3B8 inset}
+    .cal{margin-bottom:16px;break-inside:avoid}
+    .cal__t{font-size:13px;margin:0 0 6px}
+    .cal__grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .dow{text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#94A3B8;padding-bottom:2px}
+    .pc{border:1px solid #E2E8F0;border-radius:7px;min-height:54px;padding:4px;display:flex;flex-direction:column;gap:3px}
+    .pc--blank{border:none}.pc--out{opacity:.4}
+    .pc__n{font-size:10px;font-weight:700;color:#475569}
+    .pc--hoy .pc__n{color:#fff;background:#1D4ED8;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center}
+    .pc--presente{border-left:3px solid #16A34A}
+    .pc--falta{border-left:3px solid #DC2626;background:#FEF2F2}
+    .pc__tags{display:flex;flex-direction:column;gap:2px}
+    .tg{font-size:8.5px;font-weight:700;border-radius:4px;padding:1px 4px;text-align:center}
+    .tg--green{color:#15803D;background:#DCFCE7}.tg--red{color:#B91C1C;background:#FEE2E2}.tg--orange{color:#B45309;background:#FEF3C7}.tg--blue{color:#1D4ED8;background:#DBEAFE}.tg--gray{color:#475569;background:#E2E8F0}
+    .tg--inicio{color:#92400E;background:#FDE68A}
+    .tg--note{color:#64748B;background:transparent;padding:0;font-size:8px}
+    @page{margin:12mm}${CABECERA_CSS}
   </style></head><body>${cab}
-    <h1>${esc(t('Reporte de asistencia'))}</h1>
-    <p class="meta">${esc(emp?.nombre ?? '')}${meta ? ' — ' + meta : ''}</p>
-    <p class="range">${esc(diaCorto(desde))} – ${esc(diaCorto(hasta))}</p>
-    <div class="kpis">${kpi('Checadas', r.totalChecadas)}${kpi('Retardos', turno ? r.retardos : '–')}${kpi('Horas trabajadas', r.horasTotales)}${kpi('Notas', r.incidencias)}</div>
-    <table><thead><tr>
-      <th>${t('Fecha')}</th><th>${t('Entrada')}</th><th>${t('Salida')}</th><th>${t('Horas')}</th><th>${t('Estado')}</th><th>${t('Notas')}</th>
-    </tr></thead><tbody>${filas.join('') || `<tr><td colspan="6">${t('Sin días en el rango.')}</td></tr>`}</tbody></table>
+    <p class="rep-title">${esc(t('Reporte de asistencia'))}</p>
+    <div class="subj">
+      ${avatar}
+      <div class="subj__info"><h1>${esc(emp?.nombre ?? '')}</h1>${meta ? `<p class="subj__meta">${meta}</p>` : ''}</div>
+      <span class="subj__range">${esc(diaCorto(desde))} – ${esc(diaCorto(hasta))}</span>
+    </div>
+    <div class="kpis">${kc('blue', 'Checadas', r.totalChecadas)}${kc('red', 'Retardos', turno ? r.retardos : '–')}${kc('green', 'Horas trabajadas', r.horasTotales)}${kc('orange', 'Notas', r.incidencias)}</div>
+    <div class="leg">${lg('green', t('Presente'))}${lg('red', `${t('Falta')} / ${t('Retardo')}`)}${lg('orange', t('Justificada'))}${lg('blue', `${t('Permiso')} / ${t('Vacaciones')}`)}${lg('gray', t('Festivo'))}</div>
+    ${meses.join('') || `<p class="td-muted">${t('Sin días en el rango.')}</p>`}
     <scr` + `ipt>window.onload=function(){window.print()}</scr` + `ipt>
   </body></html>`);
   w.document.close();
