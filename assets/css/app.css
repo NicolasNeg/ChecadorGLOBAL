@@ -101,6 +101,45 @@
   box-shadow: 0 0 0 3px rgba(220,38,38,.12) !important;
 }
 
+/* ── Token de plaza ───────────────────────────────────────────────────────── */
+.input-token {
+  width: 100%;
+  font-family: 'Lexend', sans-serif; font-size: 1.6rem; font-weight: 600;
+  letter-spacing: .28rem; text-align: center; padding: 14px 16px;
+  text-transform: uppercase;
+  border: 1.5px solid var(--linea); border-radius: 10px;
+  background: var(--fondo); color: var(--tinta); outline: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.input-token:focus {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 3px rgba(3,105,161,.12);
+  background: #fff;
+}
+.campo-ayuda { font-size: .82rem; color: var(--tinta-3); margin: 8px 2px 0; line-height: 1.45; }
+#form-token { display: flex; flex-direction: column; gap: 12px; }
+#form-token label { font-weight: 600; color: var(--tinta-2); font-size: .92rem; }
+
+/* Lector de QR a pantalla completa */
+.qr-scan {
+  position: fixed; inset: 0; z-index: 200;
+  background: #000; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.qr-scan__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.qr-scan__marco {
+  position: relative; z-index: 1;
+  width: min(64vw, 260px); aspect-ratio: 1;
+  border: 3px solid rgba(255,255,255,.9); border-radius: 18px;
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,.45);
+}
+.qr-scan__ayuda {
+  position: relative; z-index: 1; margin-top: 22px;
+  color: #fff; font-weight: 600; font-size: .95rem; text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+.qr-scan__cancelar { position: relative; z-index: 1; margin-top: 18px; }
+
 /* ── Button spinner ───────────────────────────────────────────────────────── */
 .btn__spin { animation: spin 650ms linear infinite; flex-shrink: 0; }
 

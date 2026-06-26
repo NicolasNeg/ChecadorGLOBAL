@@ -3,6 +3,21 @@ import { renderTable, loading, showToast, openModal, closeModal, confirm, esc } 
 import { t } from '../i18n.js';
 import { direccionDesdeCoords, buscarDirecciones } from '../geo.js';
 
+// QRCode como ESM desde CDN (patrón signature_pad/leaflet): se carga una vez,
+// solo cuando se abre el modal de token. Genera el QR localmente (el token NO
+// se manda a ningún servicio externo).
+let _qrP;
+const loadQR = () => (_qrP ??= import('https://esm.sh/qrcode@1.5.4').then((m) => m.default ?? m));
+
+// Token legible: 8 chars de un alfabeto sin caracteres ambiguos (O/0, I/1).
+// Se guarda sin guion; se muestra como "ABCD-EFGH". El RPC compara sin guion.
+const TK_ALFA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function genToken() {
+  const a = new Uint8Array(8); crypto.getRandomValues(a);
+  return [...a].map((n) => TK_ALFA[n % TK_ALFA.length]).join('');
+}
+const fmtToken = (tk) => tk ? `${tk.slice(0, 4)}-${tk.slice(4)}` : '';
+
 // Leaflet desde CDN (patrón signature_pad): inyecta CSS+JS una sola vez.
 let _leafletP;
 function loadLeaflet() {
@@ -62,6 +77,10 @@ async function loadPlazas() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span>${t('Ver mapa')}</span>
         </a>
+        <button class="plaza-act" title="${t('Token de seguridad')}" onclick="window._tokenPlaza(${r.id})">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>${t('Token')}</span>
+        </button>
         <button class="plaza-act" title="${t('Editar')}" onclick="window._editPlaza(${r.id})">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           <span>${t('Editar')}</span>
@@ -77,6 +96,7 @@ async function loadPlazas() {
       const plaza = plazas.find(p => p.id === id);
       if (plaza) openPlazaForm(plaza);
     };
+    window._tokenPlaza = (id) => { const p = plazas.find((x) => x.id === id); if (p) openTokenModal(p); };
     window._deletePlaza = async (id, nombre) => {
       if (!await confirm(`${t('¿Eliminar plaza?')} "${nombre}" — ${t('Esta acción no se puede deshacer.')}`, { ok: 'Eliminar' })) return;
       try {
@@ -130,6 +150,70 @@ function sparkline(vals) {
   const label = `${total} ${t('checadas (7 días)')}`;
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}"><title>${label}</title>` +
     `<polygon class="spark__fill" points="${area}"/><polyline class="spark__line" points="${line}"/></svg>`;
+}
+
+// Modal de token de seguridad de la plaza: muestra el token actual + QR,
+// permite generar/regenerar, copiar y compartir. Lo lee el empleado antes del PIN.
+function openTokenModal(plaza) {
+  const render = () => {
+    const tk = plaza.token_seguridad;
+    return tk
+      ? `<div class="tk-code">${esc(fmtToken(tk))}</div>
+         <img id="tk-qr" class="tk-qr" alt="${t('Código QR del token')}">
+         ${plaza.token_actualizado_en ? `<span class="td-muted tk-fecha">${t('Generado')}: ${new Date(plaza.token_actualizado_en).toLocaleString()}</span>` : ''}`
+      : `<p class="ad-empty">${t('Aún no hay token para esta plaza.')}</p>`;
+  };
+
+  openModal(`${t('Token de seguridad')} — ${plaza.nombre}`,
+    `<div class="tk-modal">
+      <p class="td-muted">${t('Compártelo con los empleados de esta plaza (texto o QR). Con él, su dispositivo queda habilitado para ingresar el PIN.')}</p>
+      <div id="tk-box" class="tk-box">${render()}</div>
+      <div class="tk-acts">
+        <button id="tk-gen" class="abtn abtn--primary">${plaza.token_seguridad ? t('Regenerar') : t('Generar token')}</button>
+        <button id="tk-copy" class="abtn abtn--ghost" ${plaza.token_seguridad ? '' : 'disabled'}>${t('Copiar')}</button>
+        <button id="tk-share" class="abtn abtn--ghost" ${plaza.token_seguridad ? '' : 'disabled'} hidden>${t('Compartir')}</button>
+      </div>
+      <p class="tk-warn td-muted">${t('Regenerar invalida el token anterior: los dispositivos sin el nuevo tendrán que ingresarlo de nuevo.')}</p>
+    </div>`,
+    closeModal, 'Cerrar');
+
+  const box   = document.getElementById('tk-box');
+  const copyB = document.getElementById('tk-copy');
+  const shareB = document.getElementById('tk-share');
+  if (navigator.share) shareB.hidden = false;
+
+  const pintarQR = async () => {
+    const img = document.getElementById('tk-qr');
+    if (!img || !plaza.token_seguridad) return;
+    try { const QR = await loadQR(); img.src = await QR.toDataURL(plaza.token_seguridad, { width: 220, margin: 1 }); }
+    catch { img.remove(); } // sin QR: el código de texto sigue visible
+  };
+  pintarQR();
+
+  document.getElementById('tk-gen').onclick = async () => {
+    const btn = document.getElementById('tk-gen');
+    btn.disabled = true;
+    const nuevo = genToken();
+    try {
+      await api.updatePlaza(plaza.id, { token_seguridad: nuevo, token_actualizado_en: new Date().toISOString() });
+      plaza.token_seguridad = nuevo;
+      plaza.token_actualizado_en = new Date().toISOString();
+      box.innerHTML = render();
+      copyB.disabled = false; shareB.disabled = false;
+      btn.textContent = t('Regenerar');
+      await pintarQR();
+      showToast('Token generado.', 'ok');
+    } catch (e) { showToast(e.message, 'error'); }
+    finally { btn.disabled = false; }
+  };
+  copyB.onclick = async () => {
+    try { await navigator.clipboard.writeText(fmtToken(plaza.token_seguridad)); showToast('Token copiado.', 'ok'); }
+    catch { showToast(t('No se pudo copiar.'), 'error'); }
+  };
+  shareB.onclick = () => navigator.share({
+    title: t('Token de acceso'),
+    text: `${t('Token de acceso')} — ${plaza.nombre}: ${fmtToken(plaza.token_seguridad)}`,
+  }).catch(() => {});
 }
 
 function openPlazaForm(plaza = null) {

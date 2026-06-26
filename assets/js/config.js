@@ -10,3 +10,9 @@ export const BASE = location.pathname.startsWith('/ChecadorGLOBAL/') ? '/Checado
 // (El membrete de los REPORTES es aparte: vive en config_global, lo lee reporte-cabecera.js.)
 export const MARCA = 'EQS Checador';
 export const MARCA_LOGO = 'assets/imgs/logo_.png';
+
+// Paso de seguridad por plaza: si está activo, antes del PIN se pide (una sola
+// vez por dispositivo) el token de la plaza que el admin generó y repartió.
+// Queda guardado en localStorage hasta que se reinicie el token.
+// ⚠️ Actívalo SOLO después de generar y repartir los tokens, o nadie podrá entrar.
+export const TOKEN_PLAZA_REQUERIDO = false;

@@ -35,6 +35,49 @@
     </a>
   </div>
 
+  <!-- ── TOKEN DE PLAZA (paso previo al PIN, una vez por dispositivo) ─────────── -->
+  <section id="s-token" class="pantalla" hidden>
+    <div class="tarjeta">
+      <div class="brand-header">
+        <div class="brand-icon brand-icon--logo">
+          <img src="assets/imgs/logo_.png" alt="EQS México" data-marca-logo>
+        </div>
+        <div class="brand-text-block">
+          <span class="brand-name" data-marca>EQS Checador</span>
+          <span class="brand-sub" data-i18n>Habilita este dispositivo</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <form id="form-token" novalidate>
+        <label for="input-token" data-i18n>Token de tu plaza</label>
+        <input id="input-token" class="input-token" type="text" inputmode="text"
+          autocomplete="off" autocapitalize="characters" spellcheck="false"
+          maxlength="9" placeholder="ABCD-EFGH" aria-describedby="token-ayuda">
+        <p id="token-ayuda" class="campo-ayuda" data-i18n>Pídeselo a tu encargado. Se guarda en este dispositivo.</p>
+        <p id="error-token" class="error-msg" role="alert" hidden></p>
+
+        <button id="btn-escanear-qr" type="button" class="btn btn--secundario" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12"/>
+          </svg>
+          <span data-i18n>Escanear QR</span>
+        </button>
+
+        <button id="btn-continuar-token" type="submit" class="btn btn--primario" data-i18n>Continuar</button>
+      </form>
+    </div>
+
+    <!-- Lector de QR: cámara a pantalla completa + recuadro guía. Oculto hasta escanear. -->
+    <div id="qr-scan" class="qr-scan" hidden>
+      <video id="qr-video" class="qr-scan__video" playsinline muted></video>
+      <div class="qr-scan__marco" aria-hidden="true"></div>
+      <p class="qr-scan__ayuda" data-i18n>Apunta al código QR del token</p>
+      <button id="btn-qr-cancelar" type="button" class="btn btn--secundario btn--sm qr-scan__cancelar" data-i18n>Cancelar</button>
+    </div>
+  </section>
+
   <!-- ── LOGIN ─────────────────────────────────────────────────────────────── -->
   <section id="s-login" class="pantalla" hidden>
     <div class="tarjeta">

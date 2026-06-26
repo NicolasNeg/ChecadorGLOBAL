@@ -1,8 +1,9 @@
-import { verificarPin, limpiarSesion, obtenerTurnosPlazaSemana, setIdEmpleado } from './api.js';
+import { verificarPin, limpiarSesion, obtenerTurnosPlazaSemana, setIdEmpleado, verificarTokenPlaza } from './api.js';
 import { getSession, setSession, clearSession } from './auth.js';
-import { BASE } from './config.js';
+import { BASE, TOKEN_PLAZA_REQUERIDO } from './config.js';
 import { t, applyI18n, mountLangToggle } from './i18n.js';
 
+const sToken  = document.getElementById('s-token');
 const sLogin  = document.getElementById('s-login');
 const sMenu   = document.getElementById('s-menu');
 const sTurnos = document.getElementById('s-turnos');
@@ -71,8 +72,118 @@ const limpiarIntentosPin = () => { localStorage.removeItem('eqs_pin_intentos'); 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 let _miId = null; // id del empleado en sesión (lo usa enterTurnos); declarado antes del boot por TDZ
 const existing = getSession();
+const tokenGuardado = () => localStorage.getItem('eqs_plaza_token');
 if (existing) enterMenu(existing);
-else          enterLogin();
+else if (TOKEN_PLAZA_REQUERIDO && !tokenGuardado()) enterToken();
+else { enterLogin(); if (TOKEN_PLAZA_REQUERIDO) revalidarToken(); } // optimista: deja entrar y revalida en 2º plano
+
+// ── Token de plaza (paso previo al PIN) ────────────────────────────────────────
+// El admin genera un token por plaza y lo reparte (texto o QR). El empleado lo
+// ingresa una sola vez; queda en localStorage hasta que el admin lo regenere.
+// ponytail: el límite de intentos es disuasorio en cliente; el rate-limit real
+// vive (pendiente) en el RPC verificar_token_plaza, igual que en verificar_pin.
+const TOKEN_MAX_INTENTOS = 3;
+const fmtTokenInput = (v) => {
+  const s = v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  return s.length > 4 ? `${s.slice(0, 4)}-${s.slice(4)}` : s;
+};
+
+function enterToken() {
+  const form  = document.getElementById('form-token');
+  const input = document.getElementById('input-token');
+  const btn   = document.getElementById('btn-continuar-token');
+  const scanBtn = document.getElementById('btn-escanear-qr');
+
+  input.value = '';
+  setError('error-token', '');
+  input.oninput = () => { input.value = fmtTokenInput(input.value); };
+
+  switchTo(sLogin, sToken);
+  setTimeout(() => input.focus(), 380);
+
+  let intentos = 0;
+  const intentar = async (raw) => {
+    const tk = raw.replace(/[^A-Za-z0-9]/g, '');
+    if (tk.length < 8) { setError('error-token', t('El token tiene 8 caracteres.')); shakeInput('input-token'); return; }
+    setError('error-token', '');
+    btn.disabled = true; btn.textContent = t('Verificando…');
+    let res;
+    try { res = await verificarTokenPlaza(tk); }
+    finally { btn.disabled = false; btn.textContent = t('Continuar'); }
+
+    if (res?.ok) {
+      localStorage.setItem('eqs_plaza_token', tk);
+      localStorage.setItem('eqs_plaza_nombre', res.plazaNombre ?? '');
+      sToken.hidden = true; // enterLogin transiciona desde sMenu; ocultamos esta a mano
+      enterLogin();
+    } else if (res?.network) {
+      setError('error-token', t('Sin conexión. Revisa tu internet e inténtalo de nuevo.'));
+    } else {
+      intentos++;
+      const restantes = TOKEN_MAX_INTENTOS - intentos;
+      shakeInput('input-token');
+      setError('error-token', restantes > 0
+        ? `${t('Token incorrecto.')} ${restantes} ${t('intentos restantes')}.`
+        : t('Token incorrecto. Pídele el token correcto a tu encargado.'));
+    }
+  };
+
+  form.onsubmit = (e) => { e.preventDefault(); intentar(input.value); };
+
+  // QR: solo si el navegador trae BarcodeDetector (Chrome/Android). Si no, el
+  // empleado teclea el token a mano (el botón queda oculto).
+  if ('BarcodeDetector' in window) {
+    scanBtn.hidden = false;
+    scanBtn.onclick = () => escanearQR((valor) => { input.value = fmtTokenInput(valor); intentar(valor); });
+  } else {
+    scanBtn.hidden = true;
+  }
+}
+
+// Lector de QR con BarcodeDetector + getUserMedia. Llama onLeido(texto) al
+// detectar el primer código y cierra la cámara. Cancelable.
+async function escanearQR(onLeido) {
+  const cont  = document.getElementById('qr-scan');
+  const video = document.getElementById('qr-video');
+  const cancelar = document.getElementById('btn-qr-cancelar');
+  let stream = null, parar = false;
+  const cerrar = () => { parar = true; stream?.getTracks().forEach((tk) => tk.stop()); cont.hidden = true; };
+  cancelar.onclick = cerrar;
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch {
+    setError('error-token', t('No se pudo abrir la cámara. Escribe el token a mano.'));
+    return;
+  }
+  cont.hidden = false;
+  video.srcObject = stream;
+  await video.play().catch(() => {});
+
+  const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+  const tick = async () => {
+    if (parar) return;
+    try {
+      const codigos = await detector.detect(video);
+      if (codigos.length) { cerrar(); onLeido(codigos[0].rawValue.trim()); return; }
+    } catch { /* frame no listo: reintenta */ }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// Revalida en 2º plano el token guardado: si el admin lo regeneró, el RPC
+// responde "incorrecto" (no error de red) → limpiamos y pedimos el nuevo.
+async function revalidarToken() {
+  const tk = tokenGuardado();
+  if (!tk) return;
+  const res = await verificarTokenPlaza(tk);
+  if (!res.ok && !res.network) {
+    localStorage.removeItem('eqs_plaza_token');
+    localStorage.removeItem('eqs_plaza_nombre');
+    if (sMenu.hidden && sTurnos.hidden) enterToken(); // solo si seguimos fuera de sesión
+  }
+}
 
 // ── Login screen ─────────────────────────────────────────────────────────────
 function enterLogin() {

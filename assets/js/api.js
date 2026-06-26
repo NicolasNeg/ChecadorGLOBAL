@@ -54,6 +54,30 @@ export async function verificarPin(pin) {
   }
 }
 
+// ── VERIFICAR TOKEN DE PLAZA (paso previo al PIN) ──────────────────────────────
+// Devuelve { ok, plazaNombre } si el token pertenece a una plaza activa. En
+// fallo de red marca network:true para que el cliente sea indulgente (no dejar
+// fuera a alguien sin conexión cuyo token ya estaba guardado).
+export async function verificarTokenPlaza(token) {
+  try {
+    const r = await fetch(`${REST_BASE}/rpc/verificar_token_plaza`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_token: token })
+    });
+    if (!r.ok) return { ok: false, error: 'Error del servidor.', network: true };
+    const d = await r.json();
+    if (Array.isArray(d) && d.length) return { ok: true, plazaId: d[0].plaza_id, plazaNombre: d[0].plaza_nombre };
+    return { ok: false, error: 'Token incorrecto.' };
+  } catch {
+    return { ok: false, error: 'Sin conexión.', network: true };
+  }
+}
+
 // ── GUARDAR REGISTRO ──────────────────────────────────────────────────────────
 export async function guardarRegistro({ tipoChecada, foto, firma, latitud, longitud, rostroVerificado = false, viveza = null, similitud = null }) {
   try {
