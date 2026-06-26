@@ -173,9 +173,18 @@ function enterMenu(perfil) {
   _miId = perfil.idEmpleado ?? null;
   const nombre = perfil.nombre ?? '';
 
-  // Avatar initials (up to 2 chars)
+  // Avatar: foto de perfil si existe, si no las iniciales (hasta 2 chars).
   const initials = nombre.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  document.getElementById('saludo-avatar').textContent = initials || '–';
+  const av = document.getElementById('saludo-avatar');
+  if (perfil.fotoUrl) {
+    av.style.backgroundImage = `url("${perfil.fotoUrl}")`;
+    av.classList.add('saludo-avatar--foto');
+    av.textContent = '';
+  } else {
+    av.style.backgroundImage = '';
+    av.classList.remove('saludo-avatar--foto');
+    av.textContent = initials || '–';
+  }
 
   // Time-of-day greeting
   const h = new Date().getHours();

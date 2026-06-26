@@ -137,7 +137,9 @@
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 10px rgba(3,105,161,.3);
   letter-spacing: -.02em;
+  background-size: cover; background-position: center;
 }
+.saludo-avatar--foto { background-color: transparent; }
 .saludo-textos { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .saludo-sup {
   font-size: .72rem; color: var(--tinta-3); font-weight: 600;

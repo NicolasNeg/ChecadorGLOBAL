@@ -42,7 +42,8 @@ export async function verificarPin(pin) {
         turnoNombre:    e.turno_nombre,
         turnoEntrada:   e.turno_entrada,  // "HH:MM:SS" o null
         turnoSalida:    e.turno_salida,
-        faceDescriptor: e.face_descriptor ?? null
+        faceDescriptor: e.face_descriptor ?? null,
+        fotoUrl:        e.foto_url ?? null
       };
     } else {
       return { ok: false, error: 'PIN incorrecto o usuario inactivo.' };
