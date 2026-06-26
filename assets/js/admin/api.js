@@ -58,7 +58,9 @@ export const deleteTurno     = (id) => apiFetch(`turnos?id=eq.${id}`, { method: 
 
 // ── Puestos (catálogo para el select de empleados) ──────────────────────────
 export const getPuestos    = () => apiFetch('puestos?select=*&order=nombre.asc');
-export const createPuesto   = (nombre) => apiFetch('puestos', { method: 'POST', body: JSON.stringify({ nombre }) });
+// Acepta un nombre suelto (atajo "agregar al catálogo") o un objeto con campos.
+export const createPuesto   = (d) => apiFetch('puestos', { method: 'POST', body: JSON.stringify(typeof d === 'string' ? { nombre: d } : d) });
+export const updatePuesto   = (id, d) => apiFetch(`puestos?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(d) });
 export const deletePuesto   = (id) => apiFetch(`puestos?id=eq.${id}`, { method: 'DELETE', headers: { 'Prefer': '' } });
 
 // ── Empleados ─────────────────────────────────────────────────────────────
