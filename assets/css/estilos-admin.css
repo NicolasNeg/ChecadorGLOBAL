@@ -850,6 +850,13 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   background: var(--ad-tarjeta); color: var(--ad-tinta); font-weight: 600; font-size: .85rem; cursor: pointer;
 }
 .sem-nav__hoy:hover { background: var(--ad-fondo); }
+.sem-nav__fecha {
+  height: 34px; padding: 0 8px; border-radius: 9px;
+  border: 1px solid var(--ad-linea); background: var(--ad-tarjeta); color: var(--ad-tinta);
+  font: inherit; font-size: .85rem; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.sem-nav__fecha:hover { border-color: var(--ad-tinta3); }
+.sem-nav__fecha:focus { outline: none; border-color: var(--ad-primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
 .sem-total { margin-left: auto; font-size: .88rem; color: var(--ad-tinta2); }
 .sem-total strong { color: var(--ad-tinta); font-variant-numeric: tabular-nums; }
 .sem-ro {

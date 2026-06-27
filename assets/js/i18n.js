@@ -118,6 +118,7 @@ export const EN = {
   'Asigna el turno de cada empleado por fecha. Las semanas pasadas son solo lectura.':
     'Assign each employee\'s shift by date. Past weeks are read-only.',
   'Semana anterior': 'Previous week', 'Semana siguiente': 'Next week', 'Hoy': 'Today',
+  'Ir a la semana de…': 'Go to the week of…',
   'Total semana': 'Week total', 'Turno actualizado.': 'Shift updated.',
   'Copiar semana anterior': 'Copy previous week', 'Copiar': 'Copy',
   '¿Copiar la semana anterior? Se reemplazará la semana actual.': 'Copy the previous week? This will replace the current week.',

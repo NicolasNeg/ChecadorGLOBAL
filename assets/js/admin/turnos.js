@@ -86,6 +86,7 @@ async function loadGrid() {
         <button class="sem-nav__btn" id="sem-prev" aria-label="${tr('Semana anterior')}">‹</button>
         <div class="sem-nav__label">${rango}</div>
         <button class="sem-nav__btn" id="sem-next" aria-label="${tr('Semana siguiente')}">›</button>
+        <input class="sem-nav__fecha" id="sem-fecha" type="date" value="${ymd(_semana)}" aria-label="${tr('Ir a la semana de…')}" title="${tr('Ir a la semana de…')}">
         <button class="sem-nav__hoy" id="sem-hoy">${tr('Hoy')}</button>
         <button class="sem-nav__hoy" id="sem-copiar" ${readonly ? 'hidden' : ''}>${tr('Copiar semana anterior')}</button>
         <span class="sem-total">${tr('Total semana')}: <strong id="sem-total-h">0 h</strong></span>
@@ -207,6 +208,10 @@ function bindNav(wrap) {
   wrap.querySelector('#sem-prev')?.addEventListener('click', () => go(addDias(_semana, -7)));
   wrap.querySelector('#sem-next')?.addEventListener('click', () => go(addDias(_semana, 7)));
   wrap.querySelector('#sem-hoy') ?.addEventListener('click', () => go(lunesDe(new Date())));
+  // Salto directo: el calendario nativo lleva a la semana (lunes) de la fecha elegida.
+  wrap.querySelector('#sem-fecha')?.addEventListener('change', (e) => {
+    if (e.target.value) go(lunesDe(new Date(e.target.value + 'T12:00:00')));
+  });
 }
 
 // "Copiar semana anterior": la semana visible queda idéntica a la previa.
