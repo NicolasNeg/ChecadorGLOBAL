@@ -173,3 +173,84 @@ $$;
 grant select on roles, permisos, rol_permisos to authenticated;
 grant execute on function mis_permisos() to authenticated;
 grant execute on function mi_nivel(), es_global(), tiene_permiso(text), puede_gestionar(uuid) to authenticated;
+
+-- ── §B Reglas de oro: RLS de gestión de usuarios ─────────────────────────────
+-- Limpia las policies viejas de perfiles_admin (0004/0019) y reescribe.
+drop policy if exists "rh_all_perfiles"          on perfiles_admin;
+drop policy if exists "self_select_perfil"       on perfiles_admin;
+drop policy if exists "admin_global_all_perfiles" on perfiles_admin;
+-- Idempotencia: las propias policies de §B también se reescriben si ya existían.
+drop policy if exists "perfiles_select" on perfiles_admin;
+drop policy if exists "perfiles_insert" on perfiles_admin;
+drop policy if exists "perfiles_delete" on perfiles_admin;
+drop policy if exists "perfiles_update" on perfiles_admin;
+
+-- Ver: la propia fila siempre; ajenas si tengo usuarios.ver y están en mi alcance.
+create policy "perfiles_select" on perfiles_admin
+  for select to authenticated
+  using (
+    id = auth.uid()
+    or (tiene_permiso('usuarios.ver') and (es_global() or plaza_id = mi_plaza_id()))
+  );
+
+-- Crear: necesito usuarios.crear, el rol nuevo debe ser de nivel inferior al mío,
+-- y dentro de mi alcance de plaza.
+create policy "perfiles_insert" on perfiles_admin
+  for insert to authenticated
+  with check (
+    tiene_permiso('usuarios.crear')
+    and (select nivel from roles where clave = rol) < mi_nivel()
+    and (es_global() or plaza_id = mi_plaza_id())
+  );
+
+-- Borrar: solo a quien puedo gestionar (nunca a mí mismo / pares / superiores).
+create policy "perfiles_delete" on perfiles_admin
+  for delete to authenticated
+  using (puede_gestionar(id));
+
+-- Editar: a quien puedo gestionar, o mi propia fila (el trigger acota columnas).
+create policy "perfiles_update" on perfiles_admin
+  for update to authenticated
+  using (puede_gestionar(id) or id = auth.uid())
+  with check (puede_gestionar(id) or id = auth.uid());
+
+-- Trigger guard: cierra a nivel de columna lo que RLS no puede expresar.
+create or replace function fn_guard_perfil()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if TG_OP = 'UPDATE' and NEW.id = auth.uid() then
+    -- Nadie escala/cambia su propio rol, plaza o estado activo.
+    if NEW.rol is distinct from OLD.rol
+       or NEW.plaza_id is distinct from OLD.plaza_id
+       or NEW.activo is distinct from OLD.activo then
+      raise exception 'No puedes cambiar tu propio rol, plaza o estado.';
+    end if;
+  else
+    -- Gestionando a otro (o insertando): el rol resultante debe ser inferior al mío.
+    if (select nivel from roles where clave = NEW.rol) >= mi_nivel() then
+      raise exception 'No puedes asignar un rol igual o superior al tuyo.';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_guard_perfil on perfiles_admin;
+create trigger trg_guard_perfil
+  before insert or update on perfiles_admin
+  for each row execute function fn_guard_perfil();
+
+-- ── §B.2 Overrides por usuario: solo delego permisos que yo poseo ────────────
+alter table perfil_permisos enable row level security;
+
+drop policy if exists "perfil_permisos_rw" on perfil_permisos;
+create policy "perfil_permisos_rw" on perfil_permisos
+  for all to authenticated
+  using (puede_gestionar(perfil_id) and tiene_permiso(permiso))
+  with check (puede_gestionar(perfil_id) and tiene_permiso(permiso));
+
+-- Auditoría de cambios de perfiles/overrides (reusa fn_audit_log de 0004).
+drop trigger if exists audit_perfiles on perfiles_admin;
+create trigger audit_perfiles
+  after insert or update or delete on perfiles_admin
+  for each row execute function fn_audit_log();

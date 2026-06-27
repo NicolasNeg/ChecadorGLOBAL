@@ -43,4 +43,19 @@ begin
   assert not tiene_permiso('empleados.editar'), 'override revoke debe ganar al default';
 end $$;
 
+-- Un jefe NO puede conceder un permiso que él no tiene (config.editar).
+-- Como authenticated (jefe A), el insert debe violar la policy with check.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000a2"}';
+do $$
+begin
+  begin
+    insert into perfil_permisos (perfil_id, permiso, concedido)
+      values ('00000000-0000-0000-0000-0000000000a1','config.editar',true);
+    assert false, 'jefe no deberia poder conceder config.editar (no lo posee)';
+  exception when others then
+    null; -- esperado: RLS / insufficient privilege
+  end;
+end $$;
+
 rollback;
