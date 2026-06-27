@@ -254,3 +254,200 @@ drop trigger if exists audit_perfiles on perfiles_admin;
 create trigger audit_perfiles
   after insert or update or delete on perfiles_admin
   for each row execute function fn_audit_log();
+
+-- ── §C RLS uniforme de tablas de datos ───────────────────────────────────────
+-- Patrón: SELECT = tiene_permiso('<z>.ver') AND scope ; WRITE = '<z>.editar' AND scope.
+
+-- empleados (scope: plaza_id). Conserva intactas las policies anon de 0002.
+drop policy if exists "rh_all_empleados"     on empleados;
+drop policy if exists "jefe_select_empleados" on empleados;
+drop policy if exists "jefe_update_empleados" on empleados;
+drop policy if exists "empleados_select" on empleados;
+drop policy if exists "empleados_write" on empleados;
+create policy "empleados_select" on empleados
+  for select to authenticated
+  using (tiene_permiso('empleados.ver') and (es_global() or plaza_id = mi_plaza_id()));
+create policy "empleados_write" on empleados
+  for all to authenticated
+  using (tiene_permiso('empleados.editar') and (es_global() or plaza_id = mi_plaza_id()))
+  with check (tiene_permiso('empleados.editar') and (es_global() or plaza_id = mi_plaza_id()));
+
+-- registros (scope vía empleados.plaza_id). Conserva anon_insert_registros (0002).
+drop policy if exists "rh_all_registros"     on registros;
+drop policy if exists "jefe_select_registros" on registros;
+drop policy if exists "registros_select" on registros;
+drop policy if exists "registros_write" on registros;
+create policy "registros_select" on registros
+  for select to authenticated
+  using (
+    tiene_permiso('asistencia.ver') and (
+      es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())
+    )
+  );
+create policy "registros_write" on registros
+  for all to authenticated
+  using (
+    tiene_permiso('asistencia.editar') and (
+      es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())
+    )
+  )
+  with check (
+    tiene_permiso('asistencia.editar') and (
+      es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())
+    )
+  );
+
+-- turnos (scope: plaza_id; global = plaza_id is null visible a todo el que ve turnos).
+drop policy if exists "rh_all_turnos"     on turnos;
+drop policy if exists "jefe_select_turnos" on turnos;
+drop policy if exists "turnos_select" on turnos;
+drop policy if exists "turnos_write" on turnos;
+create policy "turnos_select" on turnos
+  for select to authenticated
+  using (tiene_permiso('turnos.ver') and (es_global() or plaza_id is null or plaza_id = mi_plaza_id()));
+create policy "turnos_write" on turnos
+  for all to authenticated
+  using (tiene_permiso('turnos.editar') and (es_global() or plaza_id = mi_plaza_id()))
+  with check (tiene_permiso('turnos.editar') and (es_global() or plaza_id = mi_plaza_id()));
+
+-- horarios_semana (scope vía empleado).
+drop policy if exists "rh_all_horarios" on horarios_semana;
+drop policy if exists "jefe_horarios"   on horarios_semana;
+drop policy if exists "horarios_select" on horarios_semana;
+drop policy if exists "horarios_write" on horarios_semana;
+create policy "horarios_select" on horarios_semana
+  for select to authenticated
+  using (tiene_permiso('turnos.ver') and (
+    es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())));
+create policy "horarios_write" on horarios_semana
+  for all to authenticated
+  using (tiene_permiso('turnos.editar') and (
+    es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())))
+  with check (tiene_permiso('turnos.editar') and (
+    es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())));
+
+-- plazas (editar reservado a plazas.editar = solo super_admin por default).
+drop policy if exists "rh_all_plazas"     on plazas;
+drop policy if exists "jefe_select_plaza" on plazas;
+drop policy if exists "plazas_select" on plazas;
+drop policy if exists "plazas_write" on plazas;
+create policy "plazas_select" on plazas
+  for select to authenticated
+  using (tiene_permiso('plazas.ver') and (es_global() or id = mi_plaza_id()));
+create policy "plazas_write" on plazas
+  for all to authenticated
+  using (tiene_permiso('plazas.editar'))
+  with check (tiene_permiso('plazas.editar'));
+
+-- puestos (lectura libre autenticada; escritura por puestos.editar).
+drop policy if exists "auth_read_puestos" on puestos;
+drop policy if exists "rh_write_puestos"  on puestos;
+drop policy if exists "puestos_select" on puestos;
+drop policy if exists "puestos_write" on puestos;
+create policy "puestos_select" on puestos
+  for select to authenticated using (true);
+create policy "puestos_write" on puestos
+  for all to authenticated
+  using (tiene_permiso('puestos.editar'))
+  with check (tiene_permiso('puestos.editar'));
+
+-- avisos (scope: plaza_id null = global). Reescribe las policies de 0034.
+drop policy if exists "rh_all_avisos"     on avisos;
+drop policy if exists "jefe_plaza_avisos" on avisos;
+drop policy if exists "avisos_select" on avisos;
+drop policy if exists "avisos_write" on avisos;
+create policy "avisos_select" on avisos
+  for select to authenticated
+  using (tiene_permiso('avisos.ver') and (es_global() or plaza_id is null or plaza_id = mi_plaza_id()));
+create policy "avisos_write" on avisos
+  for all to authenticated
+  using (tiene_permiso('avisos.editar') and (es_global() or plaza_id = mi_plaza_id()))
+  with check (tiene_permiso('avisos.editar') and (es_global() or plaza_id = mi_plaza_id()));
+
+-- incidencias (scope vía empleado).
+drop policy if exists "rh_all_incidencias"   on incidencias;
+drop policy if exists "jefe_all_incidencias" on incidencias;
+drop policy if exists "incidencias_select" on incidencias;
+drop policy if exists "incidencias_write" on incidencias;
+create policy "incidencias_select" on incidencias
+  for select to authenticated
+  using (tiene_permiso('asistencia.ver') and (
+    es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())));
+create policy "incidencias_write" on incidencias
+  for all to authenticated
+  using (tiene_permiso('asistencia.editar') and (
+    es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())))
+  with check (tiene_permiso('asistencia.editar') and (
+    es_global() or id_empleado in (select id from empleados where plaza_id = mi_plaza_id())));
+
+-- config_global (ver/editar por permiso de config).
+drop policy if exists "todos_leen_config"          on config_global;
+drop policy if exists "admin_global_escribe_config" on config_global;
+drop policy if exists "config_select" on config_global;
+drop policy if exists "config_write" on config_global;
+create policy "config_select" on config_global
+  for select to authenticated using (tiene_permiso('config.ver'));
+create policy "config_write" on config_global
+  for all to authenticated
+  using (tiene_permiso('config.editar'))
+  with check (tiene_permiso('config.editar'));
+
+-- audit_log (lectura por auditoria.ver).
+drop policy if exists "rh_select_audit" on audit_log;
+drop policy if exists "audit_select" on audit_log;
+create policy "audit_select" on audit_log
+  for select to authenticated using (tiene_permiso('auditoria.ver'));
+
+-- ── §C.2 RPCs: checks por permiso en vez de mi_rol() ─────────────────────────
+create or replace function crear_empleado(
+  p_nombre   text,
+  p_pin      text,
+  p_plaza_id bigint,
+  p_turno_id bigint default null
+)
+returns empleados language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_emp empleados;
+begin
+  if not (tiene_permiso('empleados.editar') and (es_global() or p_plaza_id = mi_plaza_id())) then
+    raise exception 'No autorizado para crear empleados en esta plaza';
+  end if;
+
+  insert into empleados (nombre, pin_hash, plaza_id, turno_id, activo)
+  values (p_nombre, crypt(p_pin, gen_salt('bf')), p_plaza_id, p_turno_id, true)
+  returning * into v_emp;
+
+  insert into audit_log (tabla, operacion, registro_id, datos_despues, admin_id)
+  values ('empleados', 'INSERT', v_emp.id::text,
+          jsonb_build_object('nombre', p_nombre, 'plaza_id', p_plaza_id), auth.uid());
+
+  return v_emp;
+end;
+$$;
+grant execute on function crear_empleado(text, text, bigint, bigint) to authenticated;
+
+create or replace function actualizar_pin_empleado(
+  p_empleado_id bigint,
+  p_nuevo_pin   text
+)
+returns void language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not tiene_permiso('empleados.editar') then
+    raise exception 'No autorizado';
+  end if;
+  if not es_global() and not exists (
+    select 1 from empleados where id = p_empleado_id and plaza_id = mi_plaza_id()
+  ) then
+    raise exception 'El empleado no pertenece a tu plaza';
+  end if;
+
+  update empleados
+  set pin_hash = crypt(p_nuevo_pin, gen_salt('bf'))
+  where id = p_empleado_id;
+
+  insert into audit_log (tabla, operacion, registro_id, datos_despues, admin_id)
+  values ('empleados', 'UPDATE_PIN', p_empleado_id::text,
+          jsonb_build_object('pin_actualizado', true), auth.uid());
+end;
+$$;
+grant execute on function actualizar_pin_empleado(bigint, text) to authenticated;
