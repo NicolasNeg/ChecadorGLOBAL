@@ -383,6 +383,43 @@ export const EN = {
   'Página no encontrada': 'Page not found',
   'La dirección que escribiste no existe o fue movida.': 'The address you entered does not exist or was moved.',
   'Ir al inicio': 'Go home',
+
+  // —— Avisos (admin: lista + editor) ——
+  'Avisos': 'Notices', 'Nuevo aviso': 'New notice', 'Editar aviso': 'Edit notice',
+  'Diseña anuncios y muéstralos a los empleados en su tablón. El móvil los ve como imagen.':
+    'Design announcements and show them to employees on their board. Mobile sees them as an image.',
+  'Aún no hay avisos. Crea el primero.': 'No notices yet. Create the first one.',
+  'Sin imagen': 'No image', '¿Eliminar este aviso?': 'Delete this notice?',
+  'Permanente': 'Permanent', 'Vigente': 'Active', 'Programado': 'Scheduled', 'Vencido': 'Expired',
+  'Título': 'Title', 'Título del aviso': 'Notice title', 'Desde': 'From', 'Hasta': 'To',
+  'Texto': 'Text', 'Forma': 'Shape', 'Icono': 'Icon', 'Imagen': 'Image',
+  'Aplicar plantilla': 'Apply template', 'Plantilla…': 'Template…',
+  'Informativo': 'Informational', 'Urgente': 'Urgent', 'Evento': 'Event',
+  'Color de fondo': 'Background color', 'Fondo': 'Background', 'Lienzo del aviso': 'Notice canvas',
+  'Toca un elemento para editarlo, o agrega uno con la barra de arriba.':
+    'Tap an element to edit it, or add one with the toolbar above.',
+  'Tamaño': 'Size', 'Color': 'Color', 'Negrita': 'Bold',
+  'Izquierda': 'Left', 'Centro': 'Center', 'Derecha': 'Right',
+  'Esquinas': 'Corners', 'Opacidad': 'Opacity', 'Reemplazar imagen': 'Replace image',
+  'Subir': 'Move up', 'Bajar': 'Move down',
+  'Solo PNG o JPEG.': 'PNG or JPEG only.', 'La imagen supera 3 MB.': 'The image exceeds 3 MB.',
+  '¿Reemplazar el diseño actual con la plantilla?': 'Replace the current design with the template?',
+  'El título es obligatorio.': 'The title is required.', 'Aviso guardado.': 'Notice saved.',
+
+  // —— Gafetes (admin) ——
+  'Gafetes': 'Badges',
+  'Genera la credencial del empleado en PDF. El QR abre una página que verifica que está activo en EQS.':
+    "Generate the employee's badge as a PDF. The QR opens a page that verifies they are active at EQS.",
+  'Gafete individual': 'Single badge', 'Descargar PDF': 'Download PDF',
+  'Vista previa del gafete': 'Badge preview',
+  'Elige un empleado para ver su gafete.': 'Choose an employee to see their badge.',
+  'Lote por plaza': 'Batch by location',
+  'Una hoja Letter con los gafetes de todos los empleados de la plaza.':
+    'A Letter-size sheet with the badges of all employees at the location.',
+  'Generar lote': 'Generate batch', 'Selecciona un empleado': 'Select an employee',
+  'Generando vista previa…': 'Generating preview…', 'No se pudo generar': 'Could not generate',
+  'Generando…': 'Generating…', 'Selecciona una plaza': 'Select a location',
+  'Esa plaza no tiene empleados.': 'That location has no employees.',
 };
 
 export const getLang = () => {
