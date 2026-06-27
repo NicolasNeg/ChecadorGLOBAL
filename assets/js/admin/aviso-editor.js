@@ -101,14 +101,22 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
     renderOverlay();
   }
 
+  // Solo dibuja la caja de selección. NO reconstruye el inspector: hacerlo en cada
+  // keystroke/drag destruía el <textarea> en edición y robaba el foco.
   function renderOverlay() {
     const el = modelo.elementos.find((e) => e.id === selId);
-    if (!el) { overlay.innerHTML = ''; inspector.innerHTML = inspectorVacio(); return; }
+    if (!el) { overlay.innerHTML = ''; return; }
     const b = bbox(el);
     const handle = el.tipo === 'texto' ? '' :
       `<rect class="ave-handle" data-handle="1" x="${b.x + b.w - 28}" y="${b.y + b.h - 28}" width="40" height="40" rx="6"></rect>`;
     overlay.innerHTML =
       `<rect class="ave-sel" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none"></rect>${handle}`;
+  }
+
+  // Reconstruye el inspector SOLO al cambiar de selección (nunca al escribir/arrastrar).
+  function refrescarInspector() {
+    const el = modelo.elementos.find((e) => e.id === selId);
+    if (!el) { inspector.innerHTML = inspectorVacio(); return; }
     renderInspector(el);
   }
 
@@ -167,7 +175,7 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
     const rep = inspector.querySelector('[data-replace]');
     if (rep) rep.addEventListener('change', () => cargarImagen(rep.files[0], selPlus(el)));
     inspector.querySelector('[data-del]').addEventListener('click', () => {
-      modelo.elementos = modelo.elementos.filter((e) => e.id !== selId); selId = null; renderCapas();
+      modelo.elementos = modelo.elementos.filter((e) => e.id !== selId); selId = null; renderCapas(); refrescarInspector();
     });
     inspector.querySelectorAll('[data-z]').forEach((b) => b.addEventListener('click', () => {
       const i = modelo.elementos.findIndex((e) => e.id === selId);
@@ -189,11 +197,11 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
       const el = modelo.elementos.find((x) => x.id === selId);
       drag = { modo: 'resize', el, x0: e.clientX, y0: e.clientY, w0: el.w, h0: el.h ?? el.w };
     } else if (g) {
-      selId = g.dataset.id; renderOverlay();
+      selId = g.dataset.id; renderOverlay(); refrescarInspector();
       const el = modelo.elementos.find((x) => x.id === selId);
       drag = { modo: 'mover', el, x0: e.clientX, y0: e.clientY, ex: el.x, ey: el.y };
     } else {
-      selId = null; renderOverlay(); return;
+      selId = null; renderOverlay(); refrescarInspector(); return;
     }
     svg.setPointerCapture(e.pointerId);
   });
@@ -219,7 +227,7 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
   // ── Agregar elementos / imagen / plantilla / fondo ───────────────────────────
   panel.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => {
     const el = elementoNuevo(b.dataset.add);
-    modelo.elementos.push(el); selId = el.id; renderCapas();
+    modelo.elementos.push(el); selId = el.id; renderCapas(); refrescarInspector();
   }));
 
   function cargarImagen(file, elExistente) {
@@ -237,7 +245,7 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
           const el = elementoNuevo('imagen', { dataUrl: fr.result, w, h: Math.round(w * ratio), x: 290, y: 425 });
           modelo.elementos.push(el); selId = el.id;
         }
-        renderCapas();
+        renderCapas(); refrescarInspector();
       };
       img.src = fr.result;
     };
@@ -250,7 +258,7 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
     if (!v) return;
     if (modelo.elementos.length && !confirm(t('¿Reemplazar el diseño actual con la plantilla?'))) return;
     const p = plantilla(v); modelo.fondo = p.fondo; modelo.elementos = p.elementos;
-    panel.querySelector('#av-fondo').value = modelo.fondo; selId = null; renderCapas();
+    panel.querySelector('#av-fondo').value = modelo.fondo; selId = null; renderCapas(); refrescarInspector();
   });
 
   panel.querySelector('#av-fondo').addEventListener('input', (e) => { modelo.fondo = e.target.value; renderCapas(); });
@@ -284,7 +292,7 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
     }
   });
 
-  renderCapas();
+  renderCapas(); refrescarInspector();
 }
 
 // ── Export SVG → PNG ──────────────────────────────────────────────────────────
