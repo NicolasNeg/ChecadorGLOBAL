@@ -33,27 +33,39 @@ export function elementoNuevo(tipo, extra = {}) {
 }
 
 // Plantillas: arreglos de elementos predefinidos. Devuelven { fondo, elementos }.
-export function plantilla(nombre) {
-  if (nombre === 'urgente') return { fondo: '#ffffff', elementos: [
-    elementoNuevo('forma',  { x: 0, y: 0, w: LIENZO_W, h: 260, fill: '#dc2626', radio: 0 }),
-    elementoNuevo('icono',  { x: 90, y: 70, w: 120, h: 120, path: ICONOS.alerta, color: '#ffffff' }),
-    elementoNuevo('texto',  { x: 250, y: 160, w: 760, texto: 'URGENTE', fontSize: 96, color: '#ffffff', bold: true }),
-    elementoNuevo('texto',  { x: 90, y: 380, w: 900, texto: 'Escribe el aviso aquí', fontSize: 56, color: '#0f172a', bold: true }),
-    elementoNuevo('texto',  { x: 90, y: 520, w: 900, texto: 'Detalles del aviso…', fontSize: 40, color: '#475569' }),
-  ] };
+// `campos` (opcional, del modo formulario) rellena título/cuerpo/fecha; vacíos
+// usan los placeholders. La fecha sólo agrega su línea cuando viene con texto.
+export function plantilla(nombre, campos = {}) {
+  const tit = (campos.titulo || '').trim();
+  const cue = (campos.cuerpo || '').trim();
+  const fec = (campos.fecha || '').trim();
+
+  if (nombre === 'urgente') {
+    const els = [
+      elementoNuevo('forma',  { x: 0, y: 0, w: LIENZO_W, h: 260, fill: '#dc2626', radio: 0 }),
+      elementoNuevo('icono',  { x: 90, y: 70, w: 120, h: 120, path: ICONOS.alerta, color: '#ffffff' }),
+      elementoNuevo('texto',  { x: 250, y: 160, w: 760, texto: 'URGENTE', fontSize: 96, color: '#ffffff', bold: true }),
+      elementoNuevo('texto',  { x: 90, y: 380, w: 900, texto: tit || 'Escribe el aviso aquí', fontSize: 56, color: '#0f172a', bold: true }),
+      elementoNuevo('texto',  { x: 90, y: 520, w: 900, texto: cue || 'Detalles del aviso…', fontSize: 40, color: '#475569' }),
+    ];
+    if (fec) els.push(elementoNuevo('texto', { x: 90, y: 700, w: 900, texto: fec, fontSize: 44, color: '#dc2626', bold: true }));
+    return { fondo: '#ffffff', elementos: els };
+  }
   if (nombre === 'evento') return { fondo: '#f0f9ff', elementos: [
     elementoNuevo('icono',  { x: 90, y: 90, w: 110, h: 110, path: ICONOS.calendario, color: '#0369a1' }),
-    elementoNuevo('texto',  { x: 90, y: 320, w: 900, texto: 'Nombre del evento', fontSize: 84, color: '#0c4a6e', bold: true }),
-    elementoNuevo('texto',  { x: 90, y: 480, w: 900, texto: 'Fecha y hora', fontSize: 48, color: '#0369a1' }),
-    elementoNuevo('texto',  { x: 90, y: 600, w: 900, texto: 'Lugar / detalles', fontSize: 40, color: '#475569' }),
+    elementoNuevo('texto',  { x: 90, y: 320, w: 900, texto: tit || 'Nombre del evento', fontSize: 84, color: '#0c4a6e', bold: true }),
+    elementoNuevo('texto',  { x: 90, y: 480, w: 900, texto: fec || 'Fecha y hora', fontSize: 48, color: '#0369a1' }),
+    elementoNuevo('texto',  { x: 90, y: 600, w: 900, texto: cue || 'Lugar / detalles', fontSize: 40, color: '#475569' }),
   ] };
   // informativo (por defecto)
-  return { fondo: '#ffffff', elementos: [
+  const els = [
     elementoNuevo('forma',  { x: 0, y: 0, w: 24, h: LIENZO_H, fill: '#0369a1', radio: 0 }),
     elementoNuevo('icono',  { x: 90, y: 90, w: 110, h: 110, path: ICONOS.info, color: '#0369a1' }),
-    elementoNuevo('texto',  { x: 90, y: 320, w: 900, texto: 'Título del aviso', fontSize: 84, color: '#0f172a', bold: true }),
-    elementoNuevo('texto',  { x: 90, y: 480, w: 900, texto: 'Cuerpo del mensaje…', fontSize: 44, color: '#475569' }),
-  ] };
+    elementoNuevo('texto',  { x: 90, y: 320, w: 900, texto: tit || 'Título del aviso', fontSize: 84, color: '#0f172a', bold: true }),
+    elementoNuevo('texto',  { x: 90, y: 480, w: 900, texto: cue || 'Cuerpo del mensaje…', fontSize: 44, color: '#475569' }),
+  ];
+  if (fec) els.push(elementoNuevo('texto', { x: 90, y: 660, w: 900, texto: fec, fontSize: 40, color: '#0369a1', bold: true }));
+  return { fondo: '#ffffff', elementos: els };
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

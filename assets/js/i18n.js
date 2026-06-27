@@ -405,6 +405,13 @@ export const EN = {
   'Solo PNG o JPEG.': 'PNG or JPEG only.', 'La imagen supera 3 MB.': 'The image exceeds 3 MB.',
   '¿Reemplazar el diseño actual con la plantilla?': 'Replace the current design with the template?',
   'El título es obligatorio.': 'The title is required.', 'Aviso guardado.': 'Notice saved.',
+  'Plantilla': 'Template', 'Lienzo': 'Canvas', 'Diseño': 'Design', 'Cuerpo': 'Body',
+  'Escribe el mensaje del aviso…': 'Write the notice message…',
+  'Ej. Lunes 30 de junio, 9:00 am': 'e.g. Monday June 30, 9:00 am',
+  'El título de arriba aparece en el aviso. ¿Necesitas un diseño a medida? Cambia a Lienzo.':
+    'The title above appears on the notice. Need a custom design? Switch to Canvas.',
+  'Volver a Plantilla regenerará el diseño desde el formulario. ¿Continuar?':
+    'Switching back to Template will regenerate the design from the form. Continue?',
 
   // —— Gafetes (admin) ——
   'Gafetes': 'Badges',
