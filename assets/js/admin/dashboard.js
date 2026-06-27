@@ -5,22 +5,29 @@ import { getPlazaScope, setPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { presentes, activosPorPlaza, contarAusentes, contarTarde, contarIncidencias } from './operaciones-calc.mjs';
 import { t, applyI18n, mountLangToggle, getLang } from '../i18n.js';
 import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
+import { puede } from './permisos.js';
 
 const sesion = requireAdminSession();
-// auth.js guarda el perfil aplanado en la sesión: rol/nombre están en la raíz.
-const esRH   = sesion?.rol === 'rh';
-const esAdminGlobal = sesion?.es_admin_global === true; // 3er concepto: super-admin
+// RBAC dirigido por datos (0035): la sesión trae `permisos` efectivos.
+const ROL_NOMBRE = {
+  super_admin: 'Super Administrador', rh: 'Recursos Humanos',
+  jefe: 'Jefe de Plaza', supervisor: 'Supervisor',
+};
+// RH global aún usa el selector de plaza "Todas"; jefe/supervisor están atados a
+// su plaza. Mantengo `esRH` como "rol global" para el selector de plaza.
+const esRH = sesion?.es_global === true;
 
-// ── Role-based UI ─────────────────────────────────────────────────────────────
-if (!esRH) {
-  document.querySelectorAll('[data-rh-only]').forEach(el => el.remove());
-}
-if (!esAdminGlobal) {
-  document.querySelectorAll('[data-admin-global]').forEach(el => el.remove());
-}
+// ── Gating por permiso ──────────────────────────────────────────────────────
+document.querySelectorAll('[data-perm]').forEach(el => {
+  if (!puede(el.dataset.perm)) el.remove();
+});
+// Grupos del sidebar sin links visibles → se ocultan.
+document.querySelectorAll('.sidebar__group[data-perm-group]').forEach(g => {
+  if (!g.querySelector('.sidebar__link')) g.remove();
+});
 const _adminNombre = sesion?.nombre ?? 'Admin';
 document.getElementById('admin-nombre-foot').textContent = _adminNombre;
-document.getElementById('admin-rol-badge').textContent = t(esRH ? 'Recursos Humanos' : 'Jefe de Plaza');
+document.getElementById('admin-rol-badge').textContent = t(ROL_NOMBRE[sesion?.rol] ?? 'Administrador');
 document.querySelectorAll('.sidebar__avatar').forEach(a => { a.firstChild.textContent = _adminNombre.trim().charAt(0).toUpperCase() || 'A'; });
 
 // ── Sidebar nav + routing ─────────────────────────────────────────────────────
@@ -51,6 +58,10 @@ async function showPanel(id) {
 
   const panel = document.getElementById(`panel-${id}`);
   if (!panel) return;
+  // Si el link de este panel fue removido por gating, no lo cargues: vuelve a overview.
+  const navOK = id === 'overview' || id === 'ajustes' ||
+    document.querySelector(`.sidebar__link[data-panel="${id}"]`);
+  if (!navOK) { showPanel('overview'); return; }
   panel.hidden = false;
   pageTitle.textContent = t(panel.dataset.title ?? id);
 
@@ -274,7 +285,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) watc
 
 // ── Panel Ajustes ───────────────────────────────────────────────────────────────
 function loadAjustes(panel) {
-  const rolTxt = t(esRH ? 'Recursos Humanos' : 'Jefe de Plaza');
+  const rolTxt = t(ROL_NOMBRE[sesion?.rol] ?? 'Administrador');
   panel.innerHTML = `
     <div class="panel-header"><h2>${t('Ajustes')}</h2></div>
     <div class="ad-card"><div class="ad-card__header"><h3>${t('Apariencia')}</h3></div>
