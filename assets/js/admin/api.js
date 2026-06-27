@@ -224,6 +224,23 @@ export async function crearCuentaAuth(email, password) {
 export const createPerfilAdmin = (d) =>
   apiFetch('perfiles_admin', { method: 'POST', body: JSON.stringify(d) });
 
+// ── RBAC: permisos efectivos + catálogos + overrides por usuario ────────────
+export const misPermisos      = () => rpc('mis_permisos');
+export const getRoles         = () => apiFetch('roles?select=clave,nombre,nivel,es_global&order=nivel.desc');
+export const getPermisosCat   = () => apiFetch('permisos?select=clave,zona,descripcion&order=zona.asc');
+export const getRolPermisos   = () => apiFetch('rol_permisos?select=rol,permiso');
+export const getPerfilPermisos = (perfilId) =>
+  apiFetch(`perfil_permisos?perfil_id=eq.${perfilId}&select=permiso,concedido`);
+export const setPerfilPermiso = (perfilId, permiso, concedido) =>
+  apiFetch('perfil_permisos?on_conflict=perfil_id,permiso', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ perfil_id: perfilId, permiso, concedido }),
+  });
+export const deletePerfilPermiso = (perfilId, permiso) =>
+  apiFetch(`perfil_permisos?perfil_id=eq.${perfilId}&permiso=eq.${permiso}`,
+    { method: 'DELETE', headers: { Prefer: '' } });
+
 // ── Configuración global (sección ADMINISTRACION) ───────────────────────────
 export const getConfigGlobal = () => apiFetch('config_global?select=clave,valor');
 

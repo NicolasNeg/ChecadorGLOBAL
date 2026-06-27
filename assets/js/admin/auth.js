@@ -2,6 +2,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, BASE } from '../config.js';
 
 const KEY = 'eqs_admin_session';
 
+// Espejo del catálogo `roles` (0035). El nivel/es_global vienen del rol; mantener
+// sincronizado con la migración. ponytail: 4 valores fijos; si crecen los roles,
+// leerlos de la tabla `roles` al login.
+const NIVEL_ROL  = { super_admin: 4, rh: 3, jefe: 2, supervisor: 1 };
+const GLOBAL_ROL = { super_admin: true, rh: true, jefe: false, supervisor: false };
+
 export const getAdminSession  = () => { try { return JSON.parse(sessionStorage.getItem(KEY)); } catch { return null; } };
 export const setAdminSession  = (d) => sessionStorage.setItem(KEY, JSON.stringify(d));
 export const clearAdminSession = () => sessionStorage.removeItem(KEY);
@@ -55,6 +61,20 @@ export async function loginAdmin(email, password, ubicacion = null) {
     refresh_token: auth.refresh_token,
     expires_at:    Date.now() + auth.expires_in * 1000
   });
+
+  // Permisos efectivos (RBAC 0035). Si el RPC no existe aún (migración sin
+  // aplicar) degradamos a [] → el panel oculta de más. Falla cerrado.
+  try {
+    const { misPermisos } = await import('./api.js');
+    const permisos = await misPermisos();
+    const s = getAdminSession();
+    setAdminSession({ ...s, permisos: Array.isArray(permisos) ? permisos : [],
+                      nivel: NIVEL_ROL[perfil.rol] ?? 0,
+                      es_global: GLOBAL_ROL[perfil.rol] === true });
+  } catch {
+    const s = getAdminSession();
+    setAdminSession({ ...s, permisos: [], nivel: 0, es_global: false });
+  }
 
   return { ok: true };
 }
