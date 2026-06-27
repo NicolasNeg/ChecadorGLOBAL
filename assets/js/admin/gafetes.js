@@ -36,7 +36,7 @@ export async function init(panel) {
 
     <div class="ad-card gf-card">
       <h4 class="gf-sub">${t('Lote por plaza')}</h4>
-      <p class="td-muted" style="margin:0 0 12px">${t('Una hoja Letter con los gafetes de todos los empleados de la plaza.')}</p>
+      <p class="td-muted">${t('Una hoja Letter con los gafetes de todos los empleados de la plaza.')}</p>
       <div class="gf-row">
         <div id="gf-plaza-pick" class="gf-pick"></div>
         <button id="gf-lote" class="abtn abtn--primary" disabled>${t('Generar lote')}</button>

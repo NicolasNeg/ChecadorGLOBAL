@@ -1621,27 +1621,35 @@ tr.is-inactive { opacity: .55; }
 }
 
 /* ── Gafetes / credenciales ─────────────────────────────────────────────────── */
-.gf-card { margin-bottom: 18px; }
+.gf-card { margin-bottom: 18px; padding: 22px 22px 24px; }
 .gf-sub {
-  font-family: 'Lexend', sans-serif; font-size: .95rem; font-weight: 600;
-  color: var(--ad-tinta); margin: 0 0 12px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Lexend', sans-serif; font-size: 1rem; font-weight: 600;
+  color: var(--ad-tinta); margin: 0 0 4px;
 }
-.gf-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
-.gf-pick { flex: 1; min-width: 220px; }
-.gf-row .abtn { flex-shrink: 0; }
+.gf-sub::before {
+  content: ''; flex: none; width: 4px; height: 18px; border-radius: 999px;
+  background: var(--ad-primary);
+}
+/* la descripción que sigue al título queda alineada bajo el texto, no la barra */
+.gf-card > .td-muted { margin: 0 0 16px 14px; font-size: .85rem; }
+.gf-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.gf-pick { flex: 1; min-width: 240px; }
+.gf-row .abtn { flex-shrink: 0; height: 44px; }
 .gf-preview-wrap {
-  margin-top: 16px; border: 1px dashed var(--ad-linea); border-radius: 12px;
-  background: var(--ad-fondo); min-height: 240px;
-  display: flex; align-items: center; justify-content: center; padding: 16px;
+  margin-top: 18px; border: 1px dashed var(--ad-linea); border-radius: 12px;
+  background: var(--ad-surf2); min-height: 260px;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
 }
 .gf-preview {
-  width: 100%; max-width: 420px; aspect-ratio: 85.6 / 54;
-  border: none; border-radius: 10px; background: #fff;
-  box-shadow: 0 4px 18px rgba(15,23,42,.14);
+  width: 100%; max-width: 440px; aspect-ratio: 85.6 / 54;
+  border: none; border-radius: 12px; background: #fff;
+  box-shadow: 0 6px 22px rgba(15,23,42,.16);
 }
-.gf-preview-vacio { color: var(--ad-tinta-3); font-size: .9rem; text-align: center; }
+.gf-preview-vacio { color: var(--ad-tinta3); font-size: .9rem; text-align: center; line-height: 1.5; }
 
 @media (max-width: 767px) {
+  .gf-card { padding: 18px; }
   .gf-row .abtn { width: 100%; }
 }
 
