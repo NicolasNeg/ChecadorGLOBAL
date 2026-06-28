@@ -14,6 +14,8 @@ const loadQR    = () => (_qrP ??= import('https://esm.sh/qrcode@1.5.4').then((m)
 const CARD_W = 85.6, CARD_H = 54; // CR80 (tarjeta estándar) en mm
 
 let _empleados = [];
+let _empresa = { nombre: 'EQS', logoUrl: null };
+let _logoData = null; // dataURL del logo (o null → se dibuja el nombre)
 
 export async function init(panel) {
   panel.innerHTML = `
@@ -43,8 +45,13 @@ export async function init(panel) {
       </div>
     </div>`;
 
-  const [empleados, plazas] = await Promise.all([api.getEmpleados(), api.getPlazas()]);
+  const [empleados, plazas, config] = await Promise.all([
+    api.getEmpleados(), api.getPlazas(), api.getConfigGlobal().catch(() => []),
+  ]);
   _empleados = empleados;
+  const cfg = Object.fromEntries((config || []).map(c => [c.clave, c.valor]));
+  _empresa = { nombre: cfg.nombre_empresa || 'EQS', logoUrl: cfg.empresa_logo_url || null };
+  _logoData = _empresa.logoUrl ? await fotoADataUrl(_empresa.logoUrl) : null;
 
   // ── Individual ──────────────────────────────────────────────────────────────
   const btnDesc = document.getElementById('gf-descargar');
@@ -179,10 +186,15 @@ function dibujarGafete(doc, emp, x, y, { foto, qr }) {
   doc.setFillColor(...PRIM);
   doc.roundedRect(x, y, W, hb, r, r, 'F');
   doc.rect(x, y + r, W, hb - r, 'F');
-  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-  doc.text('EQS', x + 5, y + 8.6);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(186, 222, 247);
-  doc.text('CHECADOR', x + 5 + doc.getTextWidth('EQS') + 1.5, y + 8.6);
+  // Logo de la empresa (config_global). Si no hay, el nombre en texto.
+  if (_logoData) {
+    // Alto de la banda menos margen; ancho proporcional acotado para no invadir "CREDENCIAL".
+    const lh = 9, lw = 22;
+    doc.addImage(_logoData, 'JPEG', x + 4, y + (hb - lh) / 2, lw, lh, undefined, 'FAST');
+  } else {
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text(doc.splitTextToSize(_empresa.nombre, 42).slice(0, 1), x + 5, y + 8.6);
+  }
   doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(255, 255, 255);
   doc.text('CREDENCIAL', x + W - 5, y + 8.4, { align: 'right' });
 
