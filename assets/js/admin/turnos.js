@@ -3,6 +3,7 @@ import { loading, showToast, openModal, closeModal, fmtHora, confirm, esc } from
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { t as tr } from '../i18n.js'; // alias: 't' ya se usa para objetos turno en este módulo
 import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
+import { colorDeTurno, contraste, PALETA } from './turno-color.mjs';
 
 let _plazas = [];
 const DIAS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -49,10 +50,6 @@ export async function init(panel) {
   await loadTurnos();
   await loadGrid();
 }
-
-// ── Color estable por turno (mismo en tarjetas y en la cuadrícula) ─────────
-const COLORS = ['c-blue', 'c-emerald', 'c-teal', 'c-amber', 'c-violet'];
-const turnoColor = (t) => COLORS[((t?.id ?? 0) % COLORS.length + COLORS.length) % COLORS.length];
 
 async function loadGrid() {
   const wrap = document.getElementById('grid-horarios-wrap');
@@ -107,8 +104,9 @@ async function loadGrid() {
         ${fechas.map(d => {
           const f = ymd(d);
           const sel = asignado.get(`${e.id}-${f}`) ?? '';
-          const t = turnoDe.get(sel);
-          return `<td><select class="grid-sel ${t ? 'sel--' + turnoColor(t) : ''}" data-emp="${e.id}" data-fecha="${f}" ${readonly ? 'disabled' : ''}>${optsFor(sel)}</select></td>`;
+          const tn = turnoDe.get(sel);
+          const sty = tn ? `style="background:${colorDeTurno(tn)};color:${contraste(colorDeTurno(tn))}"` : '';
+          return `<td><select class="grid-sel" ${sty} data-emp="${e.id}" data-fecha="${f}" ${readonly ? 'disabled' : ''}>${optsFor(sel)}</select></td>`;
         }).join('')}
       </tr>`).join('');
 
@@ -130,7 +128,9 @@ async function loadGrid() {
         sel.disabled = true;
         try {
           await api.setTurnoDia(emp, fecha, turnoId);
-          sel.className = `grid-sel ${turnoId ? 'sel--' + turnoColor(turnoDe.get(turnoId)) : ''}`;
+          const tn2 = turnoId ? turnoDe.get(turnoId) : null;
+          sel.style.background = tn2 ? colorDeTurno(tn2) : '';
+          sel.style.color = tn2 ? contraste(colorDeTurno(tn2)) : '';
           recalcTotal();
           showToast('Turno actualizado.', 'ok');
         } catch (err) { showToast(err.message, 'error'); }
@@ -141,15 +141,6 @@ async function loadGrid() {
     wrap.innerHTML = `<div class="ad-empty" style="color:#DC2626">${e.message}</div>`;
   }
 }
-
-// Color de celda en el PDF, mismo mapeo que la cuadrícula (.grid-sel.sel--c-*).
-const TURNO_PDF = {
-  'c-blue':    { bg: '#DBEAFE', fg: '#1E40AF' },
-  'c-emerald': { bg: '#DCFCE7', fg: '#166534' },
-  'c-teal':    { bg: '#CCFBF1', fg: '#115E59' },
-  'c-amber':   { bg: '#FEF3C7', fg: '#92400E' },
-  'c-violet':  { bg: '#EDE9FE', fg: '#5B21B6' },
-};
 
 // PDF de la distribución semanal: réplica imprimible de la cuadrícula en pantalla.
 // Lee los <select> en vivo para reflejar exactamente lo que ve el usuario.
@@ -174,8 +165,8 @@ async function pdfTurnos() {
       const tn = sel ? turnoDe.get(parseInt(sel.value) || 0) : null;
       if (!tn) return `<td class="off">${tr('Descanso')}</td>`;
       totalMin += horasTurno(tn);
-      const c = TURNO_PDF[turnoColor(tn)] ?? { bg: '#fff', fg: '#111' };
-      return `<td style="background:${c.bg};color:${c.fg};font-weight:600">${esc(tn.nombre)}<br><small>${(tn.hora_entrada || '').slice(0, 5)}–${(tn.hora_salida || '').slice(0, 5)}</small></td>`;
+      const bg = colorDeTurno(tn);
+      return `<td style="background:${bg};color:${contraste(bg)};font-weight:600">${esc(tn.nombre)}<br><small>${(tn.hora_entrada || '').slice(0, 5)}–${(tn.hora_salida || '').slice(0, 5)}</small></td>`;
     }).join('');
     return `<tr><td class="emp">${esc(e.nombre)}</td>${tds}</tr>`;
   }).join('');
@@ -245,7 +236,7 @@ let _allTurnos = [];
 function turnoCard(t) {
   const dias = (t.dias_semana || []).map(d => tr(DIAS[d])).join(' · ') || tr('Sin días');
   return `
-    <div class="turno-card turno-card--${turnoColor(t)}">
+    <div class="turno-card" style="--turno-color:${colorDeTurno(t)}">
       <div class="turno-card__top">
         <h3 class="turno-card__name">${t.nombre}</h3>
         <span class="turno-card__badge">${tr(t.activo ? 'Activo' : 'Inactivo')}</span>
@@ -301,6 +292,10 @@ function openTurnoForm(turno = null) {
     `<div class="form-group">
       <label for="t-nombre">${tr('Nombre del turno')} *</label>
       <input id="t-nombre" class="form-input" value="${turno?.nombre ?? ''}" placeholder="${tr('Ej: Turno Matutino')}">
+    </div>
+    <div class="form-group">
+      <label for="t-color">${tr('Color')}</label>
+      <input id="t-color" class="form-input" type="color" value="${turno?.color ?? colorDeTurno(turno ?? { id: 0 })}" style="height:42px;padding:4px">
     </div>
     <div class="form-group">
       <label for="t-plaza">${tr('Plaza')} *</label>
@@ -360,6 +355,7 @@ function openTurnoForm(turno = null) {
 
       const payload = {
         nombre, plaza_id,
+        color: document.getElementById('t-color').value,
         hora_entrada: h_ent, hora_salida: h_sal,
         tolerancia_entrada_min: tol_e, tolerancia_salida_min: tol_s,
         pausa_min: pausa,

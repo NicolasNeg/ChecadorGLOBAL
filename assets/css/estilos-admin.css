@@ -772,17 +772,14 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 .turno-card {
-  --tc: #2563EB; --tc2: #1D4ED8;
+  /* Color elegible por turno (style="--turno-color"); --tc2 oscurece para el degradado. */
+  --tc: var(--turno-color, #2563EB);
+  --tc2: color-mix(in srgb, var(--turno-color, #1D4ED8) 80%, black);
   position: relative; overflow: hidden;
   padding: 18px; border-radius: 16px; color: #fff;
   background: linear-gradient(135deg, var(--tc), var(--tc2));
   box-shadow: 0 6px 20px -8px var(--tc);
 }
-.turno-card--c-blue    { --tc:#3B82F6; --tc2:#2563EB; }
-.turno-card--c-emerald { --tc:#10B981; --tc2:#059669; }
-.turno-card--c-teal    { --tc:#14B8A6; --tc2:#0D9488; }
-.turno-card--c-amber   { --tc:#F59E0B; --tc2:#D97706; }
-.turno-card--c-violet  { --tc:#8B5CF6; --tc2:#7C3AED; }
 .turno-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .turno-card__name { font-family: var(--ad-font-head); font-size: 1.1rem; font-weight: 700; color: #fff; }
 .turno-card__badge {
