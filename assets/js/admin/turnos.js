@@ -3,7 +3,7 @@ import { loading, showToast, openModal, closeModal, fmtHora, confirm, esc } from
 import { getPlazaScope, filterByPlaza } from './plaza-scope.js';
 import { t as tr } from '../i18n.js'; // alias: 't' ya se usa para objetos turno en este módulo
 import { cabeceraReporteHTML, CABECERA_CSS } from './reporte-cabecera.js';
-import { colorDeTurno, contraste, PALETA } from './turno-color.mjs';
+import { colorDeTurno, contraste } from './turno-color.mjs';
 
 let _plazas = [];
 const DIAS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
