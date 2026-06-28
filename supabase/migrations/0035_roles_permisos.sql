@@ -23,9 +23,16 @@ on conflict (clave) do nothing;
 -- El CHECK viejo solo permitía 'rh'/'jefe'. Migrar datos ANTES de re-aplicar el
 -- check para no violarlo (super_admin viene de es_admin_global=true).
 alter table perfiles_admin drop constraint if exists perfiles_admin_rol_check;
+-- El CHECK 'jefe_necesita_plaza' de 0004 era `rol='rh' or plaza_id is not null`,
+-- así que super_admin con plaza null lo violaría. Soltarlo ANTES del update y
+-- re-aplicarlo con la jerarquía nueva: solo los roles de plaza (jefe/supervisor)
+-- requieren plaza; los globales (super_admin/rh) no.
+alter table perfiles_admin drop constraint if exists jefe_necesita_plaza;
 update perfiles_admin set rol = 'super_admin' where es_admin_global = true;
 alter table perfiles_admin add constraint perfiles_admin_rol_check
   check (rol in ('super_admin','rh','jefe','supervisor'));
+alter table perfiles_admin add constraint jefe_necesita_plaza
+  check (rol in ('super_admin','rh') or plaza_id is not null);
 
 -- ── §A.3 Catálogo de permisos + defaults por rol + overrides por usuario ─────
 create table if not exists permisos (
