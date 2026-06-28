@@ -1799,3 +1799,18 @@ tr.is-inactive { opacity: .55; }
   .ave-inspector, .ave-form { flex-basis: auto; width: 100%; }
   .ave-modo, .ave-modo__btn { width: auto; }
 }
+
+/* Matriz de permisos por usuario (panel Usuarios). */
+.pmx { display: grid; gap: 14px; }
+.pmx-zona h4 { margin: 0 0 6px; font-size: .9rem; color: var(--ad-tinta); }
+.pmx-keys { display: flex; flex-wrap: wrap; gap: 8px; }
+.pmx-cell {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  padding: 8px 10px; min-width: 120px; cursor: pointer;
+  background: var(--ad-fondo-2, #f8fafc); border: 1px solid var(--ad-borde, #e2e8f0);
+  border-radius: 10px; transition: transform .12s ease, box-shadow .12s ease;
+}
+.pmx-cell:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(15,23,42,.08); }
+.pmx-cell:focus-visible { outline: 3px solid var(--ad-azul, #0369A1); outline-offset: 2px; }
+.pmx-cell:disabled { opacity: .5; cursor: progress; }
+.pmx-def { color: var(--ad-tinta-3, #94a3b8); font-size: .7rem; }
