@@ -431,6 +431,7 @@ export const EN = {
   'Datos del aviso': 'Notice details', 'Diseño rápido': 'Quick design',
   'Herramientas': 'Tools', 'Elemento seleccionado': 'Selected element',
   'Alinear': 'Align', 'Arriba': 'Top', 'Medio': 'Middle', 'Abajo': 'Bottom',
+  'Todas las plazas (global)': 'All locations (global)',
 };
 
 export const getLang = () => {

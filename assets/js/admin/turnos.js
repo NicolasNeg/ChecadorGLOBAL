@@ -60,8 +60,9 @@ async function loadGrid() {
     const [empleados, allTurnos, dias] = await Promise.all([
       api.getEmpleados(), api.getTurnos(), api.getTurnosDia({ desde, hasta })
     ]);
-    // Solo turnos de la plaza en foco: no asignar un turno de otra plaza.
-    const turnos  = filterByPlaza(allTurnos, t => t.plaza_id);
+    // Incluye turnos globales (plaza_id null) además de los de la plaza en foco.
+    const scope = getPlazaScope();
+    const turnos = allTurnos.filter(t => scope == null || t.plaza_id == null || t.plaza_id === scope);
     const activos = filterByPlaza(empleados.filter(e => e.activo), e => e.plaza_id);
     _gridActivos = activos;
     const turnoDe = new Map(turnos.map(t => [t.id, t]));
@@ -246,7 +247,7 @@ function turnoCard(t) {
         ${fmtHora(t.hora_entrada)} – ${fmtHora(t.hora_salida)}
       </div>
       <ul class="turno-card__meta">
-        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${t.plazas?.nombre ?? '–'}</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${t.plaza_id == null ? tr('Todas las plazas') : (t.plazas?.nombre ?? '–')}</li>
         <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${dias}</li>
         <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg> ${tr('Tol.')} ${t.tolerancia_entrada_min}/${t.tolerancia_salida_min} min</li>
       </ul>
@@ -265,7 +266,9 @@ async function loadTurnos() {
   const wrap = document.getElementById('tbl-turnos-wrap');
   loading(wrap);
   try {
-    _allTurnos = filterByPlaza(await api.getTurnos(), t => t.plaza_id);
+    const scope = getPlazaScope();
+    const all = await api.getTurnos();
+    _allTurnos = all.filter(t => scope == null || t.plaza_id == null || t.plaza_id === scope);
     wrap.innerHTML = _allTurnos.length
       ? `<div class="turno-cards">${_allTurnos.map(turnoCard).join('')}</div>`
       : `<div class="ad-card"><div class="ad-empty">${tr('No hay turnos en esta plaza. Crea el primero.')}</div></div>`;
@@ -299,7 +302,11 @@ function openTurnoForm(turno = null) {
     </div>
     <div class="form-group">
       <label for="t-plaza">${tr('Plaza')} *</label>
-      <select id="t-plaza" class="form-input"><option value="">– ${tr('Selecciona')} –</option>${plazaOpts}</select>
+      <select id="t-plaza" class="form-input">
+        <option value="">– ${tr('Selecciona')} –</option>
+        <option value="global"${turno && turno.plaza_id == null ? ' selected' : ''}>${tr('Todas las plazas (global)')}</option>
+        ${plazaOpts}
+      </select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group">
@@ -338,7 +345,9 @@ function openTurnoForm(turno = null) {
     <p id="t-error" class="error-inline" hidden></p>`,
     async () => {
       const nombre   = document.getElementById('t-nombre').value.trim();
-      const plaza_id = parseInt(document.getElementById('t-plaza').value) || null;
+      const plazaSel = document.getElementById('t-plaza').value;
+      const esGlobal = plazaSel === 'global';
+      const plaza_id = esGlobal ? null : (parseInt(plazaSel) || null);
       const h_ent    = document.getElementById('t-entrada').value;
       const h_sal    = document.getElementById('t-salida').value;
       const tol_e    = parseInt(document.getElementById('t-tol-e').value) || 0;
@@ -347,7 +356,7 @@ function openTurnoForm(turno = null) {
       const dias     = [...document.querySelectorAll('input[name="t-dia"]:checked')].map(el => parseInt(el.value));
       const errEl    = document.getElementById('t-error');
 
-      if (!nombre || !plaza_id || !h_ent || !h_sal || !dias.length) {
+      if (!nombre || (!plaza_id && !esGlobal) || !h_ent || !h_sal || !dias.length) {
         errEl.textContent = tr('Completa todos los campos obligatorios.');
         errEl.hidden = false;
         return;
