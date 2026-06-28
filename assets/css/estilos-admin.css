@@ -807,6 +807,20 @@ select.form-input { -webkit-appearance: none; appearance: none; background-image
 /* El badge "Activo" tapa los botones al hover: lo ocultamos para dar espacio */
 .turno-card:hover .turno-card__badge, .turno-card:focus-within .turno-card__badge { visibility: hidden; }
 
+/* Touch / móvil: los iconos editar/eliminar no dependen de hover (no existe). */
+@media (hover: none), (max-width: 640px) {
+  .actions .abtn--icon { opacity: 1 !important; visibility: visible !important; }
+  .turno-card__actions { opacity: 1; }
+  /* Las acciones ya se ven; el badge se oculta para no encimarse con ellas. */
+  .turno-card__badge { visibility: hidden; }
+}
+@media (max-width: 640px) {
+  /* El catálogo de turnos se compacta; la cuadrícula de asignación es lo prominente. */
+  #tbl-turnos-wrap .turno-cards { gap: 8px; }
+  #tbl-turnos-wrap .turno-card { padding: 12px 14px; }
+  #grid-horarios-wrap { margin-top: 4px; }
+}
+
 /* ── Cuadrícula de asignación semanal (Turnos) ────────────────────────────── */
 .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .grid-horarios { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 720px; }
