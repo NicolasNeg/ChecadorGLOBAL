@@ -56,33 +56,40 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
       </div>
     </div>
 
-    <div class="ave-meta ad-card">
-      <label class="ave-field ave-field--grow">
-        <span>${t('Título')} *</span>
-        <input id="av-titulo" type="text" maxlength="120" value="${esc(aviso?.titulo || '')}" placeholder="${t('Título del aviso')}">
-      </label>
-      <label class="ave-field">
-        <span>${t('Plaza')}</span>
-        <select id="av-plaza">${plazaOpts}</select>
-      </label>
-      <label class="ave-field">
-        <span>${t('Desde')}</span>
-        <input id="av-desde" type="date" value="${aviso?.inicia_en || ''}">
-      </label>
-      <label class="ave-field">
-        <span>${t('Hasta')}</span>
-        <input id="av-hasta" type="date" value="${aviso?.termina_en || ''}">
-      </label>
-    </div>
+    <div class="ave-grid">
+      <section class="ave-col ad-card ave-meta">
+        <h4 class="ave-coltitle">${t('Datos del aviso')}</h4>
+        <label class="ave-field">
+          <span>${t('Título')} *</span>
+          <input id="av-titulo" type="text" maxlength="120" value="${esc(aviso?.titulo || '')}" placeholder="${t('Título del aviso')}">
+        </label>
+        <label class="ave-field">
+          <span>${t('Plaza')}</span>
+          <select id="av-plaza">${plazaOpts}</select>
+        </label>
+        <div class="ave-field2">
+          <label class="ave-field">
+            <span>${t('Desde')}</span>
+            <input id="av-desde" type="date" value="${aviso?.inicia_en || ''}">
+          </label>
+          <label class="ave-field">
+            <span>${t('Hasta')}</span>
+            <input id="av-hasta" type="date" value="${aviso?.termina_en || ''}">
+          </label>
+        </div>
+        <div class="ave-modo" role="tablist">
+          <button class="ave-modo__btn" data-modo="plantilla">${t('Plantilla')}</button>
+          <button class="ave-modo__btn" data-modo="lienzo">${t('Lienzo')}</button>
+        </div>
+      </section>
 
-    <div class="ave-modo" role="tablist">
-      <button class="ave-modo__btn" data-modo="plantilla">${t('Plantilla')}</button>
-      <button class="ave-modo__btn" data-modo="lienzo">${t('Lienzo')}</button>
-    </div>
+      <section id="av-canvas-host" class="ave-col ave-canvas-col"></section>
 
-    <div id="av-cuerpo"></div>`;
+      <aside id="av-side" class="ave-col ad-card ave-side"></aside>
+    </div>`;
 
-  const cuerpo = panel.querySelector('#av-cuerpo');
+  const canvasHost = panel.querySelector('#av-canvas-host');
+  const side = panel.querySelector('#av-side');
   const tituloInput = panel.querySelector('#av-titulo');
   if (aviso?.plaza_id != null) panel.querySelector('#av-plaza').value = String(aviso.plaza_id);
 
@@ -151,8 +158,19 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
       <label class="abtn abtn--sm ave-filebtn">${t('Reemplazar imagen')}<input type="file" accept="image/png,image/jpeg" data-replace hidden></label>`;
 
     inspector.innerHTML = `
-      <h4 class="ave-isub">${t(el.tipo[0].toUpperCase() + el.tipo.slice(1))}</h4>
+      <h4 class="ave-isub">${t('Elemento seleccionado')}: ${t(el.tipo[0].toUpperCase() + el.tipo.slice(1))}</h4>
       ${campos2}
+      <div class="ave-ialign" role="group" aria-label="${t('Alinear')}">
+        <span class="ave-ialign__lbl">${t('Alinear')}</span>
+        <div class="ave-ialign__row">
+          <button class="ave-abtn" data-align="left"    title="${t('Izquierda')}" aria-label="${t('Izquierda')}">⊢</button>
+          <button class="ave-abtn" data-align="hcenter" title="${t('Centro')}" aria-label="${t('Centro')}">⊣⊢</button>
+          <button class="ave-abtn" data-align="right"   title="${t('Derecha')}" aria-label="${t('Derecha')}">⊣</button>
+          <button class="ave-abtn" data-align="top"     title="${t('Arriba')}" aria-label="${t('Arriba')}">⊤</button>
+          <button class="ave-abtn" data-align="vmiddle" title="${t('Medio')}" aria-label="${t('Medio')}">⊥⊤</button>
+          <button class="ave-abtn" data-align="bottom"  title="${t('Abajo')}" aria-label="${t('Abajo')}">⊥</button>
+        </div>
+      </div>
       <div class="ave-iorder">
         <button class="abtn abtn--sm" data-z="up">${t('Subir')}</button>
         <button class="abtn abtn--sm" data-z="down">${t('Bajar')}</button>
@@ -181,6 +199,9 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
       if (j < 0 || j >= modelo.elementos.length) return;
       [modelo.elementos[i], modelo.elementos[j]] = [modelo.elementos[j], modelo.elementos[i]];
       renderCapas();
+    }));
+    inspector.querySelectorAll('[data-align]').forEach((b) => b.addEventListener('click', () => {
+      alinear(selPlus(el), b.dataset.align); renderCapas();
     }));
   }
 
@@ -244,19 +265,30 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
     svg.addEventListener('pointercancel', finDrag);
 
     // Agregar elementos / imagen / plantilla / fondo.
-    cuerpo.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => {
+    side.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => {
       const el = elementoNuevo(b.dataset.add);
       modelo.elementos.push(el); selId = el.id; renderCapas(); refrescarInspector();
     }));
-    cuerpo.querySelector('#av-img').addEventListener('change', (e) => cargarImagen(e.target.files[0], null));
-    cuerpo.querySelector('#av-plantilla').addEventListener('change', (e) => {
+    side.querySelector('#av-img').addEventListener('change', (e) => cargarImagen(e.target.files[0], null));
+    side.querySelector('#av-plantilla').addEventListener('change', (e) => {
       const v = e.target.value; e.target.value = '';
       if (!v) return;
       if (modelo.elementos.length && !confirm(t('¿Reemplazar el diseño actual con la plantilla?'))) return;
       const p = plantilla(v); modelo.fondo = p.fondo; modelo.elementos = p.elementos;
-      cuerpo.querySelector('#av-fondo').value = modelo.fondo; selId = null; renderCapas(); refrescarInspector();
+      side.querySelector('#av-fondo').value = modelo.fondo; selId = null; renderCapas(); refrescarInspector();
     });
-    cuerpo.querySelector('#av-fondo').addEventListener('input', (e) => { modelo.fondo = e.target.value; renderCapas(); });
+    side.querySelector('#av-fondo').addEventListener('input', (e) => { modelo.fondo = e.target.value; renderCapas(); });
+  }
+
+  // Alinea el elemento seleccionado respecto al lienzo (estilo Photoshop).
+  function alinear(el, dir) {
+    const b = bbox(el);
+    if (dir === 'left')         el.x = 0;
+    else if (dir === 'hcenter') el.x = Math.round((LIENZO_W - b.w) / 2);
+    else if (dir === 'right')   el.x = LIENZO_W - b.w;
+    else if (dir === 'top')     el.y = 0;
+    else if (dir === 'vmiddle') el.y = Math.round((LIENZO_H - b.h) / 2);
+    else if (dir === 'bottom')  el.y = LIENZO_H - b.h;
   }
 
   // Regenera el modelo desde el formulario y repinta la vista previa.
@@ -267,36 +299,39 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
   }
 
   function wirePlantilla() {
-    cuerpo.querySelector('#av-fdiseno').addEventListener('change', (e) => { campos.plantilla = e.target.value; regenPlantilla(); });
-    cuerpo.querySelector('#av-fcuerpo').addEventListener('input', (e) => { campos.cuerpo = e.target.value; regenPlantilla(); });
-    cuerpo.querySelector('#av-ffecha').addEventListener('input', (e) => { campos.fecha = e.target.value; regenPlantilla(); });
+    side.querySelector('#av-fdiseno').addEventListener('change', (e) => { campos.plantilla = e.target.value; regenPlantilla(); });
+    side.querySelector('#av-fcuerpo').addEventListener('input', (e) => { campos.cuerpo = e.target.value; regenPlantilla(); });
+    side.querySelector('#av-ffecha').addEventListener('input', (e) => { campos.fecha = e.target.value; regenPlantilla(); });
     regenPlantilla(); // pinta la vista previa inicial con el título actual
   }
 
   // ── Render del modo activo ───────────────────────────────────────────────────
   function renderModo() {
-    cuerpo.innerHTML = modo === 'plantilla' ? `
-      <div class="ave-stage">
-        <div class="ave-form ad-card">
-          <label class="ave-ifield"><span>${t('Diseño')}</span>
-            <select id="av-fdiseno">
-              <option value="informativo"${sel('informativo', campos.plantilla)}>${t('Informativo')}</option>
-              <option value="urgente"${sel('urgente', campos.plantilla)}>${t('Urgente')}</option>
-              <option value="evento"${sel('evento', campos.plantilla)}>${t('Evento')}</option>
-            </select></label>
-          <label class="ave-ifield"><span>${t('Cuerpo')}</span>
-            <textarea id="av-fcuerpo" rows="4" placeholder="${t('Escribe el mensaje del aviso…')}">${esc(campos.cuerpo)}</textarea></label>
-          <label class="ave-ifield"><span>${t('Fecha')}</span>
-            <input id="av-ffecha" type="text" maxlength="60" value="${esc(campos.fecha)}" placeholder="${t('Ej. Lunes 30 de junio, 9:00 am')}"></label>
-          <p class="ave-hint">${t('El título de arriba aparece en el aviso. ¿Necesitas un diseño a medida? Cambia a Lienzo.')}</p>
-        </div>
-        <div class="ave-canvas-wrap">${lienzoSvg(true)}</div>
-      </div>` : `
-      <div class="ave-tools ad-card">
+    // Centro: el lienzo (read-only en plantilla, editable en lienzo).
+    canvasHost.innerHTML = `<div class="ave-canvas-wrap">${lienzoSvg(modo === 'plantilla')}</div>`;
+
+    // Derecha: formulario (plantilla) o herramientas + inspector (lienzo).
+    side.innerHTML = modo === 'plantilla' ? `
+      <h4 class="ave-coltitle">${t('Diseño rápido')}</h4>
+      <label class="ave-ifield"><span>${t('Diseño')}</span>
+        <select id="av-fdiseno">
+          <option value="informativo"${sel('informativo', campos.plantilla)}>${t('Informativo')}</option>
+          <option value="urgente"${sel('urgente', campos.plantilla)}>${t('Urgente')}</option>
+          <option value="evento"${sel('evento', campos.plantilla)}>${t('Evento')}</option>
+        </select></label>
+      <label class="ave-ifield"><span>${t('Cuerpo')}</span>
+        <textarea id="av-fcuerpo" rows="4" placeholder="${t('Escribe el mensaje del aviso…')}">${esc(campos.cuerpo)}</textarea></label>
+      <label class="ave-ifield"><span>${t('Fecha')}</span>
+        <input id="av-ffecha" type="text" maxlength="60" value="${esc(campos.fecha)}" placeholder="${t('Ej. Lunes 30 de junio, 9:00 am')}"></label>
+      <p class="ave-hint">${t('El título de arriba aparece en el aviso. ¿Necesitas un diseño a medida? Cambia a Lienzo.')}</p>` : `
+      <h4 class="ave-coltitle">${t('Herramientas')}</h4>
+      <div class="ave-toolgrid">
         <button class="abtn abtn--sm" data-add="texto">+ ${t('Texto')}</button>
         <button class="abtn abtn--sm" data-add="forma">+ ${t('Forma')}</button>
         <button class="abtn abtn--sm" data-add="icono">+ ${t('Icono')}</button>
         <label class="abtn abtn--sm ave-filebtn">+ ${t('Imagen')}<input id="av-img" type="file" accept="image/png,image/jpeg" hidden></label>
+      </div>
+      <div class="ave-toolrow">
         <select id="av-plantilla" class="ave-tplsel" title="${t('Aplicar plantilla')}">
           <option value="">${t('Plantilla…')}</option>
           <option value="informativo">${t('Informativo')}</option>
@@ -307,16 +342,13 @@ export function abrirEditor(panel, { aviso, plazas, onClose }) {
           <input id="av-fondo" type="color" value="${modelo.fondo || '#ffffff'}">
         </label>
       </div>
-      <div class="ave-stage">
-        <div class="ave-canvas-wrap">${lienzoSvg(false)}</div>
-        <aside id="av-inspector" class="ave-inspector ad-card"></aside>
-      </div>`;
+      <div id="av-inspector" class="ave-inspector"></div>`;
 
-    svg       = cuerpo.querySelector('#av-lienzo');
-    capas     = cuerpo.querySelector('#av-capas');
-    overlay   = cuerpo.querySelector('#av-overlay');
-    fondoRect = cuerpo.querySelector('#av-fondo-rect');
-    inspector = cuerpo.querySelector('#av-inspector'); // null en plantilla
+    svg       = canvasHost.querySelector('#av-lienzo');
+    capas     = canvasHost.querySelector('#av-capas');
+    overlay   = canvasHost.querySelector('#av-overlay');
+    fondoRect = canvasHost.querySelector('#av-fondo-rect');
+    inspector = side.querySelector('#av-inspector'); // null en plantilla
 
     panel.querySelectorAll('.ave-modo__btn').forEach((b) =>
       b.classList.toggle('is-active', b.dataset.modo === modo));

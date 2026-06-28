@@ -38,7 +38,7 @@ export async function init(panel) {
       <h4 class="gf-sub">${t('Lote por plaza')}</h4>
       <p class="td-muted">${t('Una hoja Letter con los gafetes de todos los empleados de la plaza.')}</p>
       <div class="gf-row">
-        <div id="gf-plaza-pick" class="gf-pick"></div>
+        <select id="gf-plaza" class="form-input gf-pick"><option value="">${t('Selecciona una plaza')}</option></select>
         <button id="gf-lote" class="abtn abtn--primary" disabled>${t('Generar lote')}</button>
       </div>
     </div>`;
@@ -82,14 +82,14 @@ export async function init(panel) {
   };
 
   // ── Lote por plaza ────────────────────────────────────────────────────────────
+  // <select> nativo (no combobox): su menú lo pinta el SO, así nunca queda debajo
+  // del iframe de previsualización (capa de composición propia en Chrome).
   const btnLote = document.getElementById('gf-lote');
+  const plazaSelEl = document.getElementById('gf-plaza');
   let plazaSel = '';
-  const plazaCbx = combobox({
-    placeholder: t('Selecciona una plaza'),
-    options: plazas.map((p) => ({ value: p.id, label: p.nombre })),
-    onChange: (id) => { plazaSel = id; btnLote.disabled = !id; },
-  });
-  document.getElementById('gf-plaza-pick').appendChild(plazaCbx.el);
+  plazaSelEl.innerHTML = `<option value="">${t('Selecciona una plaza')}</option>` +
+    plazas.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  plazaSelEl.addEventListener('change', () => { plazaSel = plazaSelEl.value; btnLote.disabled = !plazaSel; });
 
   btnLote.onclick = async () => {
     const delaPlaza = _empleados.filter((e) => String(e.plaza_id) === String(plazaSel));

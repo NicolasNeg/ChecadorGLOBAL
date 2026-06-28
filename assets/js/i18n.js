@@ -428,6 +428,9 @@ export const EN = {
   'Generando vista previa…': 'Generating preview…', 'No se pudo generar': 'Could not generate',
   'Generando…': 'Generating…', 'Selecciona una plaza': 'Select a location',
   'Esa plaza no tiene empleados.': 'That location has no employees.',
+  'Datos del aviso': 'Notice details', 'Diseño rápido': 'Quick design',
+  'Herramientas': 'Tools', 'Elemento seleccionado': 'Selected element',
+  'Alinear': 'Align', 'Arriba': 'Top', 'Medio': 'Middle', 'Abajo': 'Bottom',
 };
 
 export const getLang = () => {
